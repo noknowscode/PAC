@@ -1,0 +1,99 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Console tokens, from the ui-craft pass on the prototype. The counts are fixed:
+    4 text colours, 3 cyan border levels, 7 type sizes (10 px minimum), 2 control heights.
+    Simple's roles carry the shared palette (App.xaml); these brushes add the tones Simple
+    has no role for (alpha steps of the hologram cyan and the accent).
+  -->
+
+  <!-- Fonts. The TTF family names are weight-suffixed, so the fragments must match exactly. -->
+  <FontFamily x:Key="DisplayFont">ms-appx:///Assets/Fonts/ChakraPetch-Medium.ttf#Chakra Petch Medium</FontFamily>
+  <FontFamily x:Key="DisplayStrongFont">ms-appx:///Assets/Fonts/ChakraPetch-SemiBold.ttf#Chakra Petch SemiBold</FontFamily>
+  <FontFamily x:Key="MonoFont">ms-appx:///Assets/Fonts/IBMPlexMono-Regular.ttf#IBM Plex Mono</FontFamily>
+  <FontFamily x:Key="MonoMediumFont">ms-appx:///Assets/Fonts/IBMPlexMono-Medium.ttf#IBM Plex Mono Medium</FontFamily>
+
+  <!-- Ground and surfaces -->
+  <SolidColorBrush x:Key="GroundBrush" Color="#03070A" />
+  <SolidColorBrush x:Key="PanelBrush" Color="#8C081A26" />
+  <SolidColorBrush x:Key="CardBrush" Color="#80041018" />
+  <SolidColorBrush x:Key="OverlayBrush" Color="#D1030C12" />
+
+  <!-- Text: primary, cyan, muted, faint -->
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DFF5FF" />
+  <SolidColorBrush x:Key="CyanBrush" Color="#8ADCFF" />
+  <SolidColorBrush x:Key="MutedBrush" Color="#86AABB" />
+  <SolidColorBrush x:Key="FaintBrush" Color="#6F95A8" />
+
+  <!-- Cyan borders: hairline 0.24, default 0.36, strong 0.55 -->
+  <SolidColorBrush x:Key="HairlineBrush" Color="#3D6ED2FF" />
+  <SolidColorBrush x:Key="BorderBrushDefault" Color="#5C6ED2FF" />
+  <SolidColorBrush x:Key="BorderBrushStrong" Color="#8C6ED2FF" />
+  <SolidColorBrush x:Key="CyanFillBrush" Color="#246ED2FF" />
+  <SolidColorBrush x:Key="CyanTintBrush" Color="#0A6ED2FF" />
+
+  <!-- Accent: selection and data -->
+  <SolidColorBrush x:Key="AccentBrush" Color="#F5A83B" />
+  <SolidColorBrush x:Key="AccentFillBrush" Color="#2EF5A83B" />
+  <SolidColorBrush x:Key="AccentTintBrush" Color="#12F5A83B" />
+  <SolidColorBrush x:Key="AccentBorderBrush" Color="#99F5A83B" />
+  <SolidColorBrush x:Key="OnAccentBrush" Color="#140C02" />
+
+  <!-- Alert: always paired with a word (ALERT, HIGH) or a dashed stroke -->
+  <SolidColorBrush x:Key="AlertBrush" Color="#FF6F61" />
+  <SolidColorBrush x:Key="AlertTextBrush" Color="#FF8A7E" />
+  <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3FF6F61" />
+  <SolidColorBrush x:Key="AlertTintBrush" Color="#14FF6F61" />
+
+  <!-- Type ramp: 10 / 11 / 13 / 15 / 18 / 22 / 28.
+       CharacterSpacing is a no-op on the Skia text stack but correct markup elsewhere. -->
+  <Style x:Key="TypeMicro" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoMediumFont}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="CharacterSpacing" Value="140" />
+    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+  </Style>
+  <Style x:Key="TypeBody" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style x:Key="TypeSection" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="CharacterSpacing" Value="160" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style x:Key="TypeCode" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="CharacterSpacing" Value="100" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style x:Key="TypeValue" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style x:Key="TypeTitle" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayStrongFont}" />
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="CharacterSpacing" Value="140" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style x:Key="TypeHero" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="28" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- Radii and spacing -->
+  <CornerRadius x:Key="RadiusTag">4</CornerRadius>
+  <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+  <CornerRadius x:Key="RadiusRail">8</CornerRadius>
+  <CornerRadius x:Key="RadiusCard">10</CornerRadius>
+  <CornerRadius x:Key="RadiusPanel">18</CornerRadius>
+  <x:Double x:Key="ControlHeight">36</x:Double>
+  <x:Double x:Key="ControlHeightLarge">48</x:Double>
+</ResourceDictionary>
