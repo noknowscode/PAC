@@ -1,4 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using PacConsole.Controls.Charts;
+using PacConsole.Core.Telemetry;
+using SkiaSharp;
 using Uno.Resizetizer;
 
 namespace PacConsole;
@@ -20,72 +23,78 @@ public partial class App : Application
     [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        LoadChartTypeface();
+
         var builder = this.CreateBuilder(args)
-            // Add navigation support for toolkit controls such as TabBar and NavigationView
             .UseToolkitNavigation()
             .Configure(host => host
 #if DEBUG
-                // Switch to Development environment when running in DEBUG
                 .UseEnvironment(Environments.Development)
 #endif
                 .UseLogging(configure: (context, logBuilder) =>
                 {
-                    // Configure log levels for different categories of logging
                     logBuilder
                         .SetMinimumLevel(
                             context.HostingEnvironment.IsDevelopment() ?
                                 LogLevel.Information :
                                 LogLevel.Warning)
-
-                        // Default filters for core Uno Platform namespaces
                         .CoreLogLevel(LogLevel.Warning);
-
-                    // Uno Platform namespace filter groups
-                    // Uncomment individual methods to see more detailed logging
-                    //// Generic Xaml events
-                    //logBuilder.XamlLogLevel(LogLevel.Debug);
-                    //// Layout specific messages
-                    //logBuilder.XamlLayoutLogLevel(LogLevel.Debug);
-                    //// Storage messages
-                    //logBuilder.StorageLogLevel(LogLevel.Debug);
-                    //// Binding related messages
-                    //logBuilder.XamlBindingLogLevel(LogLevel.Debug);
-                    //// Binder memory references tracking
-                    //logBuilder.BinderMemoryReferenceLogLevel(LogLevel.Debug);
-                    //// DevServer and HotReload related
-                    //logBuilder.HotReloadCoreLogLevel(LogLevel.Information);
-                    //// Debug JS interop
-                    //logBuilder.WebAssemblyLogLevel(LogLevel.Debug);
-
                 }, enableUnoLogging: true)
                 .ConfigureServices((context, services) =>
                 {
-                    // TODO: Register your services
-                    //services.AddSingleton<IMyService, MyService>();
+                    services.AddSingleton(TimeProvider.System);
+                    services.AddSingleton<ITelemetryService, SimulatedTelemetry>();
                 })
                 .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
             );
         MainWindow = builder.Window;
+        MainWindow.Title = "PAC Control Console";
 
-        #if DEBUG
-        MainWindow.UseStudio();
+#if DEBUG
+        // Hot Design needs a reachable DevServer; without one it can block a headless run.
+        // APP_NO_HOTDESIGN=1 opts a verification run out.
+        if (Environment.GetEnvironmentVariable("APP_NO_HOTDESIGN") != "1")
+        {
+            MainWindow.UseStudio();
+        }
 #endif
-                MainWindow.SetWindowIcon();
+        MainWindow.SetWindowIcon();
 
-        Host = await MainWindow.InitializeNavigationAsync(
-            () => Task.FromResult(builder.Build()),
-            initialRoute: "Main"
+        // The console is designed at 1440×900.
+        MainWindow.AppWindow.Resize(new Windows.Graphics.SizeInt32 { Width = 1440, Height = 900 });
+
+        Host = builder.Build();
+        await MainWindow.InitializeNavigationAsync(
+            () => Task.FromResult(Host),
+            initialRoute: "Console"
         );
     }
 
     private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
     {
         views.Register(
-            new ViewMap<MainPage, MainModel>()
+            new ViewMap<ConsolePage, ConsoleModel>()
         );
 
         routes.Register(
-            new RouteMap("Main", View: views.FindByViewModel<MainModel>(), IsDefault:true)
+            new RouteMap("Console", View: views.FindByViewModel<ConsoleModel>(), IsDefault: true)
         );
+    }
+
+    /// <summary>Chart labels use the same IBM Plex Mono the XAML uses.</summary>
+    private static void LoadChartTypeface()
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "IBMPlexMono-Regular.ttf");
+            if (File.Exists(path))
+            {
+                ConsoleChartTheme.MonoTypeface = SKTypeface.FromFile(path);
+            }
+        }
+        catch (IOException)
+        {
+            // Fall back to LiveCharts2's default typeface.
+        }
     }
 }

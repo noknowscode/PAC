@@ -1,0 +1,453 @@
+<Page x:Class="PacConsole.Presentation.ConsolePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mvux="using:Uno.Extensions.Reactive.UI"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:PacConsole.Controls"
+      xmlns:charts="using:PacConsole.Controls.Charts"
+      xmlns:rendering="using:PacConsole.Rendering"
+      xmlns:conv="using:PacConsole.Presentation.Converters"
+      NavigationCacheMode="Required"
+      Background="{StaticResource GroundBrush}">
+
+  <Page.Resources>
+    <conv:ToneConverter x:Key="Tone" />
+    <conv:BoolToVisibilityConverter x:Key="Visible" />
+
+    <!-- Slider lightweight styling: accent value track and thumb on a faint cyan track. -->
+    <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderThumbBackground" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderTrackFill" ResourceKey="CyanFillBrush" />
+    <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="CyanFillBrush" />
+    <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="CyanFillBrush" />
+
+    <Style x:Key="CardHeader" TargetType="TextBlock" BasedOn="{StaticResource TypeMicro}">
+      <Setter Property="CharacterSpacing" Value="160" />
+    </Style>
+  </Page.Resources>
+
+  <Grid>
+    <!-- Faint 32 px cyan grid behind everything (static asset, 2560×1440). -->
+    <Image Source="ms-appx:///Assets/Backdrop/grid.png"
+           Stretch="None"
+           HorizontalAlignment="Left"
+           VerticalAlignment="Top"
+           IsHitTestVisible="False" />
+
+    <mvux:FeedView Source="{Binding View}" Margin="20">
+
+      <!-- Before the first snapshot: the frame at its final size, so nothing jumps. -->
+      <mvux:FeedView.ProgressTemplate>
+        <DataTemplate>
+          <Border BorderBrush="{StaticResource BorderBrushStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusPanel}" Background="{StaticResource PanelBrush}">
+            <TextBlock Text="CONNECTING TO PLANT 02 …" Style="{StaticResource TypeSection}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </DataTemplate>
+      </mvux:FeedView.ProgressTemplate>
+
+      <!-- Stream fault: say so plainly and offer a retry that re-runs the feed. -->
+      <mvux:FeedView.ErrorTemplate>
+        <DataTemplate>
+          <Border BorderBrush="{StaticResource AlertBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPanel}" Background="{StaticResource PanelBrush}">
+            <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="LINK LOST" Style="{StaticResource TypeTitle}" Foreground="{StaticResource AlertTextBrush}" HorizontalAlignment="Center" />
+              <TextBlock Text="Telemetry stopped. The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
+              <Button Content="RETRY" Command="{Binding Refresh}" Style="{StaticResource ToolbarButton}" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </mvux:FeedView.ErrorTemplate>
+
+      <DataTemplate>
+        <!-- The glass panel: flat, per Uno Simple; a strong cyan hairline carries the edge. -->
+        <Border Background="{StaticResource PanelBrush}"
+                  BorderBrush="{StaticResource BorderBrushStrong}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource RadiusPanel}"
+                  Padding="20">
+            <Grid RowDefinitions="48,*" RowSpacing="16">
+
+              <!-- ============ HEADER ============ -->
+              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="16">
+                <Border Width="40" Height="40" CornerRadius="8" BorderThickness="1"
+                        BorderBrush="{StaticResource BorderBrushStrong}" Background="{StaticResource CyanTintBrush}">
+                  <Path Data="M12 3a9 9 0 1 0 0.01 0zM12 8a4 4 0 1 0 0.01 0zM12 3v3M12 18v3M3 12h3M18 12h3"
+                        Style="{StaticResource PathIconStyle}" Width="22" Height="22" Stroke="{StaticResource CyanBrush}" StrokeThickness="1.5" />
+                </Border>
+                <TextBlock Grid.Column="1" Text="CENTRAL CONTROL UNIT (PAC)" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
+                <Border Grid.Column="2" Width="1" Height="24" Background="{StaticResource BorderBrushDefault}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                  <TextBlock Text="PLANT 02 · THERMAL /" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
+                  <TextBlock x:Name="Breadcrumb" Text="OVERVIEW" Style="{StaticResource TypeBody}" />
+                </StackPanel>
+
+                <Button Grid.Column="5"
+                        Command="{Binding Parent.SelectFirstAlert}"
+                        Style="{StaticResource ConsoleButton}"
+                        Height="36" CornerRadius="18" Padding="14,0"
+                        Background="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTintBrush|False=CyanTintBrush}"
+                        BorderBrush="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertBorderBrush|False=BorderBrushDefault}"
+                        Foreground="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}"
+                        AutomationProperties.Name="{Binding Data.AlertText}"
+                        ToolTipService.ToolTip="Select the first alerting unit">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="7" Height="7" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
+                             Fill="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}" />
+                    <TextBlock Text="{Binding Data.AlertText}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+
+                <StackPanel Grid.Column="6" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="2">
+                  <TextBlock Text="{Binding Data.Clock}" Style="{StaticResource TypeValue}" HorizontalAlignment="Right" />
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="0">
+                    <TextBlock Text="{Binding Data.DataText}" Style="{StaticResource TypeMicro}"
+                               Foreground="{Binding Data.DataTone, Converter={StaticResource Tone}, ConverterParameter=stale=AlertTextBrush|held=AccentBrush|live=MutedBrush}" />
+                    <TextBlock Text=" · OPERATOR 04" Style="{StaticResource TypeMicro}" />
+                  </StackPanel>
+                </StackPanel>
+              </Grid>
+
+              <!-- ============ BODY ============ -->
+              <Grid Grid.Row="1" ColumnDefinitions="56,*,500" ColumnSpacing="16">
+
+                <!-- Rail: 7 peer sections. Only Overview is built in v1. -->
+                <StackPanel Spacing="8" AutomationProperties.Name="Console sections">
+                  <RadioButton x:Name="RailOverview" Tag="OVERVIEW" IsChecked="True" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Overview" ToolTipService.ToolTip="Overview">
+                    <Path Data="M5 19V11M10 19V5M15 19v-6M20 19V8M3 21h18" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailOverview, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                  <RadioButton x:Name="RailArchive" Tag="ARCHIVE" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Archive" ToolTipService.ToolTip="Archive">
+                    <Path Data="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailArchive, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                  <RadioButton x:Name="RailReports" Tag="REPORTS" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Reports" ToolTipService.ToolTip="Reports">
+                    <Path Data="M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h7" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailReports, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                  <RadioButton x:Name="RailSettings" Tag="SETTINGS" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Settings" ToolTipService.ToolTip="Settings">
+                    <Path Data="M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailSettings, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                  <RadioButton x:Name="RailMaintenance" Tag="MAINTENANCE" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Maintenance" ToolTipService.ToolTip="Maintenance">
+                    <Path Data="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailMaintenance, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                  <RadioButton x:Name="RailSearch" Tag="SEARCH" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Search" ToolTipService.ToolTip="Search">
+                    <Path Data="M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14zM16 16l5 5" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailSearch, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                  <RadioButton x:Name="RailHistorian" Tag="HISTORIAN" Style="{StaticResource RailRadioButton}" Checked="OnSectionChecked"
+                               AutomationProperties.Name="Historian" ToolTipService.ToolTip="Historian">
+                    <Path Data="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" Style="{StaticResource PathIconStyle}" Width="22" Height="22"
+                          Stroke="{Binding IsChecked, ElementName=RailHistorian, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=CyanBrush}" />
+                  </RadioButton>
+                </StackPanel>
+
+                <!-- Placeholder for the six unbuilt sections -->
+                <Border x:Name="PlaceholderPanel" Grid.Column="1" Grid.ColumnSpan="2" Visibility="Collapsed"
+                        Style="{StaticResource CardStyle}">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="PlaceholderTitle" Text="ARCHIVE" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" />
+                    <TextBlock Text="NOT IN THIS BUILD" Style="{StaticResource TypeMicro}" HorizontalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+
+                <!-- ============ OVERVIEW: main column ============ -->
+                <Grid x:Name="OverviewMain" Grid.Column="1" RowDefinitions="*,200" RowSpacing="16">
+
+                  <Grid>
+                    <controls:PlantViewport x:Name="Viewport"
+                                            SelectedUnit="{Binding Data.Selected}"
+                                            AlertingUnits="{Binding Data.AlertingUnits}"
+                                            SelectCommand="{Binding Parent.SelectUnit}"
+                                            Loaded="OnViewportLoaded" />
+
+                    <!-- Selected unit readout -->
+                    <Border Width="236" Margin="16" Padding="12" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                            Background="{StaticResource OverlayBrush}" BorderBrush="{StaticResource BorderBrushDefault}" BorderThickness="1" CornerRadius="8">
+                      <StackPanel Spacing="6">
+                        <Grid>
+                          <TextBlock Text="SELECTED" Style="{StaticResource CardHeader}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Data.SelectedCode}" Style="{StaticResource TypeCode}" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,4">
+                          <TextBlock Text="{Binding Data.SelectedName}" Style="{StaticResource TypeBody}" />
+                        </Border>
+                        <Grid>
+                          <TextBlock Text="STATUS" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
+                          <TextBlock Text="{Binding Data.SelectedStatus}" Style="{StaticResource TypeBody}" HorizontalAlignment="Right"
+                                     Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}" />
+                        </Grid>
+                        <Grid>
+                          <TextBlock Text="UPTIME" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
+                          <TextBlock Text="{Binding Data.SelectedUptime}" Style="{StaticResource TypeBody}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <Grid>
+                          <TextBlock Text="LAST SERVICE" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
+                          <TextBlock Text="{Binding Data.SelectedService}" Style="{StaticResource TypeBody}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <Grid>
+                          <TextBlock Text="CONTROL MODE" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
+                          <TextBlock Text="{Binding Data.ModeText}" Style="{StaticResource TypeBody}" HorizontalAlignment="Right" />
+                        </Grid>
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+
+                  <!-- Bottom row: control panel + camera presets -->
+                  <Grid Grid.Row="1" ColumnDefinitions="316,*,*,*" ColumnSpacing="12">
+                    <Border Padding="12" CornerRadius="{StaticResource RadiusCard}" BorderThickness="1"
+                            BorderBrush="{StaticResource AccentBorderBrush}" Background="{StaticResource AccentTintBrush}"
+                            AutomationProperties.Name="Unit control">
+                      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                        <Grid>
+                          <TextBlock Text="CONTROL" Style="{StaticResource TypeSection}" Foreground="{StaticResource AccentBrush}" />
+                          <TextBlock Text="UNIT SELECT" Style="{StaticResource CardHeader}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+                        <ItemsRepeater Grid.Row="1" ItemsSource="{Binding Data.Units}">
+                          <ItemsRepeater.Layout>
+                            <UniformGridLayout MaximumRowsOrColumns="3" MinItemWidth="60" MinItemHeight="48"
+                                               MinColumnSpacing="8" MinRowSpacing="8" ItemsStretch="Fill" />
+                          </ItemsRepeater.Layout>
+                          <ItemsRepeater.ItemTemplate>
+                            <DataTemplate>
+                              <Button Style="{StaticResource ConsoleButton}" Height="48" Padding="0" HorizontalAlignment="Stretch"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}"
+                                      CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}"
+                                      Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=AccentFillBrush|normal=CardBrush}"
+                                      BorderBrush="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=AccentBrush|alert=AlertBorderBrush|normal=BorderBrushDefault}">
+                                <StackPanel Spacing="2" HorizontalAlignment="Center">
+                                  <TextBlock Text="{Binding ShortCode}" Style="{StaticResource TypeCode}" HorizontalAlignment="Center"
+                                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=AccentBrush|normal=TextPrimaryBrush}" />
+                                  <TextBlock Text="{Binding Subtitle}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Center"
+                                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=alert=AlertTextBrush|selected=AccentBrush|normal=FaintBrush}" />
+                                </StackPanel>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,*,*" ColumnSpacing="6">
+                          <TextBlock Text="MODE" Style="{StaticResource CardHeader}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                          <RadioButton Grid.Column="1" Content="AUTO" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsAuto, Mode=OneWay}" Command="{Binding Parent.SetAuto}" />
+                          <RadioButton Grid.Column="2" Content="MAN" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsManual, Mode=OneWay}" Command="{Binding Parent.SetManual}" />
+                          <RadioButton Grid.Column="3" Content="HOLD" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsHold, Mode=OneWay}" Command="{Binding Parent.SetHold}" />
+                        </Grid>
+                      </Grid>
+                    </Border>
+
+                    <Button x:Name="PresetIso" Grid.Column="1" Tag="iso" Click="OnPresetClick" Style="{StaticResource ConsoleButton}"
+                            Padding="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            CornerRadius="{StaticResource RadiusCard}" AutomationProperties.Name="Camera preset ISO">
+                      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                        <TextBlock Text="ISO · NE" Style="{StaticResource CardHeader}" />
+                        <rendering:WireframeThumb Grid.Row="1" PresetKey="iso" Selected="{Binding Data.Selected}" />
+                        <TextBlock Grid.Row="2" Text="YAW 35° / EL 28°" Style="{StaticResource TypeMicro}" Foreground="{StaticResource FaintBrush}" />
+                      </Grid>
+                    </Button>
+                    <Button x:Name="PresetElevation" Grid.Column="2" Tag="elevation" Click="OnPresetClick" Style="{StaticResource ConsoleButton}"
+                            Padding="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            CornerRadius="{StaticResource RadiusCard}" AutomationProperties.Name="Camera preset elevation">
+                      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                        <TextBlock Text="ELEVATION · S" Style="{StaticResource CardHeader}" />
+                        <rendering:WireframeThumb Grid.Row="1" PresetKey="elevation" Selected="{Binding Data.Selected}" />
+                        <TextBlock Grid.Row="2" Text="YAW 0° / EL 6°" Style="{StaticResource TypeMicro}" Foreground="{StaticResource FaintBrush}" />
+                      </Grid>
+                    </Button>
+                    <Button x:Name="PresetPlan" Grid.Column="3" Tag="plan" Click="OnPresetClick" Style="{StaticResource ConsoleButton}"
+                            Padding="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            CornerRadius="{StaticResource RadiusCard}" AutomationProperties.Name="Camera preset plan">
+                      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                        <TextBlock Text="PLAN" Style="{StaticResource CardHeader}" />
+                        <rendering:WireframeThumb Grid.Row="1" PresetKey="plan" Selected="{Binding Data.Selected}" />
+                        <TextBlock Grid.Row="2" Text="YAW 0° / EL 86°" Style="{StaticResource TypeMicro}" Foreground="{StaticResource FaintBrush}" />
+                      </Grid>
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                <!-- ============ OVERVIEW: telemetry column ============ -->
+                <Grid x:Name="OverviewAside" Grid.Column="2" ColumnDefinitions="*,*,*" RowDefinitions="190,170,180,*"
+                      ColumnSpacing="12" RowSpacing="12" AutomationProperties.Name="Telemetry">
+
+                  <!-- Net output -->
+                  <Border Grid.ColumnSpan="2" Style="{StaticResource CardStyle}">
+                    <Grid RowDefinitions="42,*" RowSpacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                        <Ellipse Width="6" Height="6" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
+                                 Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=MutedBrush}" />
+                        <TextBlock Style="{StaticResource CardHeader}">
+                          <Run Text="NET OUTPUT · " /><Run Text="{Binding Data.LiveText}" />
+                        </TextBlock>
+                      </StackPanel>
+                      <StackPanel HorizontalAlignment="Right" Spacing="2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                          <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeTitle}" Foreground="{StaticResource AccentBrush}" />
+                          <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Data.OutputDelta}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right" />
+                      </StackPanel>
+                      <charts:OutputChart Grid.Row="1" Values="{Binding Data.OutputSeries}" Target="{Binding Data.TargetMw}" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Unit preview -->
+                  <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="4">
+                      <TextBlock Text="UNIT PREVIEW" Style="{StaticResource CardHeader}" />
+                      <rendering:WireframeThumb Grid.Row="1" SingleUnit="True" Selected="{Binding Data.Selected}" Pose="{Binding Pose, ElementName=Viewport}" />
+                      <TextBlock Grid.Row="2" Text="{Binding Data.SelectedCode}" Style="{StaticResource TypeCode}" Foreground="{StaticResource AccentBrush}" />
+                      <TextBlock Grid.Row="3" Text="{Binding Data.SelectedName}" Style="{StaticResource TypeMicro}" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Telemetry tiles -->
+                  <Border Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource CardStyle}">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                      <Grid>
+                        <TextBlock Style="{StaticResource CardHeader}"><Run Text="TELEMETRY · " /><Run Text="{Binding Data.SelectedCode}" /></TextBlock>
+                        <TextBlock Text="{Binding Data.SelectedStatusLine}" Style="{StaticResource CardHeader}" HorizontalAlignment="Right"
+                                   Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}" />
+                      </Grid>
+                      <ItemsRepeater Grid.Row="1" ItemsSource="{Binding Data.Tiles}">
+                        <ItemsRepeater.Layout>
+                          <UniformGridLayout MaximumRowsOrColumns="3" MinItemWidth="60" MinItemHeight="56"
+                                             MinColumnSpacing="6" MinRowSpacing="6" ItemsStretch="Fill" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                          <DataTemplate>
+                            <Border Padding="8,6" CornerRadius="6" BorderThickness="1" Background="{StaticResource CyanTintBrush}"
+                                    BorderBrush="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=high=AlertBorderBrush|normal=HairlineBrush}">
+                              <Grid RowDefinitions="Auto,*">
+                                <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" />
+                                <TextBlock Text="{Binding Status}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right"
+                                           Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=high=AlertTextBrush|normal=FaintBrush}" />
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Bottom">
+                                  <TextBlock Text="{Binding Value}" Style="{StaticResource TypeValue}"
+                                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=high=AlertTextBrush|held=MutedBrush|normal=TextPrimaryBrush}" />
+                                  <TextBlock Text="{Binding Unit}" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+                                </StackPanel>
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                      </ItemsRepeater>
+                    </Grid>
+                  </Border>
+
+                  <!-- Valves -->
+                  <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                      <TextBlock Text="VALVES" Style="{StaticResource CardHeader}" />
+                      <TextBlock Text="{Binding Data.OpenValvesText}" Style="{StaticResource CardHeader}" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right" />
+                      <ItemsRepeater Grid.Row="1" ItemsSource="{Binding Data.Valves}">
+                        <ItemsRepeater.Layout>
+                          <UniformGridLayout MaximumRowsOrColumns="3" MinItemWidth="30" MinItemHeight="36"
+                                             MinColumnSpacing="6" MinRowSpacing="6" ItemsStretch="Fill" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                          <DataTemplate>
+                            <ToggleButton Style="{StaticResource ValveToggleButton}"
+                                          IsChecked="{Binding Open, Mode=OneWay}"
+                                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}"
+                                          CommandParameter="{Binding Id}"
+                                          AutomationProperties.Name="{Binding AutomationName}">
+                              <StackPanel Spacing="1" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding Number}" FontSize="11" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding State}" FontSize="10" HorizontalAlignment="Center" Opacity="0.8" />
+                              </StackPanel>
+                            </ToggleButton>
+                          </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                      </ItemsRepeater>
+                    </Grid>
+                  </Border>
+
+                  <!-- Hourly generation -->
+                  <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource CardStyle}">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                      <TextBlock Text="HOURLY GENERATION · MWh" Style="{StaticResource CardHeader}" />
+                      <TextBlock Style="{StaticResource CardHeader}" HorizontalAlignment="Right">
+                        <Run Text="PEAK " /><Run Text="{Binding Data.HourlyPeak}" Foreground="{StaticResource TextPrimaryBrush}" />
+                      </TextBlock>
+                      <charts:HourlyChart Grid.Row="1" Values="{Binding Data.HourlySeries}" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Vibration -->
+                  <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource CardStyle}"
+                          BorderBrush="{Binding Data.VibrationIsHigh, Converter={StaticResource Tone}, ConverterParameter=True=AlertBorderBrush|False=HairlineBrush}">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="4">
+                      <TextBlock Text="VIBRATION" Style="{StaticResource CardHeader}" />
+                      <TextBlock Text="{Binding Data.VibrationStatus}" Style="{StaticResource CardHeader}" HorizontalAlignment="Right"
+                                 Foreground="{Binding Data.VibrationIsHigh, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}" />
+                      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding Data.VibrationNow}" Style="{StaticResource TypeHero}"
+                                   Foreground="{Binding Data.VibrationIsHigh, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}" />
+                        <TextBlock Text="mm/s" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                      </StackPanel>
+                      <charts:VibrationChart Grid.Row="2" Values="{Binding Data.VibrationSeries}" IsHigh="{Binding Data.VibrationIsHigh}" />
+                      <Grid Grid.Row="3">
+                        <TextBlock Text="LIMIT 4.5" Style="{StaticResource TypeMicro}" />
+                        <TextBlock Text="{Binding Data.VibrationZone}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right"
+                                   Foreground="{Binding Data.VibrationIsHigh, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=CyanBrush}" />
+                      </Grid>
+                    </Grid>
+                  </Border>
+
+                  <!-- Setpoints -->
+                  <Border Grid.Row="3" Grid.ColumnSpan="3" Style="{StaticResource CardStyle}" Padding="14,12">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                      <TextBlock Text="SETPOINTS" Style="{StaticResource CardHeader}" />
+                      <TextBlock Style="{StaticResource CardHeader}" HorizontalAlignment="Right">
+                        <Run Text="MODE " /><Run Text="{Binding Data.ModeText}" Foreground="{StaticResource TextPrimaryBrush}" />
+                      </TextBlock>
+                      <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="20">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="OUTPUT TARGET" Style="{StaticResource TypeMicro}" />
+                          <TextBlock Style="{StaticResource TypeTitle}" CharacterSpacing="0">
+                            <Run Text="{Binding Parent.TargetMw}" /><Run Text=" MW" FontSize="10" Foreground="{StaticResource MutedBrush}" />
+                          </TextBlock>
+                          <Slider Minimum="400" Maximum="700" StepFrequency="5" SmallChange="5" LargeChange="50"
+                                  Value="{Binding Parent.TargetMw, Mode=TwoWay}" AutomationProperties.Name="Output target, megawatts" />
+                          <TextBlock Text="Dashed on output chart" Style="{StaticResource TypeMicro}" CharacterSpacing="0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                          <TextBlock Text="TRB INLET LIMIT" Style="{StaticResource TypeMicro}" />
+                          <TextBlock Style="{StaticResource TypeTitle}" CharacterSpacing="0">
+                            <Run Text="{Binding Parent.TurbineLimitBar}" /><Run Text=" bar" FontSize="10" Foreground="{StaticResource MutedBrush}" />
+                          </TextBlock>
+                          <Slider Minimum="140" Maximum="180" StepFrequency="1" SmallChange="1" LargeChange="10"
+                                  Value="{Binding Parent.TurbineLimitBar, Mode=TwoWay}" AutomationProperties.Name="Turbine inlet pressure limit, bar" />
+                          <TextBlock Text="TRB-04 alarms above" Style="{StaticResource TypeMicro}" CharacterSpacing="0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                          <TextBlock Text="STACK DAMPER" Style="{StaticResource TypeMicro}" />
+                          <TextBlock Style="{StaticResource TypeTitle}" CharacterSpacing="0">
+                            <Run Text="{Binding Parent.DamperPct}" /><Run Text=" %" FontSize="10" Foreground="{StaticResource MutedBrush}" />
+                          </TextBlock>
+                          <Slider Minimum="0" Maximum="100" StepFrequency="1" SmallChange="1" LargeChange="10"
+                                  Value="{Binding Parent.DamperPct, Mode=TwoWay}" AutomationProperties.Name="Stack damper, percent" />
+                          <TextBlock Text="Scales STK-01 flow" Style="{StaticResource TypeMicro}" CharacterSpacing="0" />
+                        </StackPanel>
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Border>
+      </DataTemplate>
+    </mvux:FeedView>
+  </Grid>
+</Page>
