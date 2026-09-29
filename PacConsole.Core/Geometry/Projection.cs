@@ -46,14 +46,14 @@ public static class CameraPresets
 /// Orthographic orbit projection. Screen X follows the yawed X axis; screen Y combines height
 /// (scaled by cos elevation) and depth (scaled by sin elevation), so the camera looks down at the plant.
 /// </summary>
-public readonly struct Projection
+public readonly struct OrbitProjection
 {
     /// <summary>The prototype's viewport, which the default scale and centre were tuned against.</summary>
     public const float ReferenceWidth = 772, ReferenceHeight = 540;
 
     private readonly float _cosYaw, _sinYaw, _cosElev, _sinElev;
 
-    public Projection(CameraPose pose, float scale, float centerX, float centerY)
+    public OrbitProjection(CameraPose pose, float scale, float centerX, float centerY)
     {
         _cosYaw = MathF.Cos(pose.Yaw);
         _sinYaw = MathF.Sin(pose.Yaw);
@@ -79,20 +79,20 @@ public readonly struct Projection
     /// The main viewport projection. Scale shrinks as the camera tilts toward plan view so the
     /// platform's depth still fits, exactly as in the prototype, then scales with the viewport.
     /// </summary>
-    public static Projection ForViewport(CameraPose pose, float width, float height)
+    public static OrbitProjection ForViewport(CameraPose pose, float width, float height)
     {
         var ce = MathF.Cos(pose.Elevation);
         var se = MathF.Sin(pose.Elevation);
         var k = MathF.Min(width / ReferenceWidth, height / ReferenceHeight);
         var scale = MathF.Min(2.3f, 205f / (126.5f * se + 20f * ce)) * k;
         var centerY = height / 2 + (300 + 40 * ce - ReferenceHeight / 2) * k;
-        return new Projection(pose, scale, width / 2, centerY);
+        return new OrbitProjection(pose, scale, width / 2, centerY);
     }
 
     /// <summary>Fits every segment inside a box, for whole-plant thumbnails.</summary>
-    public static Projection Fit(CameraPose pose, IEnumerable<Segment3> segments, float width, float height, float padding)
+    public static OrbitProjection Fit(CameraPose pose, IEnumerable<Segment3> segments, float width, float height, float padding)
     {
-        var unit = new Projection(pose, 1, 0, 0);
+        var unit = new OrbitProjection(pose, 1, 0, 0);
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
         foreach (var s in segments)
         {
@@ -103,17 +103,17 @@ public readonly struct Projection
             }
         }
         var scale = MathF.Min((width - 2 * padding) / (maxX - minX), (height - 2 * padding) / (maxY - minY));
-        return new Projection(pose, scale, width / 2 - scale * (minX + maxX) / 2, height / 2 - scale * (minY + maxY) / 2);
+        return new OrbitProjection(pose, scale, width / 2 - scale * (minX + maxX) / 2, height / 2 - scale * (minY + maxY) / 2);
     }
 
     /// <summary>
     /// Centres one unit using its bounding sphere, so the scale stays constant while the unit rotates
     /// (a bounding-box fit would breathe in and out every frame).
     /// </summary>
-    public static Projection AroundSphere(CameraPose pose, Vec3 center, float radius, float width, float height, float padding)
+    public static OrbitProjection AroundSphere(CameraPose pose, Vec3 center, float radius, float width, float height, float padding)
     {
         var scale = (MathF.Min(width, height) / 2 - padding) / radius;
-        var c = new Projection(pose, scale, 0, 0).Project(center);
-        return new Projection(pose, scale, width / 2 - c.X, height / 2 - c.Y);
+        var c = new OrbitProjection(pose, scale, 0, 0).Project(center);
+        return new OrbitProjection(pose, scale, width / 2 - c.X, height / 2 - c.Y);
     }
 }

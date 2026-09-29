@@ -24,13 +24,13 @@ public class TagLayoutTests
     [TestCaseSource(nameof(OrbitPoses))]
     public void Tags_never_collide_with_each_other_or_the_top_band(CameraPose pose)
     {
-        var placements = Place(pose, alerting: UnitId.Cnd, width: Projection.ReferenceWidth, height: Projection.ReferenceHeight);
+        var placements = Place(pose, alerting: UnitId.Cnd, width: OrbitProjection.ReferenceWidth, height: OrbitProjection.ReferenceHeight);
 
         foreach (var a in placements)
         {
             a.Top.Should().BeGreaterThanOrEqualTo(TagLayout.TopBand);
             a.Left.Should().BeGreaterThanOrEqualTo(0);
-            (a.Left + a.Width).Should().BeLessThanOrEqualTo(Projection.ReferenceWidth);
+            (a.Left + a.Width).Should().BeLessThanOrEqualTo(OrbitProjection.ReferenceWidth);
 
             foreach (var b in placements.Where(b => b.Unit != a.Unit))
             {
@@ -49,7 +49,7 @@ public class TagLayoutTests
 
     private static ImmutableArray<TagPlacement> Place(CameraPose pose, UnitId? alerting, float width, float height)
     {
-        var projection = Projection.ForViewport(pose, width, height);
+        var projection = OrbitProjection.ForViewport(pose, width, height);
         var requests = UnitCatalog.All.Select(u =>
         {
             var label = u.Id == alerting ? $"{u.Code} · ALERT" : u.Code;

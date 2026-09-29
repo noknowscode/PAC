@@ -33,13 +33,13 @@ public class GeometryTests
     [TestCase(2.5f, 0.8f)]
     public void Whole_plant_stays_inside_the_reference_viewport(float yaw, float elevation)
     {
-        var p = Projection.ForViewport(new CameraPose(yaw, elevation), Projection.ReferenceWidth, Projection.ReferenceHeight);
+        var p = OrbitProjection.ForViewport(new CameraPose(yaw, elevation), OrbitProjection.ReferenceWidth, OrbitProjection.ReferenceHeight);
         foreach (var s in Plant.AllSolid)
         {
             foreach (var pt in new[] { p.Project(s.A), p.Project(s.B) })
             {
-                pt.X.Should().BeInRange(0, Projection.ReferenceWidth);
-                pt.Y.Should().BeInRange(0, Projection.ReferenceHeight);
+                pt.X.Should().BeInRange(0, OrbitProjection.ReferenceWidth);
+                pt.Y.Should().BeInRange(0, OrbitProjection.ReferenceHeight);
             }
         }
     }
@@ -47,7 +47,7 @@ public class GeometryTests
     [Test]
     public void Plan_view_collapses_height()
     {
-        var p = new Projection(new CameraPose(0, MathF.PI / 2), 1, 0, 0);
+        var p = new OrbitProjection(new CameraPose(0, MathF.PI / 2), 1, 0, 0);
         var ground = p.Project(new Vec3(10, 0, 5));
         var roof = p.Project(new Vec3(10, 50, 5));
         roof.Y.Should().BeApproximately(ground.Y, 1e-3f);
@@ -65,7 +65,7 @@ public class GeometryTests
     {
         for (var yaw = 0f; yaw < MathF.Tau; yaw += 0.2f)
         {
-            var p = Projection.AroundSphere(new CameraPose(yaw, 0.45f), Plant.Centers[UnitId.Stk], Plant.Radii[UnitId.Stk], 135, 104, 6);
+            var p = OrbitProjection.AroundSphere(new CameraPose(yaw, 0.45f), Plant.Centers[UnitId.Stk], Plant.Radii[UnitId.Stk], 135, 104, 6);
             foreach (var s in Plant.Units[UnitId.Stk])
             {
                 var a = p.Project(s.A);

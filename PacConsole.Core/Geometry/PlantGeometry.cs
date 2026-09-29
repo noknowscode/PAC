@@ -10,6 +10,11 @@ public sealed class PlantGeometry
 {
     public const float PlatformHalfX = 104, PlatformHalfZ = 72;
 
+    private static readonly Lazy<PlantGeometry> _default = new(Build);
+
+    /// <summary>The one plant this app draws, built on first use and shared by every view.</summary>
+    public static PlantGeometry Default => _default.Value;
+
     private PlantGeometry(
         ImmutableDictionary<UnitId, ImmutableArray<Segment3>> units,
         ImmutableArray<Segment3> grid,
