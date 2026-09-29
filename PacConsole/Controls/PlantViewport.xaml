@@ -1,0 +1,67 @@
+<UserControl x:Class="PacConsole.Controls.PlantViewport"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:rendering="using:PacConsole.Rendering"
+             IsTabStop="True"
+             UseSystemFocusVisuals="True"
+             FocusVisualPrimaryBrush="{StaticResource AccentBrush}"
+             AutomationProperties.Name="Plant 3D model">
+
+  <Grid x:Name="Root"
+        Background="{StaticResource CardBrush}"
+        BorderBrush="{StaticResource HairlineBrush}"
+        BorderThickness="1"
+        CornerRadius="{StaticResource RadiusCard}">
+
+    <!-- Drag surface + wireframe. Tags sit in a Canvas above it so they stay real, focusable Buttons. -->
+    <Grid x:Name="Surface" Background="Transparent">
+      <rendering:WireframeCanvas x:Name="Wireframe" />
+      <Canvas x:Name="TagLayer" />
+    </Grid>
+
+    <!-- Caption -->
+    <StackPanel Margin="16,14,0,0"
+                Spacing="4"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                IsHitTestVisible="False">
+      <TextBlock Text="PLANT MODEL · WIREFRAME" Style="{StaticResource TypeSection}" />
+      <TextBlock x:Name="CaptionDetail" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
+    </StackPanel>
+
+    <!-- Toolbar -->
+    <StackPanel Margin="0,12,12,0"
+                Orientation="Horizontal"
+                Spacing="6"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top">
+      <Button x:Name="RotateLeft"
+              Style="{StaticResource IconButton}"
+              AutomationProperties.Name="Rotate left 45 degrees"
+              ToolTipService.ToolTip="Rotate left">
+        <Path Data="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5" Style="{StaticResource PathIconStyle}" Stroke="{StaticResource CyanBrush}" />
+      </Button>
+      <Button x:Name="RotateRight"
+              Style="{StaticResource IconButton}"
+              AutomationProperties.Name="Rotate right 45 degrees"
+              ToolTipService.ToolTip="Rotate right">
+        <Path Data="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" Style="{StaticResource PathIconStyle}" Stroke="{StaticResource CyanBrush}" />
+      </Button>
+      <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
+          <TextBlock x:Name="AutoOrbitLabel" Text="AUTO ORBIT ON" VerticalAlignment="Center" />
+        </StackPanel>
+      </ToggleButton>
+      <Button x:Name="Reset" Content="RESET" Style="{StaticResource ToolbarButton}" />
+    </StackPanel>
+
+    <TextBlock Text="DRAG TO ORBIT · CLICK A TAG TO SELECT"
+               Style="{StaticResource TypeMicro}"
+               Foreground="{StaticResource FaintBrush}"
+               Margin="0,0,16,16"
+               HorizontalAlignment="Right"
+               VerticalAlignment="Bottom"
+               IsHitTestVisible="False" />
+  </Grid>
+</UserControl>
