@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pure domain + math for the PAC console: records, plant geometry, camera projection,
+    tag layout, simulated telemetry and alert rules. No UI types, so every rule is unit-testable.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PacConsole.Core</RootNamespace>
+  </PropertyGroup>
+
+</Project>

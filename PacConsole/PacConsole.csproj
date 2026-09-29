@@ -1,0 +1,42 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <!-- v1 targets desktop only (Skia renderer on Windows, macOS, Linux). -->
+    <TargetFrameworks>net10.0-desktop</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+
+    <!-- Display name -->
+    <ApplicationTitle>PacConsole</ApplicationTitle>
+    <!-- App Identifier -->
+    <ApplicationId>com.unoplatform.pacconsole</ApplicationId>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <!-- Package Publisher -->
+    <ApplicationPublisher>PacConsole</ApplicationPublisher>
+    <!-- Package Description -->
+    <Description>PacConsole powered by Uno Platform.</Description>
+
+    <!--
+      UnoFeatures are used to quickly add and manage features enabled for your app.
+      https://aka.platform.uno/singleproject-features
+    -->
+    <UnoFeatures>
+      SimpleTheme;
+      Hosting;
+      Toolkit;
+      Logging;
+      MVUX;
+      Navigation;
+      SkiaRenderer;
+    </UnoFeatures>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PacConsole.Core\PacConsole.Core.csproj" />
+    <!-- Charts: net10.0-desktop build needs SkiaSharp.Views.Uno.WinUI >= 3.119.0; Uno.Sdk 6.7.30 bundles 3.119.2. -->
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Uno.WinUI" />
+  </ItemGroup>
+
+</Project>
