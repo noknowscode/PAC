@@ -68,6 +68,17 @@ public readonly struct OrbitProjection
     public float CenterX { get; }
     public float CenterY { get; }
 
+    public float SinYaw => _sinYaw;
+    public float CosYaw => _cosYaw;
+    public float SinElevation => _sinElev;
+    public float CosElevation => _cosElev;
+
+    /// <summary>Distance toward the viewer: larger is nearer.</summary>
+    public float Depth(Vec3 p) => (p.X * _sinYaw + p.Z * _cosYaw) * _cosElev + p.Y * _sinElev;
+
+    /// <summary>Screen offset of a rise of <paramref name="height"/> (negative: up the screen).</summary>
+    public float Rise(float height) => -height * _cosElev * Scale;
+
     public Vec2 Project(Vec3 p)
     {
         var xr = p.X * _cosYaw - p.Z * _sinYaw;
