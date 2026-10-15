@@ -63,7 +63,7 @@ Out of scope: new routes, new telemetry, theme switching (the app is dark-only, 
 | CND fan-cell mechanism (motor, gearbox, sensor, cable) in the preview | **substituted** | the preview shows the selected unit's own solids for every unit; the fan-cell drive train exists only in the reference figure |
 | Interactive fan speed (Fig 5) | **omitted** | the console has no fan-speed telemetry or control; showing a speed slider would impersonate a capability |
 | Light theme | **omitted** | app is dark-only |
-| Hover-to-lift (reference figure) | **substituted** | console selects by tag click and keyboard, as today; lift follows the bound selection |
+| Hover-to-lift (reference figure) | **substituted** | hover draws an outline; click on a unit (or its tag, or keyboard) selects; lift follows the bound selection |
 
 ## Design Brief
 
@@ -225,13 +225,17 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 - **Contrast of 2 % shade steps** on `CardBrush` (#131313-range): measure luminance in screenshots; widen to 3 % if tones merge.
 - **API verify (5 min each):** `SKCanvasElement.IsSupportedOnCurrentPlatform()` on desktop; `SKPath` reuse with `Rewind()` on 3.119.2.
 
+## Decisions (2026-10-15, delegated by the user)
+
+- **Unit preview: one design for all units.** Selected unit's solids plus the vibration gauge. The CND fan-cell drive train stays in the reference figure only; deferred, not planned. Reason: the gauge carries the alert meaning for every unit; the drive train is ~30 solids for one unit of six.
+- **Fan speed: omitted.** No fan-speed telemetry exists; a speed control would impersonate a capability (`capability-coverage.md`, step 3).
+- **Hover: outline, not selection.** Hovering a unit's solid draws a `MutedBrush` outline on it; clicking it executes `SelectCommand` (tags keep working). Lift follows selection. Reason: hover-to-select would rewrite the telemetry panels whenever the pointer crosses the plant. Adds to phase 4: a per-unit hit test against each unit's rest-pose screen hull (the figure's `HULLS` approach), frontmost by pad depth; drag past 4 px cancels the click as today.
+- **Accent: `AccentBrush` (orange).** Matches the tags' selected state; the figure's white is its own palette.
+- **Verification: rooted session.** Implementation runs in a session opened with `Open-RootedSession.ps1`, which seeds `.mcp.json`, resuming from `HANDOFF.md`.
+- **Release path: out of scope for this port.** Needs a remote the user creates; tracked in the backlog, not a blocker.
+
 ## Unresolved Questions
 
-- **Substituted:** the unit preview shows each unit's own solids plus the vibration gauge. The CND fan-cell drive train (motor, coupling, gearbox, sensor, cable) from the reference figure is not ported. Port it as a CND-only preview, or keep one preview for all units?
-- **Omitted:** interactive fan speed. The console has no fan-speed telemetry; the gauge follows real `Vib` only. Agree?
-- **Omitted:** light theme (app is dark-only).
-- **Substituted:** hover-to-lift becomes lift-on-selection (tag click / keyboard), matching the console today. Should hovering a unit's solid also select it (needs a per-unit screen hit test, which the figure already has)?
-- **Accent colour:** the figure's single lit accent is white; the spec uses the console's orange `AccentBrush`. Confirm.
-- **Rooted session:** the repo has no `.mcp.json`, so `uno-verify` with the App MCP cannot run from the current session. Phase 4 starts with `Open-RootedSession.ps1`.
+- **Omitted (accepted):** light theme (app is dark-only); interactive fan speed (see Decisions).
+- **Substituted (accepted):** fan-cell preview → generic unit preview; hover-to-lift → hover outline + click/lift on selection.
 - **Skills not loaded for this spec:** `uno-navigation` (no route changes), `xaml-art-direction` (direction fixed by the reference figure) and `xaml-design-polish` (motion constants copied from the figure). Load `xaml-design-polish` in phase 4 before finalising motion.
-- **Release path:** no git remote or CI yet (project hook).
