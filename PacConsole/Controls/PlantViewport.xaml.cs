@@ -27,7 +27,7 @@ public sealed partial class PlantViewport : UserControl
     // retargets (the figure's tau 0.28 s). Reduced motion snaps.
     private const double LiftTau = 0.28;
 
-    // Frames come from CompositionTarget.Rendering, in step with the display. A 16 ms
+    // While something moves, frames come from CompositionTarget.Rendering, in step with the display. A 16 ms
     // DispatcherTimer ticked on Windows' 15.6 ms timer grid, alternating 16 and 31 ms frames
     // (measured p90 31 ms), which read as judder. Time comes from a Stopwatch, not the wall clock.
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
@@ -61,6 +61,7 @@ public sealed partial class PlantViewport : UserControl
     public PlantViewport()
     {
         InitializeComponent();
+        _ambient = OnFrame;
 
         // Opens still: the full-detail drawing is cached while the camera holds, and fans and flow
         // keep moving. Orbiting is opt-in (the toggle) or a drag.
@@ -103,7 +104,7 @@ public sealed partial class PlantViewport : UserControl
 
         SizeChanged += (_, _) => Draw();
         Loaded += (_, _) => Refresh();
-        Unloaded += (_, _) => StopLoop();
+        Unloaded += (_, _) => { StopLoop(); AmbientClock.Unsubscribe(_ambient); };
     }
 
     /// <summary>The current camera pose, updated every frame (a <see cref="CameraPose"/>).</summary>
@@ -124,7 +125,7 @@ public sealed partial class PlantViewport : UserControl
     }
 
     public static readonly DependencyProperty SelectedUnitProperty =
-        DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, _) => ((PlantViewport)d).Refresh()));
+        DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => { if (!SameValue(e.OldValue, e.NewValue)) ((PlantViewport)d).Refresh(); }));
 
     /// <summary>Units in alert (an <see cref="ImmutableArray{UnitId}"/>), drawn coral and dashed.</summary>
     public object? AlertingUnits
@@ -134,7 +135,14 @@ public sealed partial class PlantViewport : UserControl
     }
 
     public static readonly DependencyProperty AlertingUnitsProperty =
-        DependencyProperty.Register(nameof(AlertingUnits), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, _) => ((PlantViewport)d).Draw()));
+        DependencyProperty.Register(nameof(AlertingUnits), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => { if (!SameValue(e.OldValue, e.NewValue)) ((PlantViewport)d).Draw(); }));
+
+    /// <summary>
+    /// The view is recomposed every second, so these properties receive a new boxed value (a new
+    /// alerting array) each time even when nothing changed. Redraw only for a real change.
+    /// </summary>
+    internal static bool SameValue(object? a, object? b) =>
+        Equals(a, b) || (a is ImmutableArray<UnitId> x && b is ImmutableArray<UnitId> y && x.SequenceEqual(y));
 
     /// <summary>Executed with a <see cref="UnitId"/> when a tag is clicked.</summary>
     public ICommand? SelectCommand
@@ -189,10 +197,22 @@ public sealed partial class PlantViewport : UserControl
         {
             foreach (var id in _lift.Keys.ToList()) _lift[id] = LiftTarget(id);
         }
-        // Fans and pipe flow keep the loop running while animations are on; with them off it runs
-        // only while the camera or a lift moves.
-        var needsLoop = IsOrbiting || _tweening || !LiftSettled || _animationsEnabled;
-        if (needsLoop) StartLoop(); else StopLoop();
+        // Display-rate frames only while the camera or a lift moves. Fans and pipe flow keep turning
+        // on the shared 20 fps ambient clock (the same tick as the status-dot pulse), not on a held
+        // Rendering subscription, which would force frames at display rate forever.
+        var moving = IsOrbiting || _tweening || !LiftSettled;
+        if (moving) StartLoop(); else StopLoop();
+        if (!moving && _animationsEnabled && IsLoaded)
+        {
+            if (!_ambientOn) _lastFrameSeconds = _clock.Elapsed.TotalSeconds;
+            _ambientOn = true;
+            AmbientClock.Subscribe(_ambient);
+        }
+        else
+        {
+            _ambientOn = false;
+            AmbientClock.Unsubscribe(_ambient);
+        }
 
         AutoOrbitLabel.Text = !_auto ? "Auto orbit" : _hover || _dragging ? "Orbit paused" : "Orbiting";
         Draw();
@@ -215,12 +235,16 @@ public sealed partial class PlantViewport : UserControl
 
     private void OnRendering(object? sender, object e) => OnFrame();
 
+    private readonly Action _ambient;
+    private bool _ambientOn;
+
     private void OnFrame()
     {
         var now = DateTimeOffset.Now;
         var nowSeconds = _clock.Elapsed.TotalSeconds;
-        // Capped so a hitch (GC, a telemetry refresh) never makes the camera or a lift jump.
-        var dt = (float)Math.Min(nowSeconds - _lastFrameSeconds, 0.05);
+        // Capped so a hitch (GC, a telemetry refresh) never makes the camera or a lift jump; the cap
+        // sits above the ambient clock's 50 ms so fans keep their speed on it.
+        var dt = (float)Math.Min(nowSeconds - _lastFrameSeconds, 0.1);
         _lastFrameSeconds = nowSeconds;
 
         _seconds += dt;

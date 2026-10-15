@@ -88,7 +88,14 @@ public sealed partial class SolidThumb : SKCanvasElement
     public static readonly DependencyProperty SingleUnitProperty =
         DependencyProperty.Register(nameof(SingleUnit), typeof(bool), typeof(SolidThumb), new PropertyMetadata(false, Redraw));
 
-    private static void Redraw(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((SolidThumb)d).Invalidate();
+    // Only a real change redraws: the view hands out a new alerting array every second.
+    private static void Redraw(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (!Controls.PlantViewport.SameValue(e.OldValue, e.NewValue)) ((SolidThumb)d).Invalidate();
+    }
+
+    private (CameraPose Pose, float W, float H) _fitKey;
+    private OrbitProjection? _fit;
 
     private void OnThemeChanged()
     {
@@ -119,6 +126,12 @@ public sealed partial class SolidThumb : SKCanvasElement
         }
 
         // Thumbnails skip line work: at this scale it turns to noise.
-        _renderer.Draw(canvas, plant.All, PlantSolids.Fit(pose, plant.All, w, h, 4), new SolidFrame(selected, alerting, Details: false));
+        // The fit walks every part's corners; it changes only with the pose or the size.
+        if (_fit is null || _fitKey != (pose, w, h))
+        {
+            _fit = PlantSolids.Fit(pose, plant.All, w, h, 4);
+            _fitKey = (pose, w, h);
+        }
+        _renderer.Draw(canvas, plant.All, _fit.Value, new SolidFrame(selected, alerting, Details: false));
     }
 }

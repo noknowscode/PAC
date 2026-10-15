@@ -3,7 +3,8 @@ namespace PacConsole.Controls;
 /// <summary>
 /// Opacity pulse (1 → 0.3 → 1, sine, 1.6 s) for the live dot and the alert chip dot.
 /// Job: says "data is live" / draws the eye to an alert. Off when the OS asks for less motion.
-/// One shared ~20 fps timer writes Opacity for every loaded dot and stops when none is loaded:
+/// The shared 20 fps <see cref="AmbientClock"/> writes Opacity for every loaded dot (in the same tick
+/// as the plant's fans and flow, so they share frames) and stops when none is loaded:
 /// a Forever storyboard pumps frames permanently on Skia desktop, and Timeline.AutoReverse is not
 /// implemented there (Uno0001), so the storyboard snapped from 0.3 straight back to 1.
 /// </summary>
@@ -14,7 +15,7 @@ public static class Pulse
 
     private static readonly List<UIElement> Dots = [];
     private static readonly DateTimeOffset Start = DateTimeOffset.Now;
-    private static DispatcherTimer? _timer;
+    private static readonly Action TickAction = Tick;
 
     public static bool GetIsEnabled(DependencyObject obj) => (bool)obj.GetValue(IsEnabledProperty);
 
@@ -36,19 +37,14 @@ public static class Pulse
     private static void Add(UIElement dot)
     {
         if (!Dots.Contains(dot)) Dots.Add(dot);
-        if (_timer is null)
-        {
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
-            _timer.Tick += (_, _) => Tick();
-        }
-        if (!_timer.IsEnabled) _timer.Start();
+        AmbientClock.Subscribe(TickAction);
     }
 
     private static void Remove(UIElement dot)
     {
         Dots.Remove(dot);
         dot.Opacity = 1;
-        if (Dots.Count == 0) _timer?.Stop();
+        if (Dots.Count == 0) AmbientClock.Unsubscribe(TickAction);
     }
 
     private static void Tick()
