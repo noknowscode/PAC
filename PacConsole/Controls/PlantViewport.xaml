@@ -26,19 +26,19 @@
           <!-- Circuit legend: the pipe tints, each with its name. -->
           <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
+              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
               <TextBlock Text="Steam" Style="{StaticResource TypeMicro}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitWaterBrush}" VerticalAlignment="Center" />
+              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitWaterBrush}" VerticalAlignment="Center" />
               <TextBlock Text="Feedwater" Style="{StaticResource TypeMicro}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
+              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
               <TextBlock Text="Cooling water" Style="{StaticResource TypeMicro}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
+              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
               <TextBlock Text="Fuel" Style="{StaticResource TypeMicro}" />
             </StackPanel>
           </StackPanel>

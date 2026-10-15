@@ -14,6 +14,17 @@ public sealed record MetricTileView(string Label, string Value, string Unit, str
 {
     /// <summary>"high", "held" or "normal".</summary>
     public string Tone => IsHigh ? "high" : IsHeld ? "held" : "normal";
+
+    /// <summary>The reading this tile shows; selecting the tile plots it.</summary>
+    public Metric Metric { get; init; }
+
+    /// <summary>True for the reading currently plotted.</summary>
+    public bool IsFocused { get; init; }
+
+    /// <summary>"focused" or "normal": the tile's surface.</summary>
+    public string Surface => IsFocused ? "focused" : "normal";
+
+    public string AutomationName => $"{Label} {Value} {Unit}{(IsHigh ? ", high" : "")}{(IsFocused ? ", plotted" : "")}";
 }
 
 public sealed record ValveView(int Id, string Number, bool Open, string State, string AutomationName);
@@ -61,6 +72,36 @@ public sealed record ConsoleView
     // Telemetry
     public ImmutableArray<MetricTileView> Tiles { get; init; } = [];
 
+    // Each reading and unit by position, for buttons that stay put: MVUX updates these nested records
+    // in place, where a repeater over a new array each second rebinds (and recycles) its buttons, and
+    // a press could land on a button just rebound to another item.
+    public MetricTileView? TempTile => TileAt(0);
+    public MetricTileView? PressTile => TileAt(1);
+    public MetricTileView? FlowTile => TileAt(2);
+    public MetricTileView? LoadTile => TileAt(3);
+    public MetricTileView? EffTile => TileAt(4);
+    public MetricTileView? VibTile => TileAt(5);
+    public UnitTileView? StkTile => UnitAt(0);
+    public UnitTileView? TkaTile => UnitAt(1);
+    public UnitTileView? GenTile => UnitAt(2);
+    public UnitTileView? TrbTile => UnitAt(3);
+    public UnitTileView? CndTile => UnitAt(4);
+    public UnitTileView? SilTile => UnitAt(5);
+
+    public ValveView? Valve1 => ValveAt(0);
+    public ValveView? Valve2 => ValveAt(1);
+    public ValveView? Valve3 => ValveAt(2);
+    public ValveView? Valve4 => ValveAt(3);
+    public ValveView? Valve5 => ValveAt(4);
+    public ValveView? Valve6 => ValveAt(5);
+    public ValveView? Valve7 => ValveAt(6);
+    public ValveView? Valve8 => ValveAt(7);
+    public ValveView? Valve9 => ValveAt(8);
+
+    private ValveView? ValveAt(int i) => i < Valves.Length ? Valves[i] : null;
+    private MetricTileView? TileAt(int i) => i < Tiles.Length ? Tiles[i] : null;
+    private UnitTileView? UnitAt(int i) => i < Units.Length ? Units[i] : null;
+
     public ImmutableArray<double> OutputSeries { get; init; } = [];
     public string OutputNow { get; init; } = "";
     public string OutputDelta { get; init; } = "";
@@ -69,6 +110,12 @@ public sealed record ConsoleView
 
     public ImmutableArray<double> HourlySeries { get; init; } = [];
     public string HourlyPeak { get; init; } = "";
+
+    /// <summary>The hourly plot's header text when nothing is hovered.</summary>
+    public string HourlyText => $"peak {HourlyPeak} MWh";
+
+    /// <summary>The focused reading of the selected unit, drawn in the presentation that suits it.</summary>
+    public MetricPlot? Plot { get; init; }
 
     public ImmutableArray<double> VibrationSeries { get; init; } = [];
     public string VibrationNow { get; init; } = "";
@@ -88,7 +135,8 @@ public sealed record ConsoleView
         ImmutableArray<Valve> valves,
         ControlMode mode,
         UnitId? requestedUnit,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        Metric focus = Metric.Vib)
     {
         var readings = Simulation.Readings(snapshot.Tick, setpoints.DamperPct);
         var alerts = AlertRules.Evaluate(readings, setpoints);
@@ -156,12 +204,13 @@ public sealed record ConsoleView
                     UnitOf(m),
                     high ? "high" : "",
                     high,
-                    held && !high);
+                    held && !high) { Metric = m, IsFocused = m == focus };
             })],
+            Plot = MetricPlot.Compose(selected, focus, snapshot.Tick, setpoints, alerts.Any(a => a.Unit == selected && a.Metric == focus)),
 
             OutputSeries = output,
             OutputNow = Math.Round(outputNow).ToString("0", Inv),
-            OutputDelta = $"Δ {(delta > 0 ? "+" : delta < 0 ? "−" : "±")}{Math.Abs(delta)} vs target {setpoints.TargetMw.ToString("0", Inv)}",
+            OutputDelta = $"{(delta > 0 ? "+" : delta < 0 ? "−" : "±")}{Math.Abs(delta)} MW vs target {setpoints.TargetMw.ToString("0", Inv)} MW",
             TargetMw = setpoints.TargetMw,
             LiveText = held ? "Held" : "Live",
 
@@ -180,7 +229,7 @@ public sealed record ConsoleView
                 v.Open,
                 v.Open ? "open" : "shut",
                 $"Valve {v.Code} {(v.Open ? "open" : "shut")}"))],
-            OpenValvesText = $"{openValves}/{valves.Length}",
+            OpenValvesText = $"{openValves} of {valves.Length} open",
         };
     }
 

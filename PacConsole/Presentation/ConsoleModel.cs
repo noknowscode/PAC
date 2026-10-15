@@ -41,14 +41,20 @@ public partial record ConsoleModel
     /// </summary>
     public IState<UnitSelection> Selection => State.Value(this, () => new UnitSelection(null));
 
+    /// <summary>The reading plotted for the selected unit. A value-type state, so it always has a value and never stalls the combine.</summary>
+    public IState<Metric> Focus => State.Value(this, () => Metric.Vib);
+
     public IFeed<Setpoints> CurrentSetpoints => Feed.Combine(TargetMw, TurbineLimitBar, DamperPct)
         .Select(t => new Setpoints(t.Item1, t.Item2, t.Item3));
 
-    public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Valves, Mode, Selection, Clock)
-        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, t.Item6));
+    public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Valves, Mode, Selection, Clock, Focus)
+        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, t.Item6, t.Item7));
 
     public async ValueTask SelectUnit(UnitId unit, CancellationToken ct) =>
         await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
+
+    public async ValueTask SelectMetric(Metric metric, CancellationToken ct) =>
+        await Focus.SetAsync(metric, ct);
 
     public async ValueTask SelectFirstAlert(CancellationToken ct)
     {

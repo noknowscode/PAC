@@ -89,7 +89,7 @@ public partial class App : Application
             var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "IBMPlexSans-Regular.ttf");
             if (File.Exists(path))
             {
-                ConsoleChartTheme.LabelTypeface = SKTypeface.FromFile(path);
+                ConsoleChartTheme.LabelFontPath = path;
             }
         }
         catch (IOException)

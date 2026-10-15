@@ -38,7 +38,38 @@ public static class ConsoleChartTheme
 
     public const float LabelSize = 11;
 
-    public static SolidColorPaint AxisLabels() => new(Faint) { SKTypeface = LabelTypeface };
+    /// <summary>
+    /// One draw margin for every plot: room for value labels on the left and time labels below, so
+    /// stacked plots share their left and right edges.
+    /// </summary>
+    public static LiveChartsCore.Measure.Margin FrameMargin => new(36, 6, 16, 18);
+
+    /// <summary>
+    /// A time axis over <paramref name="count"/> samples, labelled every <paramref name="every"/>
+    /// samples back from the newest ("−24 s", "now"). Columns sit on whole indices, so their axis
+    /// spans half a step either side.
+    /// </summary>
+    public static Axis TimeAxis(int count, int every, string unit, bool columns = false) => new()
+    {
+        MinLimit = columns ? -0.5 : 0,
+        MaxLimit = columns ? count - 0.5 : count - 1,
+        MinStep = 1,
+        ForceStepToMin = true,
+        TextSize = LabelSize,
+        LabelsPaint = AxisLabels(),
+        SeparatorsPaint = null,
+        Labeler = v =>
+        {
+            var i = (int)Math.Round(v);
+            var ago = count - 1 - i;
+            if (Math.Abs(v - i) > 0.01 || ago < 0 || ago % every != 0) return "";
+            return ago == 0 ? "now" : $"−{ago} {unit}";
+        },
+    };
+
+    // Each label paint gets its own typeface: LiveCharts disposes a paint's typeface with the paint,
+    // and one shared instance let a single chart's disposal blank every chart on the page.
+    public static SolidColorPaint AxisLabels() => new(Faint) { SKTypeface = LabelFontPath is { } path ? SKTypeface.FromFile(path) : null };
 
     public static SolidColorPaint GridLines() => new(Grid) { StrokeThickness = 1 };
 
@@ -82,5 +113,5 @@ public static class ConsoleChartTheme
     }
 
     /// <summary>IBM Plex Sans from the app's own assets, so chart labels match the XAML type.</summary>
-    public static SKTypeface? LabelTypeface { get; set; }
+    public static string? LabelFontPath { get; set; }
 }

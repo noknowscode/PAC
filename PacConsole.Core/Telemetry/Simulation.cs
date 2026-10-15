@@ -61,6 +61,11 @@ public static class Simulation
     public static ImmutableArray<double> VibrationHistory(UnitId id, long tick) =>
         [.. Enumerable.Range(0, VibrationHistoryLength).Select(k => Vibration(id, tick - (VibrationHistoryLength - 1) + k))];
 
+    /// <summary>The last <see cref="VibrationHistoryLength"/> samples of one unit's reading, oldest first.</summary>
+    public static ImmutableArray<double> MetricHistory(UnitId id, Metric metric, long tick, double damperPct = ReferenceDamperPct) =>
+        [.. Enumerable.Range(0, VibrationHistoryLength).Select(k =>
+            Readings(tick - (VibrationHistoryLength - 1) + k, damperPct).First(r => r.Id == id).Get(metric))];
+
     /// <summary>Net output in MW. Each open valve beyond the reference seven adds 6 MW.</summary>
     public static double OutputMw(long tick, int openValves = ReferenceOpenValves) =>
         600
