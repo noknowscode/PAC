@@ -9,18 +9,15 @@ namespace PacConsole.Controls.Charts;
 /// <summary>Net output, last 48 samples: accent line with a 12% fill, dashed target line.</summary>
 public sealed partial class OutputChart : ConsoleChart
 {
-    private readonly RectangularSection _target = new()
-    {
-        Yi = 620,
-        Yj = 620,
-        Stroke = Dashed(TextPrimary, alpha: 180),
-    };
+    private readonly RectangularSection _target = new() { Yi = 620, Yj = 620, Stroke = Dashed(TextPrimary, alpha: 180) };
+    private readonly LineSeries<ObservableValue> _line;
+    private readonly Axis _axis = FixedAxis(480, 700, visible: true, step: 50);
 
     public OutputChart()
     {
         Chart.Series =
         [
-            new LineSeries<ObservableValue>
+            _line = new LineSeries<ObservableValue>
             {
                 Values = Points,
                 Stroke = Stroke(Accent, 1.5f),
@@ -33,9 +30,17 @@ public sealed partial class OutputChart : ConsoleChart
             },
         ];
         Chart.XAxes = [FixedAxis(0, 47, visible: false)];
-        Chart.YAxes = [FixedAxis(480, 700, visible: true, step: 50)];
+        Chart.YAxes = [_axis];
         Chart.Sections = [_target];
         AutomationProperties.SetName(this, "Net output, last 48 samples");
+    }
+
+    protected override void ApplyTheme()
+    {
+        Recolor(_target.Stroke, TextPrimary, 180);
+        Recolor(_line.Stroke, Accent);
+        Recolor(_line.Fill, Accent, 31);
+        Repaint(_axis);
     }
 
     public double Target
@@ -71,7 +76,7 @@ public sealed partial class HourlyChart : ConsoleChart
     {
         Chart.Series =
         [
-            new ColumnSeries<ObservableValue>
+            _hours = new ColumnSeries<ObservableValue>
             {
                 Values = Points,
                 Fill = Fill(Accent, 179),
@@ -81,7 +86,7 @@ public sealed partial class HourlyChart : ConsoleChart
                 IgnoresBarPosition = true,
                 Name = "Generation (MWh)",
             },
-            new ColumnSeries<ObservableValue>
+            _now = new ColumnSeries<ObservableValue>
             {
                 Values = _current,
                 Fill = Fill(Cyan, 217),
@@ -93,8 +98,21 @@ public sealed partial class HourlyChart : ConsoleChart
             },
         ];
         Chart.XAxes = [FixedAxis(-0.5, 23.5, visible: false)];
-        Chart.YAxes = [FixedAxis(400, 700, visible: true, step: 150)];
+        Chart.YAxes = [_axis];
         AutomationProperties.SetName(this, "Hourly generation, last 24 hours");
+    }
+
+    private readonly ColumnSeries<ObservableValue> _hours;
+    private readonly ColumnSeries<ObservableValue> _now;
+    private readonly Axis _axis = FixedAxis(400, 700, visible: true, step: 150);
+
+    protected override void ApplyTheme()
+    {
+        Recolor(_hours.Fill, Accent, 179);
+        Recolor(_hours.Stroke, Accent);
+        Recolor(_now.Fill, Cyan, 217);
+        Recolor(_now.Stroke, TextPrimary);
+        Repaint(_axis);
     }
 
     protected override void OnPointsUpdated(IReadOnlyList<double> values)
@@ -132,13 +150,18 @@ public sealed partial class VibrationChart : ConsoleChart
         Chart.Series = [_line];
         Chart.XAxes = [FixedAxis(0, 29, visible: false)];
         Chart.YAxes = [FixedAxis(0, 6, visible: false)];
-        Chart.Sections =
-        [
-            new RectangularSection { Yi = 4.5, Yj = 4.5, Stroke = Dashed(Alert, alpha: 204) },
-        ];
+        Chart.Sections = [_limit];
         Chart.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden;
         Chart.DrawMargin = new LiveChartsCore.Measure.Margin(0, 4, 0, 4);
         AutomationProperties.SetName(this, "Vibration trend for the selected unit");
+    }
+
+    private readonly RectangularSection _limit = new() { Yi = 4.5, Yj = 4.5, Stroke = Dashed(Alert, alpha: 204) };
+
+    protected override void ApplyTheme()
+    {
+        Recolor(_limit.Stroke, Alert, 204);
+        Recolor(_line.Stroke, IsHigh ? AlertText : Cyan);
     }
 
     public bool IsHigh
@@ -150,7 +173,7 @@ public sealed partial class VibrationChart : ConsoleChart
     public static readonly DependencyProperty IsHighProperty =
         DependencyProperty.Register(nameof(IsHigh), typeof(bool), typeof(VibrationChart),
             new PropertyMetadata(false, (d, e) =>
-                ((VibrationChart)d)._line.Stroke = Stroke((bool)e.NewValue ? AlertText : Cyan, 1.3f)));
+                Recolor(((VibrationChart)d)._line.Stroke, (bool)e.NewValue ? AlertText : Cyan)));
 
     protected override void OnPointsUpdated(IReadOnlyList<double> values)
     {

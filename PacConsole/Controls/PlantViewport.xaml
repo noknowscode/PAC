@@ -50,7 +50,7 @@
       <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
-          <TextBlock x:Name="AutoOrbitLabel" Text="AUTO ORBIT ON" VerticalAlignment="Center" />
+          <TextBlock x:Name="AutoOrbitLabel" Text="AUTO ORBIT ON" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
         </StackPanel>
       </ToggleButton>
       <Button x:Name="Reset" Content="RESET" Style="{StaticResource ToolbarButton}" />

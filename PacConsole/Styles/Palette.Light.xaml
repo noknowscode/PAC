@@ -1,0 +1,47 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Light theme: slate greys, burnt orange, whites. Not merged as resources: ConsoleTheme copies
+    each colour into the brush (or Color) of the same key, so every StaticResource, converter result
+    and canvas palette follows a switch. Contrast on a white card: ink 16.3, muted 7.7, faint 5.4,
+    orange text 5.2, white on orange 5.2, alert 5.9, control border 3.1.
+  -->
+
+  <Color x:Key="GroundBrush">#E3E8ED</Color>
+  <Color x:Key="PanelBrush">#F4F6F8</Color>
+  <Color x:Key="CardBrush">#FFFFFF</Color>
+  <Color x:Key="OverlayBrush">#F2FFFFFF</Color>
+  <Color x:Key="TextPrimaryBrush">#17212B</Color>
+  <Color x:Key="CyanBrush">#2F4B63</Color>
+  <Color x:Key="MutedBrush">#475467</Color>
+  <Color x:Key="FaintBrush">#5D6B7C</Color>
+  <Color x:Key="HairlineBrush">#33475467</Color>
+  <Color x:Key="BorderBrushDefault">#8494A7</Color>
+  <Color x:Key="BorderBrushStrong">#6A7A8C</Color>
+  <Color x:Key="CyanFillBrush">#262F4B63</Color>
+  <Color x:Key="CyanTintBrush">#0A2F4B63</Color>
+  <Color x:Key="AccentBrush">#C2410C</Color>
+  <Color x:Key="AccentFillBrush">#1FC2410C</Color>
+  <Color x:Key="AccentTintBrush">#0DC2410C</Color>
+  <Color x:Key="AccentBorderBrush">#99C2410C</Color>
+  <Color x:Key="OnAccentBrush">#FFFFFF</Color>
+  <Color x:Key="AlertBrush">#C0261B</Color>
+  <Color x:Key="AlertTextBrush">#B42318</Color>
+  <Color x:Key="AlertBorderBrush">#B3C0261B</Color>
+  <Color x:Key="AlertTintBrush">#12C0261B</Color>
+  <Color x:Key="SolidPaperColor">#F7F9FB</Color>
+  <Color x:Key="SolidShade0Color">#D3DAE1</Color>
+  <Color x:Key="SolidShade1Color">#DEE4EA</Color>
+  <Color x:Key="SolidShade2Color">#E8EDF1</Color>
+  <Color x:Key="SolidShade3Color">#F2F5F8</Color>
+  <Color x:Key="SolidTopColor">#FFFFFF</Color>
+  <Color x:Key="SolidLitFaceColor">#FFF3EA</Color>
+  <Color x:Key="SolidLitShadeColor">#FBE3D2</Color>
+  <Color x:Key="SolidLitTopColor">#FFFFFF</Color>
+  <Color x:Key="SolidLineHiColor">#17212B</Color>
+  <Color x:Key="SolidLineMidColor">#6B7889</Color>
+  <Color x:Key="SolidLineLoColor">#A9B4C0</Color>
+  <Color x:Key="SolidLineFaintColor">#D3DAE1</Color>
+  <Color x:Key="SolidLeaderColor">#992F4B63</Color>
+  <Color x:Key="SolidHaloColor">#73334155</Color>
+  </ResourceDictionary>

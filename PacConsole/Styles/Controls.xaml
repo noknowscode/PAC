@@ -230,6 +230,14 @@
     <Setter Property="Template" Value="{StaticResource ConsoleCheckableTemplate}" />
   </Style>
 
+  <!--
+    Text inside a control (a button's label) must take the control's Foreground. Simple's implicit
+    TextBlock style sets Foreground locally, which beats inheritance, so such text kept Simple's ink
+    (dark theme: #DFF5FF) instead of the accent or alert colour. An explicit style replaces the
+    implicit one, and with no Foreground setter the label inherits again.
+  -->
+  <Style x:Key="ControlLabel" TargetType="TextBlock" />
+
   <!-- Valve labels: no Foreground setter, so the toggle's checked/unchecked ink still applies.
        The state line is one size smaller instead of faded (text opacity breaks contrast). -->
   <Style x:Key="ValveNumber" TargetType="TextBlock">

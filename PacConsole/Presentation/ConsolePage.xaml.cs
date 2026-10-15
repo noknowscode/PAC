@@ -1,3 +1,5 @@
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using PacConsole.Controls;
 using PacConsole.Core.Geometry;
 
@@ -12,28 +14,17 @@ public sealed partial class ConsolePage : Page
         InitializeComponent();
     }
 
-    /// <summary>
-    /// Rail sections are peers inside one page, so switching is view-only visibility state:
-    /// Overview shows the console, the other six show a placeholder until they are built.
-    /// </summary>
-    private void OnSectionChecked(object sender, RoutedEventArgs e)
+    // xaml-lint: allow codebehind - theme switch is view-only glue: it repaints app resources and the root element theme.
+    private void OnThemeClick(object sender, RoutedEventArgs e)
     {
-        if (sender is not RadioButton { Tag: string section } button) return;
-
-        var overview = section == "OVERVIEW";
-        SetVisible(button, "OverviewMain", overview);
-        SetVisible(button, "OverviewAside", overview);
-        SetVisible(button, "PlaceholderPanel", !overview);
-        if (button.FindName("PlaceholderTitle") is TextBlock title) title.Text = section;
-        if (button.FindName("Breadcrumb") is TextBlock crumb) crumb.Text = section;
-    }
-
-    private static void SetVisible(FrameworkElement scope, string name, bool visible)
-    {
-        if (scope.FindName(name) is UIElement element)
-        {
-            element.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        }
+        // The toggle sits inside the FeedView template, so it arrives as the sender, not a field.
+        if (sender is not ToggleButton toggle) return;
+        var light = toggle.IsChecked == true;
+        Styles.ConsoleTheme.Apply(light, XamlRoot?.Content as FrameworkElement ?? this);
+        if (toggle.Content is TextBlock label) label.Text = light ? "DARK" : "LIGHT";
+        AutomationProperties.SetName(toggle, light ? "Dark theme" : "Light theme");
+        // The cyan grid backdrop belongs to the dark console; the light one sits on plain slate.
+        Backdrop.Visibility = light ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void OnViewportLoaded(object sender, RoutedEventArgs e) => _viewport = sender as PlantViewport;

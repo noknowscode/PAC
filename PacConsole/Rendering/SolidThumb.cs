@@ -22,9 +22,16 @@ public sealed partial class SolidThumb : SKCanvasElement
         Loaded += (_, _) =>
         {
             _renderer ??= new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+            Styles.ConsoleTheme.Changed -= OnThemeChanged;
+            Styles.ConsoleTheme.Changed += OnThemeChanged;
             Invalidate();
         };
-        Unloaded += (_, _) => { _renderer?.Dispose(); _renderer = null; };
+        Unloaded += (_, _) =>
+        {
+            Styles.ConsoleTheme.Changed -= OnThemeChanged;
+            _renderer?.Dispose();
+            _renderer = null;
+        };
     }
 
     /// <summary>Camera pose (a <see cref="CameraPose"/>).</summary>
@@ -82,6 +89,13 @@ public sealed partial class SolidThumb : SKCanvasElement
         DependencyProperty.Register(nameof(SingleUnit), typeof(bool), typeof(SolidThumb), new PropertyMetadata(false, Redraw));
 
     private static void Redraw(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((SolidThumb)d).Invalidate();
+
+    private void OnThemeChanged()
+    {
+        _renderer?.Dispose();
+        _renderer = new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        Invalidate();
+    }
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {

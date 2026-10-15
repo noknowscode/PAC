@@ -12,7 +12,7 @@ namespace PacConsole.Rendering;
 /// tag to its unit. PlantViewport owns the camera and the tag layout and calls <see cref="Show"/>;
 /// both use <see cref="PlantSolids.ViewProjection"/>, so tags and drawing share one projection.
 /// </summary>
-public sealed class PlantCanvas : SKCanvasElement
+public sealed partial class PlantCanvas : SKCanvasElement
 {
     private static readonly ImmutableArray<SolidPart> Parts = PlantSolids.Default.All;
 
@@ -36,9 +36,16 @@ public sealed class PlantCanvas : SKCanvasElement
         {
             _renderer ??= new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
             _leaderPaint.Color = _renderer.Palette.Leader;
+            Styles.ConsoleTheme.Changed -= OnThemeChanged;
+            Styles.ConsoleTheme.Changed += OnThemeChanged;
             Invalidate();
         };
-        Unloaded += (_, _) => { _renderer?.Dispose(); _renderer = null; };
+        Unloaded += (_, _) =>
+        {
+            Styles.ConsoleTheme.Changed -= OnThemeChanged;
+            _renderer?.Dispose();
+            _renderer = null;
+        };
     }
 
     /// <summary>Snapshots the frame on the UI thread, then asks for a redraw.</summary>
@@ -53,6 +60,16 @@ public sealed class PlantCanvas : SKCanvasElement
         _hovered = hovered;
         Invalidate();
     }
+
+    private void OnThemeChanged()
+    {
+        _renderer?.Dispose();
+        _renderer = new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        OnPaletteChanged(_renderer.Palette);
+        Invalidate();
+    }
+
+    private void OnPaletteChanged(SolidPalette palette) => _leaderPaint.Color = palette.Leader;
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {

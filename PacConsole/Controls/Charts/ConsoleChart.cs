@@ -29,7 +29,12 @@ public abstract partial class ConsoleChart : UserControl
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         };
         Content = Chart;
+        Loaded += (_, _) => { Styles.ConsoleTheme.Changed += ApplyTheme; ApplyTheme(); };
+        Unloaded += (_, _) => Styles.ConsoleTheme.Changed -= ApplyTheme;
     }
+
+    /// <summary>Builds the chart's paints from <see cref="ConsoleChartTheme"/>; runs on load and on every theme switch.</summary>
+    protected abstract void ApplyTheme();
 
     public IReadOnlyList<double>? Values
     {
