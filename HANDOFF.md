@@ -29,7 +29,7 @@ Read, not applied: `skiasharp-uno` `SKCanvasElement.IsSupportedOnCurrentPlatform
 - Release path: no git remote or CI (a hook asks for it; SPEC → Decisions keeps it out of scope until the user creates a remote).
 - Pre-existing lint counts and the 3 Uno0001 warnings.
 - Figure palette on `#131313` reads very dark in the card; measure shade steps against `CardBrush` in phase 4.
-- Candidate gotcha, not yet added to `uno-runtime-gotchas.md`: an `SKCanvasElement` that disposes Skia objects on `Unloaded` crashes (AV in `sk_path_reset`) when rendered again after a reload, triggered here by App MCP element screenshots. Needs an evidence excerpt exported if added.
+- The Unloaded-dispose crash is a Skia case of the existing re-parenting gotcha in `uno-runtime-gotchas.md` (Layout: "anything Unloaded lets go of must be taken back in Loaded"). Optional: add the native-AV symptom (`sk_path_reset` after an App MCP element screenshot) to that bullet.
 
 ## Relaunch
 ```
