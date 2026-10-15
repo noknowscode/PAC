@@ -11,7 +11,7 @@ Every plant drawing renders as solids with the figure's line work and motion (li
 - Git: `main` at `a73d94c`.
 
 ## Next actions (in order)
-1. Stutter tail: capture a Release `dotnet-trace` while orbiting and find what fills the 40–50 ms frames (our code is about 2.4 ms per frame). Then consider reusing shape buffers (allocation is 70–80 MB/s) or a steady 30 fps ambient cap.
+1. Stutter tail, traced (`dotnet-trace`, `dotnet-sampled-thread-time`, Release, orbiting): our managed work is about 2.7 ms per frame. About two thirds of UI-thread time is native: Skia drawing (about 1,100 `DrawPath` calls per frame plus the halo blur) and Uno's flush, present and damage regions (`SKPath.Op`). Orbiting rebuilds all 139 shapes per frame, allocating about 74 MB/s (GC about 17 ms/s). Result: p50 7 ms, p90 about 38 ms (missed refreshes). Waiting on the user's choice: (a) auto-orbit off by default (static camera = cached plant, smooth), (b) fewer draw calls per part and no blur while orbiting, or (c) a steady 30 fps orbit.
 2. Record three runtime gotchas in `~/.claude/rules/uno-runtime-gotchas.md`, with evidence excerpts per the handoff skill:
    - A keyed `ResourceDictionary` nested in a merged dictionary stops the desktop window from ever appearing, silently (process alive, no window).
    - Simple's implicit `TextBlock` style sets Foreground locally, so an explicit `TextBlock` inside a Button or ToggleButton ignores the control's Foreground (fix: an explicit empty style).
