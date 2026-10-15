@@ -21,6 +21,9 @@ public sealed record SolidPart(string Name, UnitId? Unit, Volume Volume, Func<Or
     /// <summary>Line work drawn over the part (seams, bolts, fan blades), given the camera and the time in seconds.</summary>
     public Func<OrbitProjection, double, IEnumerable<DetailLine>>? Details { get; init; }
 
+    /// <summary>True when <see cref="Details"/> change with time (fan blades); the rest can be cached per camera.</summary>
+    public bool AnimatedDetails { get; init; }
+
     /// <summary>Set on a pad: the unit standing on it, whose lift shadow is drawn on this pad.</summary>
     public UnitId? PadOf { get; init; }
 }
@@ -169,7 +172,8 @@ public sealed class PlantSolids
     private readonly System.Collections.Concurrent.ConcurrentDictionary<UnitId, ImmutableArray<SolidPart>> _unitWithPad = new();
 
     /// <summary>Attaches line work to the part just added.</summary>
-    private void With(Func<OrbitProjection, double, IEnumerable<DetailLine>> details) => _parts[^1] = _parts[^1] with { Details = details };
+    private void With(Func<OrbitProjection, double, IEnumerable<DetailLine>> details, bool animated = false) =>
+        _parts[^1] = _parts[^1] with { Details = details, AnimatedDetails = animated };
 
     /// <summary>Fan speed, radians per second (the figure's 1.6).</summary>
     public const float FanSpeed = 1.6f;
@@ -433,7 +437,7 @@ public sealed class PlantSolids
                     Details.Ring(EdgeTone.Lo, x, z, 6.3f, FanTop, p),
                     Details.Ring(EdgeTone.Mid, x, z, 1.4f, FanTop, p, 16),
                     .. Details.Blades(x, z, FanTop, phase + (float)(t * FanSpeed % (Math.PI * 2)), p),
-                ]);
+                ], animated: true);
             }
         }
     }

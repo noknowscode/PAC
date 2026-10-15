@@ -78,7 +78,7 @@ public sealed partial class SolidThumb : SKCanvasElement
     public static readonly DependencyProperty AlertingUnitsProperty =
         DependencyProperty.Register(nameof(AlertingUnits), typeof(object), typeof(SolidThumb), new PropertyMetadata(null, Redraw));
 
-    /// <summary>When true, draw only <see cref="Selected"/> on its pad, turning with <see cref="Pose"/>.</summary>
+    /// <summary>When true, draw only <see cref="Selected"/> on its pad, seen from <see cref="Pose"/>.</summary>
     public bool SingleUnit
     {
         get => (bool)GetValue(SingleUnitProperty);
@@ -110,9 +110,10 @@ public sealed partial class SolidThumb : SKCanvasElement
         if (SingleUnit)
         {
             if (selected is not { } unit) return;
-            // Follows the viewport's yaw, turned half a radian so the preview shows another face.
+            // A fixed three-quarter portrait. Following the orbit redrew the preview every frame and
+            // added Uno's damage-region work to each one (trace: ~0.7 ms a frame).
             var (centre, radius) = plant.Sphere(unit);
-            var p = OrbitProjection.AroundSphere(new CameraPose(pose.Yaw + 0.5f, 0.45f), centre, radius, w, h, 2);
+            var p = OrbitProjection.AroundSphere(pose, centre, radius, w, h, 2);
             _renderer.Draw(canvas, plant.UnitWithPad(unit), p, new SolidFrame(selected, alerting));
             return;
         }

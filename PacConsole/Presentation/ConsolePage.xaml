@@ -245,7 +245,7 @@
                   <Border Grid.Column="2" Style="{StaticResource CardStyle}">
                     <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="4">
                       <TextBlock Text="UNIT PREVIEW" Style="{StaticResource CardHeader}" />
-                      <rendering:SolidThumb Grid.Row="1" SingleUnit="True" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" Pose="{Binding Pose, ElementName=Viewport}" />
+                      <rendering:SolidThumb Grid.Row="1" SingleUnit="True" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" PresetKey="iso" />
                       <TextBlock Grid.Row="2" Text="{Binding Data.SelectedCode}" Style="{StaticResource TypeCode}" Foreground="{StaticResource AccentBrush}" />
                       <TextBlock Grid.Row="3" Text="{Binding Data.SelectedName}" Style="{StaticResource TypeMicro}" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                       <TextBlock Grid.Row="4" Style="{StaticResource TypeMicro}">

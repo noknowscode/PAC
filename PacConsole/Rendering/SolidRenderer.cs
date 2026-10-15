@@ -87,6 +87,7 @@ public sealed class SolidRenderer : IDisposable
     private IReadOnlyList<SolidPart>? _cachedParts;
     private (float, float, float, float, float, float) _cachedCamera;
     private SolidShape[] _shapes = [];
+    private DetailLine[]?[] _details = [];
     private int[] _order = [];
     private float[] _orderLift = [];
 
@@ -102,7 +103,12 @@ public sealed class SolidRenderer : IDisposable
             _cachedParts = parts;
             _cachedCamera = camera;
             _shapes = new SolidShape[parts.Count];
-            for (var i = 0; i < parts.Count; i++) _shapes[i] = parts[i].Build(projection);
+            _details = new DetailLine[]?[parts.Count];
+            for (var i = 0; i < parts.Count; i++)
+            {
+                _shapes[i] = parts[i].Build(projection);
+                if (parts[i].Details is { } d && !parts[i].AnimatedDetails) _details[i] = [.. d(projection, 0)];
+            }
         }
 
         var lifts = new float[parts.Count];
@@ -130,7 +136,10 @@ public sealed class SolidRenderer : IDisposable
                 canvas.Translate(0, projection.Rise(lift));
             }
             DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered);
-            if (frame.Details && part.Details is { } details) DrawDetails(canvas, details(projection, frame.Seconds), frame.Seconds);
+            if (frame.Details && part.Details is { } details)
+            {
+                DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds);
+            }
             if (lift > 0) canvas.Restore();
 
             if (part.PadOf is { } padUnit && LiftOf(padUnit) is var raised and > 0) DrawHalo(canvas, part.Volume, raised, projection);
