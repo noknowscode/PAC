@@ -1,41 +1,30 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-15 13:30
+Updated: 2026-10-15 14:30
 
 ## Where we are
-SPEC phases 1–3 are done and committed. `PacConsole.Core/Solids/` ports the Anatomy kit (extrude, slab, cylinder, lathe/disc/turned, prism, tube, four-tone shading), checked point for point against a kit-exported fixture. `PlantSolids.Default.All` is the whole plant as 139 solids. `DepthOrder` is an exact separating-plane painter's order, verified by a ray-cast z-buffer at 72 cameras and with a unit lifted. `Rendering/SolidRenderer.cs` paints them, still in the figure palette. The app on `main` still shows the wireframe. The running dev build shows the whole solid plant through an **uncommitted scratch** `SolidSpikeCanvas` swapped into `PlantViewport`; phase 4 replaces it with `PlantCanvas`. Results and two decisions (flat sort; separating planes over support graph) are recorded in SPEC.md → *Phase 1 result*.
+SPEC phases 1–3 are done, and most of phases 4–6 landed early at the user's request. Every plant drawing (viewport, ISO / elevation / plan presets, unit preview) now renders as shaded solids in the console palette (`Solid*` tokens). Tags are pinned to their units through one shared projection (`PlantSolids.ViewProjection`) with leader lines. The plant has the figure's line work and motion: the selected unit lifts with a shadow under it, the condenser fans turn, and flow dashes run along the pipes. Alerting units get a dashed coral outline. A ui-craft / impeccable audit / polish pass ran on the whole console: safe fixes are committed, and the larger findings wait on the user (see Open questions). Design context is recorded in `.impeccable.md`.
 
 ## Last verified state
-- Build: pass, `net10.0-desktop` Debug, 3 pre-existing Uno0001 warnings (Pulse `AutoReverse`, 2× `CharacterSpacing`).
-- Tests: 139/139 green (`dotnet test PacConsole.Tests`); the z-buffer test takes ~16 s.
-- Runtime: App MCP (`uno_app_start`, rooted session). TKA-02 at 8 yaws, then the whole plant orbiting with CND-05 lit; element screenshots no longer crash the app.
-- Git: `main`, last commit `e4acd45 docs: record phases 2 and 3 in the spec`. Uncommitted on purpose: `PacConsole/Controls/PlantViewport.xaml(.cs)` (scratch swap), `PacConsole/Rendering/SolidSpikeCanvas.cs`. Untracked leftovers: `.mcp.json`, `docs/spike/` (empty), figure screenshots under `docs/anatomy/plant/shots/` and `docs/hairline/*.png`.
-- Lint: CARD 7 · HEX 18 · TOKENTHEME 20 · CODEBEHIND 8 · ICON 10 (all pre-existing, unchanged).
-
-## Guidance applied
-| Skill / rule / decision | Applied at (file:line) |
-|---|---|
-| `skiasharp-uno`: cache paints/paths, reuse per frame | `PacConsole/Rendering/SolidRenderer.cs:46` |
-| Renderer lifetime follows Loaded/Unloaded (crash fix) | `PacConsole/Rendering/WireframeCanvas.cs:26`, `WireframeThumb.cs:22` |
-| Decision: separating-plane order, silhouette-overlap constraints | `PacConsole.Core/Solids/DepthOrder.cs:66`, `:108` |
-| Decision: tapered hulls for cones | `PacConsole.Core/Solids/DepthOrder.cs:26` |
-Read, not applied: `skiasharp-uno` `SKCanvasElement.IsSupportedOnCurrentPlatform()` guard (add with `PlantCanvas`), `uno-verify`, `uno-runtime-gotchas.md`, `capability-coverage.md`.
+- Build: pass, `net10.0-desktop`, **0 warnings** (Pulse AutoReverse and the Control.CharacterSpacing setters removed).
+- Tests: 144/144 (`dotnet test PacConsole.Tests`, ~15 s, mostly the z-buffer order test).
+- Runtime (App MCP): tags stay on their units through orbit and rotate steps. Selecting TKA moves the lift, and CND drops to the dashed alert outline. All five drawings are solid. Not verified: keyboard focus order (`uno_app_key_press` failed), narrow or short windows (the MCP cannot resize), frame cost.
+- Git: `main` at `3bd340b`. Untracked: `.mcp.json`, figure screenshots, an empty `docs/spike/`.
 
 ## Next actions (in order)
-1. Phase 4: load `xaml-design-polish` (motion) first. Add `SolidShade0..3Color`, `SolidTopColor`, `SolidHaloColor`, `SolidStroke*` to `Styles/Tokens.xaml`; build `PlantCanvas` (`SKCanvasElement`, guarded, Loaded/Unloaded renderer) replacing `WireframeCanvas` and the scratch canvas; retune `OrbitProjection.ForViewport` for the 320 × 220 plate; tag anchors from `PlantSolids`; lift (τ 0.28 s) + halo + alert outline/dashed crease; hover outline + click-to-select hit test; fan blades; line decorations. Measure frame cost (< 4 ms). `uno-verify`, commit.
-2. Phases 5–7 per SPEC.md (`SolidThumb`, `UnitPreview` + `SelectedVib`/`VibrationLimit`, cleanup), `uno-verify` after 5 and 6.
-3. Then delete `SolidSpikeCanvas.cs` and `docs/spike/` (the user's call; deletion was declined this session).
+1. Measure the per-frame cost (139 shapes + details rebuilt at 30–60 fps). Budget < 4 ms; cache static parts per pose if over.
+2. Remaining phase 4 items: hover outline + click-to-select hit test on the drawing; the unit preview's vibration gauge plus the `SelectedVib`/`VibrationLimit` fields (phase 6); phase 7 cleanup (delete `Wireframe*` and the `PlantGeometry` segment builders; the user approves deletions).
+3. Walk the user through the audit's open findings below, then decide whether to run `xaml-art-direction` (they said they are open to a new direction).
 
 ## Open questions
-- Release path: no git remote or CI (a hook asks for it; SPEC → Decisions keeps it out of scope until the user creates a remote).
-- Pre-existing lint counts and the 3 Uno0001 warnings.
-- Figure palette on `#131313` reads very dark in the card; measure shade steps against `CardBrush` in phase 4.
-- The Unloaded-dispose crash is a Skia case of the existing re-parenting gotcha in `uno-runtime-gotchas.md` (Layout: "anything Unloaded lets go of must be taken back in Loaded"). Optional: add the native-AV symptom (`sk_path_reset` after an App MCP element screenshot) to that bullet.
+- Six of the seven rail sections open "NOT IN THIS BUILD". In a demo that impersonates capability: remove them, or disable them with a reason?
+- The selected unit is shown five times (tag, tile, SELECTED overlay, preview, telemetry header), and vibration twice (VIB tile + VIBRATION card).
+- Identity: cyan-on-dark with neon amber, monospace caps everywhere and pulsing dots read as generic "sci-fi dashboard". The user is open to a new direction.
+- Values use proportional digits (Chakra Petch), so live numbers shift width; tabular numerals were not verified on Uno.
+- Release path: no remote or CI (kept out of scope by SPEC → Decisions).
 
 ## Relaunch
 ```
 cd C:\Users\Platform006\UnoProjects\PacConsole
 dotnet build PacConsole/PacConsole.csproj -f net10.0-desktop
-dotnet test PacConsole.Tests/PacConsole.Tests.csproj
-# rooted session: uno_app_start (projectPath PacConsole\PacConsole.csproj, net10.0-desktop)
-# viewport refs: Reset ^3q, Rotate right ^3e, PlantViewport ^26 (take a fresh snapshot first)
+# rooted session: uno_app_start (PacConsole\PacConsole.csproj, net10.0-desktop); close + Stop-Process before rebuilding
 ```
