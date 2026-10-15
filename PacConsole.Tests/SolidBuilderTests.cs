@@ -136,7 +136,7 @@ public partial class SolidBuilderTests
     [Test]
     public void Spike_unit_has_every_part_of_the_figure()
     {
-        PlantSolids.Tka().Should().HaveCount(KitParts().Count(k => k.Name != "gen.roof") + 6, "the fixture leaves out the three steps, the skid, the coupling and the pump");
+        PlantSolids.Default.UnitWithPad(UnitId.Tka).Should().HaveCount(KitParts().Count(k => k.Name != "gen.roof") + 6, "the fixture leaves out the three steps, the skid, the coupling and the pump");
     }
 
     [TestCase(0)]
@@ -150,7 +150,7 @@ public partial class SolidBuilderTests
     public void Roofs_vents_and_caps_paint_after_what_they_stand_on(int yawDegrees)
     {
         var p = new OrbitProjection(new CameraPose(yawDegrees * MathF.PI / 180, 0.5f), 2, 400, 300);
-        var parts = PlantSolids.Tka();
+        var parts = PlantSolids.Default.UnitWithPad(UnitId.Tka);
         var order = DepthOrder.Sort(parts.Select(x => x.Volume).ToList(), p);
         var rank = new int[order.Length];
         for (var k = 0; k < order.Length; k++) rank[order[k]] = k;
