@@ -13,14 +13,36 @@ The plant opens still. The readings are interactive: picking one plots it in the
 - Build: pass, `net10.0-desktop`, 0 warnings (Debug and Release).
 - Tests: 161/161 (`dotnet test PacConsole.Tests`). Explicit timing tests: `FrameCostTests` (Core work 1.78 ms/frame in Release).
 - Runtime (App MCP + direct Release runs): click-to-select, the light/dark round trip including charts, the 1100 × 720 stacked layout and the 1424 × 861 wide layout. Frame timing (Release, orbiting): render p50 2.3 ms; frame interval p50 8 ms, **p90 45 ms**.
-- Git: `main` at `3222aa9`. Lint: CARD 0, ICON 0, HEX 18 (Simple role overrides in App.xaml), TOKENTHEME 35 (allowed, in-place repaint), CODEBEHIND 7 (allowed glue).
+- Git: `main` at `ac8e03f`. Lint: CARD 0, ICON 0, HEX 18 (Simple role overrides in App.xaml), TOKENTHEME 35 (allowed, in-place repaint), CODEBEHIND 7 (allowed glue).
 - Redesign verified via App MCP: wide 1424 x 861 light and graphite, the round trip, and the 1100 x 720 stack (tree bounds). Shots: docs/shots-fukasawa-light.png, docs/shots-fukasawa-graphite.png, docs/shots-before-fukasawa.png.
 
 ## Next actions (in order)
-1. **Still-frame interval, about 90 ms, unexplained** (Release probe).
-   - Render cost is 0.6 ms after the boxed-parts fix and the picture cache, and the UI thread idles 94% of the time.
-   - Ruled out: the shadow path, the picture cache, invalidation from inside Rendering (a kick timer didn't help) and the finalizer load (present in the morning trace too).
-   - Next: trace the render thread and GPU (GL present), and compare against commit `a73d94c`, which predates today, in still mode.
+1. **Performance (open; Debug Checkpoint, 2026-10-15 evening).** Release, Intel Iris Xe at 59 Hz, measured with per-thread OS CPU, `dotnet-trace` and `dotnet-gcdump`. Scripts are in the session scratchpad (`perframe.ps1`, `run10.ps1`, `threadmods.ps1`).
+   - **Committed build:** about 150% CPU and about 5 plant frames per second. The plant's own render is 1.6 ms, about 0.5% of a frame's CPU.
+   - **Where the CPU goes:**
+
+     | Thread | CPU | Activity |
+     |---|---|---|
+     | Uno render thread | about 110% | `SKCanvas.Flush` / `GRContext.Flush` and `DrawPicture`, replaying every element's recording every frame |
+     | Native driver thread | about 95% | No managed frames |
+     | UI thread | about 18% | Layout, bindings, our C# drawing |
+
+   - **Ruled out:**
+     - the rendering backend (OpenGL, Vulkan and Software all about 110%)
+     - `Win32SystemThemeHelper` (blocked in a wait, not spinning)
+     - GC and allocation (2.5 MB/s, about 0.2 gen0/s)
+     - the shadow path
+     - the picture cache
+     - invalidating from inside Rendering
+   - **Blank page:** 0% CPU.
+   - **Tried and reverted:** rasterising static plant layers into `SKImage`s (copy at `scratchpad/SolidRenderer.images.cs`). It made things worse: `RenderOverride` receives a picture-recording canvas (no `GRContext`), so the images were CPU rasters.
+   - **Kept** (`ac8e03f`): one shared 20 fps ambient clock, and redraws skipped on unchanged data.
+   - **Next options:**
+     - (a) Render the four plant thumbnails once into bitmaps shown by XAML `Image` controls, so the compositor owns the textures.
+     - (b) Pause ambient motion (fans, flow, pulse) when the window is idle or unfocused.
+     - (c) Reduce per-frame vector work (fewer paths per part).
+     - (d) A reduced repro for Uno: flush cost proportional to SKCanvasElement content on every frame.
+   - **Measurements were contaminated by other load:** a `dotnet build -f net10.0-android` running six `aapt2` daemons at about 100% each, Flatpack at 138% and qemu at 50%.
 2. **Record runtime gotchas with evidence** in `~/.claude/rules/uno-runtime-gotchas.md` (handoff skill: export transcript excerpts to `docs/evidence/`):
    1. A keyed ResourceDictionary nested in a merged dictionary stops the window from appearing.
    2. Simple's implicit TextBlock foreground beats inheritance inside buttons.
