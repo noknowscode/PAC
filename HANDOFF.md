@@ -1,23 +1,35 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-15 16:45
+Updated: 2026-10-15 18:15
 
 ## Where we are
-The console was redirected from a dark command center to a quiet instrument (.impeccable.md, Direction 2: Fukasawa calm plus a journal figure plate). Light is the base theme and graphite the dark one, with one family (IBM Plex Sans, tabular digits). The plant is Fig. 1, drawn on the ground with no frame; readings sit in one datasheet column with hairline rules and no cards; orange marks only the selected unit and live data. The plant drawings, selection, lift, motion and the runtime theme switch are unchanged in behaviour. A tail of slow frames during auto-orbit remains (see Next actions 1).
+The console is a quiet instrument (light base, graphite dark, IBM Plex Sans). The plant illustration now follows the user's reference (Andrew Kras, Isometric Swimming Pool):
+- inked silhouettes and flat ground shadows
+- a closed thermal cycle: boiler bay, fuel, steam, feedwater and ash runs with fittings and valves, a transformer yard and cabinets
+- pipes tinted by circuit, with a legend
+
+The plant opens still. The readings are interactive: picking one plots it in the presentation that suits the metric, and every chart shares one frame with a pointer and keyboard readout. Audit and fixes: `docs/audit/2026-10-15-interface.md`; plan: SPEC.md "Illustration fidelity".
 
 ## Last verified state
 - Build: pass, `net10.0-desktop`, 0 warnings (Debug and Release).
-- Tests: 149/149 (`dotnet test PacConsole.Tests`). Explicit timing tests: `FrameCostTests` (Core work 1.78 ms/frame in Release).
+- Tests: 161/161 (`dotnet test PacConsole.Tests`). Explicit timing tests: `FrameCostTests` (Core work 1.78 ms/frame in Release).
 - Runtime (App MCP + direct Release runs): click-to-select, the light/dark round trip including charts, the 1100 × 720 stacked layout and the 1424 × 861 wide layout. Frame timing (Release, orbiting): render p50 2.3 ms; frame interval p50 8 ms, **p90 45 ms**.
-- Git: `main` at `9b143d9` (redesign). Lint: CARD 0, ICON 0, HEX 18 (Simple role overrides in App.xaml), TOKENTHEME 35 (allowed, in-place repaint), CODEBEHIND 7 (allowed glue).
+- Git: `main` at `3222aa9`. Lint: CARD 0, ICON 0, HEX 18 (Simple role overrides in App.xaml), TOKENTHEME 35 (allowed, in-place repaint), CODEBEHIND 7 (allowed glue).
 - Redesign verified via App MCP: wide 1424 x 861 light and graphite, the round trip, and the 1100 x 720 stack (tree bounds). Shots: docs/shots-fukasawa-light.png, docs/shots-fukasawa-graphite.png, docs/shots-before-fukasawa.png.
 
 ## Next actions (in order)
-1. Stutter tail, traced (`dotnet-trace`, `dotnet-sampled-thread-time`, Release, orbiting): our managed work is about 2.7 ms per frame. About two thirds of UI-thread time is native: Skia drawing (about 1,100 `DrawPath` calls per frame plus the halo blur) and Uno's flush, present and damage regions (`SKPath.Op`). Orbiting rebuilds all 139 shapes per frame, allocating about 74 MB/s (GC about 17 ms/s). Result: p50 7 ms, p90 about 38 ms (missed refreshes). Waiting on the user's choice: (a) auto-orbit off by default (static camera = cached plant, smooth), (b) fewer draw calls per part and no blur while orbiting, or (c) a steady 30 fps orbit.
-2. Record three runtime gotchas in `~/.claude/rules/uno-runtime-gotchas.md`, with evidence excerpts per the handoff skill:
-   - A keyed `ResourceDictionary` nested in a merged dictionary stops the desktop window from ever appearing, silently (process alive, no window).
-   - Simple's implicit `TextBlock` style sets Foreground locally, so an explicit `TextBlock` inside a Button or ToggleButton ignores the control's Foreground (fix: an explicit empty style).
-   - LiveCharts2 2.0.5: replacing a paint on a drawn chart disposes the shared label `SKTypeface` and freezes that chart (fix: recolour paints in place).
-3. Remaining SPEC items: the unit preview's vibration gauge (`SelectedVib`, `VibrationLimit`), then phase 7 cleanup (delete `Wireframe*` and the `PlantGeometry` segment builders; deletions need the user's OK).
+1. **Still-frame interval, about 90 ms, unexplained** (Release probe).
+   - Render cost is 0.6 ms after the boxed-parts fix and the picture cache, and the UI thread idles 94% of the time.
+   - Ruled out: the shadow path, the picture cache, invalidation from inside Rendering (a kick timer didn't help) and the finalizer load (present in the morning trace too).
+   - Next: trace the render thread and GPU (GL present), and compare against commit `a73d94c`, which predates today, in still mode.
+2. **Record runtime gotchas with evidence** in `~/.claude/rules/uno-runtime-gotchas.md` (handoff skill: export transcript excerpts to `docs/evidence/`):
+   1. A keyed ResourceDictionary nested in a merged dictionary stops the window from appearing.
+   2. Simple's implicit TextBlock foreground beats inheritance inside buttons.
+   3. LiveCharts paint replacement freezes a chart.
+   4. A collapsed LiveCharts chart disposes a shared label typeface and blanks every chart.
+   5. MVUX proxies nested records in place, so a dependency property bound to the whole record never changes.
+   6. ItemsRepeater over a new array each tick recycles buttons: stale visual states and misrouted clicks.
+   7. `ImmutableArray` passed as `IReadOnlyList` boxes per call, which defeats reference-equality caches.
+3. **Remaining SPEC items.** The unit preview gauge, then phase 7 cleanup (deleting `Wireframe*` needs the user's OK).
 
 ## Open questions
 - Chakra Petch and IBM Plex Mono font files are no longer referenced; deleting them needs the user's OK.
