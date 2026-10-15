@@ -1,35 +1,41 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-15 12:45
+Updated: 2026-10-15 13:30
 
 ## Where we are
-This session built and ran the app (desktop, headless fallback), made two reference figures of the plant (`docs/hairline/`, `docs/anatomy/plant/`, the second published at https://claude.ai/artifact/3ZUDmNh8CpXUqVtdbw5nyy), and wrote `SPEC.md` to port the Anatomy figure's solid, shaded, depth-ordered look into the app. The user delegated the open calls; they are recorded in SPEC.md → *Decisions*. No app code has changed yet.
+SPEC phases 1–3 are done and committed. `PacConsole.Core/Solids/` ports the Anatomy kit (extrude, slab, cylinder, lathe/disc/turned, prism, tube, four-tone shading), checked point for point against a kit-exported fixture. `PlantSolids.Default.All` is the whole plant as 139 solids. `DepthOrder` is an exact separating-plane painter's order, verified by a ray-cast z-buffer at 72 cameras and with a unit lifted. `Rendering/SolidRenderer.cs` paints them, still in the figure palette. The app on `main` still shows the wireframe. The running dev build shows the whole solid plant through an **uncommitted scratch** `SolidSpikeCanvas` swapped into `PlantViewport`; phase 4 replaces it with `PlantCanvas`. Results and two decisions (flat sort; separating planes over support graph) are recorded in SPEC.md → *Phase 1 result*.
 
 ## Last verified state
-- Build: pass, `net10.0-desktop` Debug, 3 warnings (Uno0001: `Timeline.AutoReverse` in `Controls/Pulse.cs:29`, two `Control.CharacterSpacing` in a Controls XAML).
-- Runtime: launched via `dotnet PacConsole.dll` with `APP_NO_HOTDESIGN=1`, confirmed by PrintWindow screenshot only. App MCP not available (no `.mcp.json`).
-- Git: `main`, last commit `9831f30 docs: add spec for solid plant rendering port`; SPEC.md decisions edit and this file committed with the handoff. Untracked: figure screenshots under `docs/anatomy/plant/shots/` and `docs/hairline/*.png` (check outputs, not needed).
-- Lint: CARD 7 · HEX 18 · TOKENTHEME 20 · CODEBEHIND 8 · ICON 10 · BACKBAR 0 · OVERLAY 0 · RESPONSIVE 0 · BUILTIN 0 (pre-existing, none from this session).
+- Build: pass, `net10.0-desktop` Debug, 3 pre-existing Uno0001 warnings (Pulse `AutoReverse`, 2× `CharacterSpacing`).
+- Tests: 139/139 green (`dotnet test PacConsole.Tests`); the z-buffer test takes ~16 s.
+- Runtime: App MCP (`uno_app_start`, rooted session). TKA-02 at 8 yaws, then the whole plant orbiting with CND-05 lit; element screenshots no longer crash the app.
+- Git: `main`, last commit `e4acd45 docs: record phases 2 and 3 in the spec`. Uncommitted on purpose: `PacConsole/Controls/PlantViewport.xaml(.cs)` (scratch swap), `PacConsole/Rendering/SolidSpikeCanvas.cs`. Untracked leftovers: `.mcp.json`, `docs/spike/` (empty), figure screenshots under `docs/anatomy/plant/shots/` and `docs/hairline/*.png`.
+- Lint: CARD 7 · HEX 18 · TOKENTHEME 20 · CODEBEHIND 8 · ICON 10 (all pre-existing, unchanged).
 
 ## Guidance applied
 | Skill / rule / decision | Applied at (file:line) |
 |---|---|
-| (none in app code yet) | |
-Read, not applied: `skiasharp-uno` (cache paints, snapshot DPs, `SKCanvasElement`), `uno-scaffolding.md` build gates, `capability-coverage.md` — all written into SPEC.md, to apply in phases 1–7.
+| `skiasharp-uno`: cache paints/paths, reuse per frame | `PacConsole/Rendering/SolidRenderer.cs:46` |
+| Renderer lifetime follows Loaded/Unloaded (crash fix) | `PacConsole/Rendering/WireframeCanvas.cs:26`, `WireframeThumb.cs:22` |
+| Decision: separating-plane order, silhouette-overlap constraints | `PacConsole.Core/Solids/DepthOrder.cs:66`, `:108` |
+| Decision: tapered hulls for cones | `PacConsole.Core/Solids/DepthOrder.cs:26` |
+Read, not applied: `skiasharp-uno` `SKCanvasElement.IsSupportedOnCurrentPlatform()` guard (add with `PlantCanvas`), `uno-verify`, `uno-runtime-gotchas.md`, `capability-coverage.md`.
 
 ## Next actions (in order)
-1. Read SPEC.md cold, including *Decisions*. Reference geometry and numbers: `docs/anatomy/plant/build.mjs` (Z-up; app is Y-up).
-2. Phase 1 spike (45 min box): port `slabOf`, `cylinder` and shade bucketing to `PacConsole.Core/Solids/`, draw TKA in a scratch `SKCanvasElement`, orbit 8 yaws via the App MCP. Debug Checkpoint if it misses.
-3. Phases 2–7 per SPEC.md, `uno-verify` after phases 4, 5, 6; commit per phase.
-4. Load `xaml-design-polish` before finalising motion in phase 4.
+1. Phase 4: load `xaml-design-polish` (motion) first. Add `SolidShade0..3Color`, `SolidTopColor`, `SolidHaloColor`, `SolidStroke*` to `Styles/Tokens.xaml`; build `PlantCanvas` (`SKCanvasElement`, guarded, Loaded/Unloaded renderer) replacing `WireframeCanvas` and the scratch canvas; retune `OrbitProjection.ForViewport` for the 320 × 220 plate; tag anchors from `PlantSolids`; lift (τ 0.28 s) + halo + alert outline/dashed crease; hover outline + click-to-select hit test; fan blades; line decorations. Measure frame cost (< 4 ms). `uno-verify`, commit.
+2. Phases 5–7 per SPEC.md (`SolidThumb`, `UnitPreview` + `SelectedVib`/`VibrationLimit`, cleanup), `uno-verify` after 5 and 6.
+3. Then delete `SolidSpikeCanvas.cs` and `docs/spike/` (the user's call; deletion was declined this session).
 
 ## Open questions
-- Lint counts above are pre-existing; decide separately whether to address them.
-- Release path: no git remote / CI (user's to create).
-- Pre-existing Uno0001 warnings (Pulse `AutoReverse`, `CharacterSpacing`).
+- Release path: no git remote or CI (a hook asks for it; SPEC → Decisions keeps it out of scope until the user creates a remote).
+- Pre-existing lint counts and the 3 Uno0001 warnings.
+- Figure palette on `#131313` reads very dark in the card; measure shade steps against `CardBrush` in phase 4.
+- Candidate gotcha, not yet added to `uno-runtime-gotchas.md`: an `SKCanvasElement` that disposes Skia objects on `Unloaded` crashes (AV in `sk_path_reset`) when rendered again after a reload, triggered here by App MCP element screenshots. Needs an evidence excerpt exported if added.
 
 ## Relaunch
 ```
 cd C:\Users\Platform006\UnoProjects\PacConsole
 dotnet build PacConsole/PacConsole.csproj -f net10.0-desktop
-# in the rooted session: uno_app_start (Debug, devserver, hot reload)
+dotnet test PacConsole.Tests/PacConsole.Tests.csproj
+# rooted session: uno_app_start (projectPath PacConsole\PacConsole.csproj, net10.0-desktop)
+# viewport refs: Reset ^3q, Rotate right ^3e, PlantViewport ^26 (take a fresh snapshot first)
 ```
