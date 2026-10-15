@@ -20,6 +20,41 @@ public class PlantSolidsTests
     }
 
     [Test]
+    public void Every_anchor_sits_on_top_of_its_own_unit()
+    {
+        foreach (var (id, anchor) in Plant.Anchors)
+        {
+            var c = PlantSolids.Centres[id];
+            MathF.Abs(anchor.X - c.X).Should().BeLessThan(PlantSolids.PadHalf, id.ToString());
+            MathF.Abs(anchor.Z - c.Z).Should().BeLessThan(PlantSolids.PadHalf, id.ToString());
+            anchor.Y.Should().Be(Plant.All.Where(p => p.Unit == id).Max(p => p.Volume.Y1), id.ToString());
+        }
+    }
+
+    [TestCase(0.61f, 0.49f)]
+    [TestCase(0f, 0.10f)]
+    [TestCase(0f, 1.50f)]
+    [TestCase(4.8f, 1.24f)]
+    public void The_whole_plant_fits_its_frame(float yaw, float elevation)
+    {
+        const float w = 1240, h = 760;
+        var p = PlantSolids.ViewProjection(new CameraPose(yaw, elevation), w, h);
+        foreach (var part in Plant.All)
+        {
+            var v = part.Volume;
+            foreach (var q in v.Footprint)
+            {
+                foreach (var y in new[] { v.Y0, v.Y1 })
+                {
+                    var s = p.Project(new(q.X, y, q.Z));
+                    s.X.Should().BeInRange(0, w, part.Name);
+                    s.Y.Should().BeInRange(0, h, part.Name);
+                }
+            }
+        }
+    }
+
+    [Test]
     public void Part_count_matches_the_figure()
     {
         // Stand 8 feet + plate + strip + label + 6 pads = 17; STK 12; TKA 19; GEN 16; TRB 27;

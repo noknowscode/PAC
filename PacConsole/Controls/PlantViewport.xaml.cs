@@ -3,6 +3,7 @@ using System.Windows.Input;
 using Microsoft.UI.Xaml.Input;
 using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
+using PacConsole.Core.Solids;
 using Windows.System;
 
 namespace PacConsole.Controls;
@@ -207,12 +208,13 @@ public sealed partial class PlantViewport : UserControl
 
         var selected = SelectedUnit as UnitId?;
         var alerting = AlertingUnits is ImmutableArray<UnitId> a ? a : ImmutableArray<UnitId>.Empty;
-        var projection = OrbitProjection.ForViewport(_pose, width, height);
+        // One projection for the drawing and the tags, so leaders land on their units at any pose.
+        var projection = PlantSolids.ViewProjection(_pose, width, height);
 
         var requests = UnitCatalog.All.Select(u =>
         {
             var label = alerting.Contains(u.Id) ? $"{u.Code} · ALERT" : u.Code;
-            return new TagRequest(u.Id, projection.Project(PlantGeometry.Default.Anchors[u.Id]), TagLayout.EstimateWidth(label));
+            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id]), TagLayout.EstimateWidth(label));
         }).ToList();
         var placements = TagLayout.Solve(requests, width);
 
@@ -229,7 +231,7 @@ public sealed partial class PlantViewport : UserControl
             ApplyTagState(tag, isSelected, isAlert);
         }
 
-        Wireframe.Show(_pose, selected, alerting, placements);
+        PlantDrawing.Show(_pose, selected, alerting, placements);
         Pose = _pose;
 
         CaptionDetail.Text = $"{PresetName()} · YAW {_pose.YawDegrees:000}° · EL {_pose.ElevationDegrees:00}°";

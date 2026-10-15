@@ -18,22 +18,38 @@ public sealed record SolidPalette(
     SKColor Lo,
     SKColor Faint,
     SKColor Lit,
-    float Hairline)
+    SKColor Alert,
+    SKColor Leader,
+    float Hairline,
+    float LitStroke)
 {
-    /// <summary>The reference figure's dark palette (the Anatomy kit's CSS variables).</summary>
-    public static readonly SolidPalette Figure = new(
-        Paper: SKColor.Parse("#131313"),
-        Shades: [SKColor.Parse("#0f0f0f"), SKColor.Parse("#121212"), SKColor.Parse("#151515"), SKColor.Parse("#181818")],
-        Top: SKColor.Parse("#1c1c1c"),
-        LitFace: SKColor.Parse("#1b1b1b"),
-        LitShade: SKColor.Parse("#1d1d1d"),
-        LitTop: SKColor.Parse("#262626"),
-        Hi: SKColor.Parse("#d4d4d4"),
-        Mid: SKColor.Parse("#6a6a6a"),
-        Lo: SKColor.Parse("#3e3e3e"),
-        Faint: SKColor.Parse("#2a2a2a"),
-        Lit: SKColors.White,
-        Hairline: 0.6f);
+    /// <summary>The console palette from <c>Styles/Tokens.xaml</c> (the Solid* colours), so every plant drawing matches its card.</summary>
+    public static SolidPalette FromResources(ResourceDictionary r)
+    {
+        SKColor C(string key) => r[key] switch
+        {
+            Windows.UI.Color c => new SKColor(c.R, c.G, c.B, c.A),
+            SolidColorBrush b => new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A),
+            _ => SKColors.Magenta,
+        };
+        float D(string key) => (float)(double)r[key];
+        return new(
+            Paper: C("SolidPaperColor"),
+            Shades: [C("SolidShade0Color"), C("SolidShade1Color"), C("SolidShade2Color"), C("SolidShade3Color")],
+            Top: C("SolidTopColor"),
+            LitFace: C("SolidLitFaceColor"),
+            LitShade: C("SolidLitShadeColor"),
+            LitTop: C("SolidLitTopColor"),
+            Hi: C("SolidLineHiColor"),
+            Mid: C("SolidLineMidColor"),
+            Lo: C("SolidLineLoColor"),
+            Faint: C("SolidLineFaintColor"),
+            Lit: C("AccentBrush"),
+            Alert: C("AlertBrush"),
+            Leader: C("SolidLeaderColor"),
+            Hairline: D("SolidStrokeHairline"),
+            LitStroke: D("SolidStrokeLit"));
+    }
 }
 
 /// <summary>
@@ -47,19 +63,22 @@ public sealed class SolidRenderer : IDisposable
     private readonly SKPaint _fill = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
     private readonly SKPaint _line = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
 
-    public SolidPalette Palette { get; set; } = SolidPalette.Figure;
+    public required SolidPalette Palette { get; init; }
 
-    public void Draw(SKCanvas canvas, IReadOnlyList<SolidPart> parts, OrbitProjection projection, UnitId? selected)
+    /// <summary>Paints <paramref name="parts"/> back to front. Lit parts of the selected unit take the accent; of an alerting unit, the alert colour.</summary>
+    public void Draw(SKCanvas canvas, IReadOnlyList<SolidPart> parts, OrbitProjection projection, UnitId? selected, IReadOnlyCollection<UnitId>? alerting = null)
     {
         var order = DepthOrder.Sort(parts.Select(p => p.Volume).ToList(), projection);
         foreach (var index in order)
         {
             var part = parts[index];
-            DrawShape(canvas, part.Build(projection), part.Edge, part.Crease, part.Lit && part.Unit is { } u && u == selected);
+            var lit = part.Lit && part.Unit is { } u && u == selected;
+            var alert = !lit && part.Lit && part.Unit is { } a && alerting is not null && alerting.Contains(a);
+            DrawShape(canvas, part.Build(projection), part.Edge, part.Crease, lit, alert);
         }
     }
 
-    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit)
+    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert)
     {
         var pal = Palette;
         Fill(canvas, shape.Fill, lit ? pal.LitFace : pal.Paper);
@@ -70,13 +89,14 @@ public sealed class SolidRenderer : IDisposable
             Stroke(canvas, shape.Crease, pal.Faint);
             Stroke(canvas, shape.Bevel, pal.Faint);
         }
-        Stroke(canvas, shape.Outline, lit ? pal.Lit : edge switch
+        var outline = lit ? pal.Lit : alert ? pal.Alert : edge switch
         {
             EdgeTone.Hi => pal.Hi,
             EdgeTone.Lo => pal.Lo,
             EdgeTone.Faint => pal.Faint,
             _ => pal.Mid,
-        });
+        };
+        Stroke(canvas, shape.Outline, outline, lit || alert ? pal.LitStroke : pal.Hairline);
     }
 
     private void Fill(SKCanvas canvas, Vec2[] polygon, SKColor color)
@@ -97,7 +117,7 @@ public sealed class SolidRenderer : IDisposable
         canvas.DrawPath(_path, _fill);
     }
 
-    private void Stroke(SKCanvas canvas, List<Vec2[]> lines, SKColor color)
+    private void Stroke(SKCanvas canvas, List<Vec2[]> lines, SKColor color, float? width = null)
     {
         if (lines.Count == 0) return;
         _path.Rewind();
@@ -108,7 +128,7 @@ public sealed class SolidRenderer : IDisposable
             for (var i = 1; i < line.Length; i++) _path.LineTo(line[i].X, line[i].Y);
         }
         _line.Color = color;
-        _line.StrokeWidth = Palette.Hairline;
+        _line.StrokeWidth = width ?? Palette.Hairline;
         canvas.DrawPath(_path, _line);
     }
 

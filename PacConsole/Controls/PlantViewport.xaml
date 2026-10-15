@@ -13,9 +13,9 @@
         BorderThickness="1"
         CornerRadius="{StaticResource RadiusCard}">
 
-    <!-- Drag surface + wireframe. Tags sit in a Canvas above it so they stay real, focusable Buttons. -->
+    <!-- Drag surface + solid plant. Tags sit in a Canvas above it so they stay real, focusable Buttons. -->
     <Grid x:Name="Surface" Background="Transparent">
-      <rendering:WireframeCanvas x:Name="Wireframe" />
+      <rendering:PlantCanvas x:Name="PlantDrawing" />
       <Canvas x:Name="TagLayer" />
     </Grid>
 
@@ -25,7 +25,7 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 IsHitTestVisible="False">
-      <TextBlock Text="PLANT MODEL · WIREFRAME" Style="{StaticResource TypeSection}" />
+      <TextBlock Text="PLANT MODEL" Style="{StaticResource TypeSection}" />
       <TextBlock x:Name="CaptionDetail" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
     </StackPanel>
 

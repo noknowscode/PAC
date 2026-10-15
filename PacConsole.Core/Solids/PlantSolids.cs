@@ -61,7 +61,55 @@ public sealed class PlantSolids
         Pipework();
         All = _parts.ToImmutable();
         Pads = _pads.ToImmutableDictionary();
+
+        // Each tag hangs from the top of its unit's tallest part, so the leader lands on the unit.
+        Anchors = Centres.Keys.ToImmutableDictionary(id => id, id =>
+        {
+            var top = All.Where(p => p.Unit == id).MaxBy(p => p.Volume.Y1)!.Volume;
+            var c = top.Centre;
+            return new Vec3(c.X, top.Y1, c.Z);
+        });
     }
+
+    /// <summary>Where each unit's tag attaches: the top centre of its tallest part.</summary>
+    public ImmutableDictionary<UnitId, Vec3> Anchors { get; }
+
+    /// <summary>
+    /// The camera framing every whole-plant view shares, so the drawing and the tags placed over it
+    /// use the same projection. The sphere holds the plate, feet and the tallest stack.
+    /// </summary>
+    public static OrbitProjection ViewProjection(CameraPose pose, float width, float height, float padding = 8) =>
+        OrbitProjection.AroundSphere(pose, new(0, 20, 0), 190, width, height, padding);
+
+    /// <summary>Fits the parts' hulls tightly inside a box, for fixed-camera thumbnails.</summary>
+    public static OrbitProjection Fit(CameraPose pose, IEnumerable<SolidPart> parts, float width, float height, float padding)
+    {
+        var unit = new OrbitProjection(pose, 1, 0, 0);
+        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+        foreach (var q in Corners(parts))
+        {
+            var s = unit.Project(q);
+            minX = MathF.Min(minX, s.X); maxX = MathF.Max(maxX, s.X);
+            minY = MathF.Min(minY, s.Y); maxY = MathF.Max(maxY, s.Y);
+        }
+        var scale = MathF.Min((width - 2 * padding) / (maxX - minX), (height - 2 * padding) / (maxY - minY));
+        return new OrbitProjection(pose, scale, width / 2 - scale * (minX + maxX) / 2, height / 2 - scale * (minY + maxY) / 2);
+    }
+
+    /// <summary>Centre and radius that hold one unit at any yaw, for the turning unit preview.</summary>
+    public (Vec3 Centre, float Radius) Sphere(UnitId id)
+    {
+        var corners = Corners(UnitWithPad(id)).ToList();
+        var centre = new Vec3(
+            (corners.Min(q => q.X) + corners.Max(q => q.X)) / 2,
+            (corners.Min(q => q.Y) + corners.Max(q => q.Y)) / 2,
+            (corners.Min(q => q.Z) + corners.Max(q => q.Z)) / 2);
+        return (centre, corners.Max(q => (q - centre).Length));
+    }
+
+    private static IEnumerable<Vec3> Corners(IEnumerable<SolidPart> parts) =>
+        parts.SelectMany(p => p.Volume.Bottom.Select(q => new Vec3(q.X, p.Volume.Y0, q.Z))
+            .Concat(p.Volume.Top.Select(q => new Vec3(q.X, p.Volume.Y1, q.Z))));
 
     /// <summary>Every solid: stand, pads, the six units and the pipework.</summary>
     public ImmutableArray<SolidPart> All { get; }

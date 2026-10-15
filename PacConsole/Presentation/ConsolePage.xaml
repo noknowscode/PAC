@@ -251,7 +251,7 @@
                             CornerRadius="{StaticResource RadiusCard}" AutomationProperties.Name="Camera preset ISO">
                       <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
                         <TextBlock Text="ISO · NE" Style="{StaticResource CardHeader}" />
-                        <rendering:WireframeThumb Grid.Row="1" PresetKey="iso" Selected="{Binding Data.Selected}" />
+                        <rendering:SolidThumb Grid.Row="1" PresetKey="iso" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
                         <TextBlock Grid.Row="2" Text="YAW 35° / EL 28°" Style="{StaticResource TypeMicro}" Foreground="{StaticResource FaintBrush}" />
                       </Grid>
                     </Button>
@@ -260,7 +260,7 @@
                             CornerRadius="{StaticResource RadiusCard}" AutomationProperties.Name="Camera preset elevation">
                       <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
                         <TextBlock Text="ELEVATION · S" Style="{StaticResource CardHeader}" />
-                        <rendering:WireframeThumb Grid.Row="1" PresetKey="elevation" Selected="{Binding Data.Selected}" />
+                        <rendering:SolidThumb Grid.Row="1" PresetKey="elevation" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
                         <TextBlock Grid.Row="2" Text="YAW 0° / EL 6°" Style="{StaticResource TypeMicro}" Foreground="{StaticResource FaintBrush}" />
                       </Grid>
                     </Button>
@@ -269,7 +269,7 @@
                             CornerRadius="{StaticResource RadiusCard}" AutomationProperties.Name="Camera preset plan">
                       <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
                         <TextBlock Text="PLAN" Style="{StaticResource CardHeader}" />
-                        <rendering:WireframeThumb Grid.Row="1" PresetKey="plan" Selected="{Binding Data.Selected}" />
+                        <rendering:SolidThumb Grid.Row="1" PresetKey="plan" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
                         <TextBlock Grid.Row="2" Text="YAW 0° / EL 86°" Style="{StaticResource TypeMicro}" Foreground="{StaticResource FaintBrush}" />
                       </Grid>
                     </Button>
@@ -305,7 +305,7 @@
                   <Border Grid.Column="2" Style="{StaticResource CardStyle}">
                     <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="4">
                       <TextBlock Text="UNIT PREVIEW" Style="{StaticResource CardHeader}" />
-                      <rendering:WireframeThumb Grid.Row="1" SingleUnit="True" Selected="{Binding Data.Selected}" Pose="{Binding Pose, ElementName=Viewport}" />
+                      <rendering:SolidThumb Grid.Row="1" SingleUnit="True" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" Pose="{Binding Pose, ElementName=Viewport}" />
                       <TextBlock Grid.Row="2" Text="{Binding Data.SelectedCode}" Style="{StaticResource TypeCode}" Foreground="{StaticResource AccentBrush}" />
                       <TextBlock Grid.Row="3" Text="{Binding Data.SelectedName}" Style="{StaticResource TypeMicro}" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                     </Grid>
