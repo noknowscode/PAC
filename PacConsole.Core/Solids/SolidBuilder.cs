@@ -155,8 +155,9 @@ public static class SolidBuilder
     }
 
     /// <summary>A disc (a short cylinder) between <paramref name="s0"/> and <paramref name="s1"/> along a frame's axis.</summary>
-    public static SolidShape Disc(float s0, float s1, float r, Frame f, OrbitProjection p) =>
-        Lathe([(s0, 0), (s0, r), (s1, r), (s1, 0)], f, p, StepsFor(r, 32, 160, p.Scale));
+    /// <remarks><paramref name="least"/> is the fewest facets; pipes pass 12 (a 5 px pipe's outline is then within 0.2 px).</remarks>
+    public static SolidShape Disc(float s0, float s1, float r, Frame f, OrbitProjection p, int least = 32) =>
+        Lathe([(s0, 0), (s0, r), (s1, r), (s1, 0)], f, p, StepsFor(r, least, 160, p.Scale));
 
     /// <summary>A closed turned solid from a profile of (s, r) knots: the kit's <c>solidOf</c>.</summary>
     public static SolidShape Turned((float S, float R)[] profile, Frame f, OrbitProjection p)
@@ -169,10 +170,10 @@ public static class SolidBuilder
     /// A straight pipe from <paramref name="a"/> to <paramref name="b"/>: a disc along its own axis,
     /// shaded like every other turned part. (The kit draws tubes as flat ribbons; solids need a hull.)
     /// </summary>
-    public static SolidShape Tube(Vec3 a, Vec3 b, float r, OrbitProjection p)
+    public static SolidShape Tube(Vec3 a, Vec3 b, float r, OrbitProjection p, int least = 32)
     {
         var along = b - a;
-        return Disc(0, along.Length, r, Frame.Along(a, along), p);
+        return Disc(0, along.Length, r, Frame.Along(a, along), p, least);
     }
 
     /// <summary>

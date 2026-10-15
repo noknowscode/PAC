@@ -111,6 +111,16 @@
   <!-- The inked silhouette every piece of equipment carries (the reference's navy, kept in slate). -->
   <Color x:Key="SolidSilhouetteColor">#2C3D50</Color>
   <Color x:Key="SolidLeaderColor">#8A939E</Color>
+  <!-- Pipe circuits, muted so orange stays the only call to attention. The brush is the deep tone
+       (shades, outline, and the legend swatch); the colour is the base face. -->
+  <SolidColorBrush x:Key="CircuitSteamBrush" Color="#D4A3AF" />
+  <SolidColorBrush x:Key="CircuitWaterBrush" Color="#9EC1D8" />
+  <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#96C9C3" />
+  <SolidColorBrush x:Key="CircuitFuelBrush" Color="#B9A8D0" />
+  <Color x:Key="SolidSteamColor">#F2D9DF</Color>
+  <Color x:Key="SolidWaterColor">#D6E7F2</Color>
+  <Color x:Key="SolidCoolingColor">#D3ECE9</Color>
+  <Color x:Key="SolidFuelColor">#E5DDEF</Color>
   <!-- Flat ground shadow: one opaque tone, so overlapping shadows never darken. -->
   <Color x:Key="SolidShadowColor">#D3DDE6</Color>
   <x:Double x:Key="SolidStrokeHairline">0.7</x:Double>

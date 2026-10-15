@@ -62,7 +62,9 @@ public sealed partial class PlantViewport : UserControl
     {
         InitializeComponent();
 
-        _auto = _animationsEnabled;
+        // Opens still: the full-detail drawing is cached while the camera holds, and fans and flow
+        // keep moving. Orbiting is opt-in (the toggle) or a drag.
+        _auto = false;
         AutoOrbit.IsChecked = _auto;
 
         foreach (var unit in UnitCatalog.All)

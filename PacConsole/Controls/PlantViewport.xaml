@@ -19,9 +19,30 @@
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="16">
       <!-- Caption, set like a figure plate: number, title, then what the view shows. -->
       <StackPanel Spacing="2" VerticalAlignment="Center" IsHitTestVisible="False">
-        <TextBlock Style="{StaticResource TypeSection}">
-          <Run Text="Fig. 1" Foreground="{StaticResource MutedBrush}" /><Run Text="    Plant 02, thermal" />
-        </TextBlock>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <TextBlock Style="{StaticResource TypeSection}">
+            <Run Text="Fig. 1" Foreground="{StaticResource MutedBrush}" /><Run Text="    Plant 02, thermal" />
+          </TextBlock>
+          <!-- Circuit legend: the pipe tints, each with its name. -->
+          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="Steam" Style="{StaticResource TypeMicro}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitWaterBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="Feedwater" Style="{StaticResource TypeMicro}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="Cooling water" Style="{StaticResource TypeMicro}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="Fuel" Style="{StaticResource TypeMicro}" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
         <TextBlock Style="{StaticResource TypeMicro}">
           <Run x:Name="CaptionDetail" /><Run Text=" · drag to orbit, click a unit to select it" />
         </TextBlock>

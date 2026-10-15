@@ -27,6 +27,9 @@ public sealed record SolidPart(string Name, UnitId? Unit, Volume Volume, Func<Or
 
     /// <summary>Set on a pad: the unit standing on it, whose lift shadow is drawn on this pad.</summary>
     public UnitId? PadOf { get; init; }
+
+    /// <summary>The fluid a pipe part carries; the renderer tints the part by it.</summary>
+    public Circuit Circuit { get; init; }
 }
 
 /// <summary>
@@ -34,12 +37,13 @@ public sealed record SolidPart(string Name, UnitId? Unit, Volume Volume, Func<Or
 /// is Z-up; here the figure's (x, y, z) is (X, Z, Y), so every plan keeps the figure's numbers.
 /// Line work (seams, bolts, ticks, fan blades, pipe flow) rides on its part as <see cref="SolidPart.Details"/>.
 /// </summary>
-public sealed class PlantSolids
+public sealed partial class PlantSolids
 {
     public const float PadHeight = 1.2f;
     public const float PadHalf = 36;
     public const float PlateHeight = 10, FootHeight = 6;
-    public static readonly Plan Plate = new(-160, -110, 320, 220, 10);
+    /// <summary>The stand. It reaches west of the figure's plate (x -160) to hold the boiler bay.</summary>
+    public static readonly Plan Plate = new(-250, -110, 410, 220, 10);
 
     private static readonly Lazy<PlantSolids> _default = new(() => new PlantSolids());
 
@@ -71,6 +75,7 @@ public sealed class PlantSolids
         CondenserBank();
         AshSilo();
         Pipework();
+        ThermalCycle();
         All = _parts.ToImmutable();
         Pads = _pads.ToImmutableDictionary();
 
@@ -518,7 +523,7 @@ public sealed class PlantSolids
             Slab(null, "stand.pier", plan, 0, height, bevel: 0.4f);
             With((p, _) => Details.Dots(EdgeTone.Mid, [new(plan.X + plan.W / 2, height, plan.Z + 1.6f), new(plan.X + plan.W / 2, height, plan.Z + plan.D - 1.6f)], p));
         }
-        void Pipe(string name, Vec3 a, Vec3 b, float r)
+        void Pipe(string name, Vec3 a, Vec3 b, float r, Circuit circuit)
         {
             var along = b - a;
             var length = along.Length;
@@ -527,11 +532,11 @@ public sealed class PlantSolids
             var rim = r * 1.55f;
             Vec3 At(float s) => new(a.X + dir.X * s, a.Y + dir.Y * s, a.Z + dir.Z * s);
             var axis = Frame.Along(a, along);
-            _parts.Add(new(name, null, BoxAlong(axis, t, length - t, r), p => SolidBuilder.Tube(At(t), At(length - t), r, p)));
+            _parts.Add(new(name, null, BoxAlong(axis, t, length - t, r), p => SolidBuilder.Tube(At(t), At(length - t), r, p)) { Circuit = circuit });
             // A flow mark along the crown, in the direction the line runs.
             With((p, _) => [Details.Flow(At(t), At(length - t), r, p)]);
-            Disc(null, name + ".flange", axis, 0, t, rim);
-            Disc(null, name + ".flange", axis, length - t, length, rim);
+            _parts.Add(PipeDisc(name + ".flange", axis, 0, t, rim) with { Circuit = circuit });
+            _parts.Add(PipeDisc(name + ".flange", axis, length - t, length, rim) with { Circuit = circuit });
         }
 
         Pier(new(-150, -8, 8, 16, 0.8f), 10);
@@ -540,14 +545,14 @@ public sealed class PlantSolids
         {
             Slab(null, "stand.sleeper", new(x - 1.5f, -6.5f, 3, 13, 0.3f), 0, 3.3f, steps: 2, bevel: 0);
         }
-        Pipe("rack.north", new(-142, 5.5f, -3), new(142, 5.5f, -3), 2.2f);
-        Pipe("rack.south", new(142, 5.5f, 3), new(-142, 5.5f, 3), 2.2f); // the return header runs west
+        Pipe("rack.north", new(-142, 5.5f, -3), new(142, 5.5f, -3), 2.2f, Circuit.Cooling);
+        Pipe("rack.south", new(142, 5.5f, 3), new(-142, 5.5f, 3), 2.2f, Circuit.Cooling); // the return header runs west
 
         Pier(new(37, 42, 5, 12, 0.6f), 12);
         Pier(new(53, 42, 5, 12, 0.6f), 12);
-        Pipe("steam", new(42, 6.5f, 48), new(53, 6.5f, 48), 2.6f);
+        Pipe("steam", new(42, 6.5f, 48), new(53, 6.5f, 48), 2.6f, Circuit.Steam);
         Pier(new(37, -35, 5, 10, 0.6f), 9);
         Pier(new(53, -35, 5, 10, 0.6f), 9);
-        Pipe("fuel", new(42, 4.8f, -30), new(53, 4.8f, -30), 1.6f);
+        Pipe("fuel", new(42, 4.8f, -30), new(53, 4.8f, -30), 1.6f, Circuit.Fuel);
     }
 }

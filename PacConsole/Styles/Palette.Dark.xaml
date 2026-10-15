@@ -45,5 +45,13 @@
   <Color x:Key="SolidLineFaintColor">#33383E</Color>
   <Color x:Key="SolidLeaderColor">#6E767F</Color>
   <Color x:Key="SolidShadowColor">#0E1012</Color>
+  <Color x:Key="CircuitSteamBrush">#7A4D58</Color>
+  <Color x:Key="CircuitWaterBrush">#3F5F78</Color>
+  <Color x:Key="CircuitCoolingBrush">#3A6662</Color>
+  <Color x:Key="CircuitFuelBrush">#5C4E70</Color>
+  <Color x:Key="SolidSteamColor">#4A3037</Color>
+  <Color x:Key="SolidWaterColor">#283B4B</Color>
+  <Color x:Key="SolidCoolingColor">#243F3D</Color>
+  <Color x:Key="SolidFuelColor">#3A3047</Color>
   <Color x:Key="SolidSilhouetteColor">#8E97A1</Color>
 </ResourceDictionary>

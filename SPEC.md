@@ -268,6 +268,11 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 - One flat ground shadow path covers every non-stand part. Each shadow is the hull of the part's base and top, pushed away from a viewer-relative light (right and toward the viewer, 0.55 per unit of height). It's drawn opaque after the stand, so overlaps never darken. It replaces the blurred halo, which also removes the per-frame blur the trace flagged; a lifted unit's shadow slides out from under it.
 - Framing fits the plant's outline taken across 36 yaws, cached per elevation. The plant now fills Fig. 1, the frame doesn't breathe while orbiting, and "the whole plant fits its frame" still passes.
 
+**Decisions (the user, 2026-10-15):**
+- **Full thermal cycle.** Add a boiler, feedwater pumps, a steam valve station, cooling-water runs, a step-up transformer and cable trays as unselectable plant. The six units keep their telemetry.
+- **Muted circuit tints.** Steam in dusty rose, feedwater and cooling water in two pale blues, flue in grey, with a legend in the Fig. 1 caption. Orange stays reserved for selection.
+- **Still by default.** The plant opens on a still isometric with fans and flow moving, and auto orbit becomes opt-in. That lets the static drawing be cached at full detail.
+
 **Phase B: kit and plant detail.**
 - New builders: `Elbow` (a radiused tube bend), `Flange` (a ring at each joint), `Valve` (body, bonnet and handwheel), `PumpSet` (plinth, pump volute, coupling and motor), `Cabinet` (box, door seam, display, handle), `Ladder`/`Rail` (lines on a part), `Grating` (a hatch on a top face).
 - Routed pipe runs: a polyline on the plan grid becomes tubes, elbows and flanges, on supports at fixed spacing.

@@ -85,13 +85,21 @@ public class PlantSolidsTests
     }
 
     [Test]
-    public void Part_count_matches_the_figure()
+    public void Part_count_matches_the_figure_plus_the_thermal_cycle()
     {
-        // Stand 8 feet + plate + strip + label + 6 pads = 17; STK 12; TKA 19; GEN 16; TRB 27;
-        // CND 8; SIL 14; pipework 6 piers + 8 sleepers + 4 tubes + 8 flanges = 26.
-        Plant.All.Should().HaveCount(139);
+        // The figure: stand 17, STK 12, TKA 19, GEN 16, TRB 27, CND 8, SIL 14, pipework 26 = 139.
+        Plant.All.Count(p => !IsCycle(p)).Should().Be(139);
         Plant.All.Count(p => p.Name is "rack.north" or "rack.south" or "steam" or "fuel").Should().Be(4);
+        // The cycle added round it: boiler bay, runs, pumps, transformer and cabinets.
+        Plant.All.Should().HaveCount(266);
+        Plant.All.Where(p => p.Circuit != Circuit.None).Should().NotBeEmpty();
     }
+
+    private static readonly string[] CyclePrefixes =
+        ["boiler.", "stand.boilerpad", "flue.", "fuel.", "steam.", "ash", "fw.", "xfmr.", "stand.yard", "cab.", "pipe.support"];
+
+    private static bool IsCycle(SolidPart p) =>
+        p.Name is not ("steam" or "fuel" or "steam.flange" or "fuel.flange") && CyclePrefixes.Any(p.Name.StartsWith);
 
     [Test]
     public void Every_unit_part_stands_inside_its_pad()

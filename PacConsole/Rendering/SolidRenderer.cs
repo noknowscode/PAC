@@ -26,6 +26,9 @@ public sealed record SolidPalette(
     float SilhouetteStroke,
     float LitStroke)
 {
+    /// <summary>Base and deep tone per pipe circuit (steam, water, cooling, fuel).</summary>
+    public IReadOnlyDictionary<Circuit, (SKColor Base, SKColor Deep)> Circuits { get; init; } = new Dictionary<Circuit, (SKColor, SKColor)>();
+
     /// <summary>The console palette from <c>Styles/Tokens.xaml</c> (the Solid* colours), so every plant drawing matches its card.</summary>
     public static SolidPalette FromResources(ResourceDictionary r)
     {
@@ -54,7 +57,16 @@ public sealed record SolidPalette(
             Silhouette: C("SolidSilhouetteColor"),
             Hairline: D("SolidStrokeHairline"),
             SilhouetteStroke: D("SolidStrokeSilhouette"),
-            LitStroke: D("SolidStrokeLit"));
+            LitStroke: D("SolidStrokeLit"))
+        {
+            Circuits = new Dictionary<Circuit, (SKColor, SKColor)>
+            {
+                [Circuit.Steam] = (C("SolidSteamColor"), C("CircuitSteamBrush")),
+                [Circuit.Water] = (C("SolidWaterColor"), C("CircuitWaterBrush")),
+                [Circuit.Cooling] = (C("SolidCoolingColor"), C("CircuitCoolingBrush")),
+                [Circuit.Fuel] = (C("SolidFuelColor"), C("CircuitFuelBrush")),
+            },
+        };
     }
 }
 
@@ -102,17 +114,20 @@ public sealed class SolidRenderer : IDisposable
         float LiftOf(UnitId? unit) => unit is { } u && frame.Lift is not null && frame.Lift.TryGetValue(u, out var l) ? l : 0;
 
         var camera = (projection.SinYaw, projection.CosYaw, projection.SinElevation, projection.Scale, projection.CenterX, projection.CenterY);
-        var cameraChanged = !ReferenceEquals(parts, _cachedParts) || camera != _cachedCamera;
+        var cameraChanged = !SameParts(parts, _cachedParts) || camera != _cachedCamera;
         if (cameraChanged)
         {
             _cachedParts = parts;
             _cachedCamera = camera;
             _shapes = new SolidShape[parts.Count];
             _details = new DetailLine[]?[parts.Count];
+            _live = new bool[parts.Count];
             for (var i = 0; i < parts.Count; i++)
             {
                 _shapes[i] = parts[i].Build(projection);
                 if (parts[i].Details is { } d && !parts[i].AnimatedDetails) _details[i] = [.. d(projection, 0)];
+                // Live parts change with time (fan blades, moving flow marks) and are drawn every frame.
+                _live[i] = parts[i].AnimatedDetails || (_details[i]?.Any(l => l.Kind == DetailKind.Flow) ?? false);
             }
         }
 
@@ -129,22 +144,116 @@ public sealed class SolidRenderer : IDisposable
         if (cameraChanged || lifts.AsSpan().SequenceEqual(_shadowLift) is false) BuildShadows(parts, lifts, projection);
 
         // The stand (plate, pads, strip) lies under everything, so it goes first; then the shadows
-        // that fall on it; then every other part in depth order.
-        foreach (var index in order)
+        // that fall on it; then every other part in depth order. -1 stands for the shadow pass.
+        var sequence = new List<int>(order.Length + 1);
+        foreach (var index in order) if (IsGround(parts[index])) sequence.Add(index);
+        sequence.Add(-1);
+        foreach (var index in order) if (!IsGround(parts[index])) sequence.Add(index);
+
+        void Op(SKCanvas c, int index)
         {
-            if (IsGround(parts[index])) DrawPart(canvas, parts[index], index, projection, frame, LiftOf(parts[index].Unit));
+            if (index < 0)
+            {
+                _fill.Color = Palette.Shadow;
+                c.DrawPath(_shadow, _fill);
+            }
+            else
+            {
+                DrawPart(c, parts[index], index, projection, frame, LiftOf(parts[index].Unit));
+            }
         }
-        _fill.Color = Palette.Shadow;
-        canvas.DrawPath(_shadow, _fill);
-        foreach (var index in order)
+
+        // A moving camera or lift draws directly: recording would only add cost to a frame that is
+        // thrown away. Once the view holds, static runs are recorded once and replayed, so a still
+        // plant costs a few picture replays plus its live parts (trace: ~2,500 paths a frame otherwise).
+        var key = new StillKey(camera, frame.Selected, frame.Hovered, AlertMask(frame.Alerting), frame.Details, Palette);
+        var moving = cameraChanged || !lifts.AsSpan().SequenceEqual(_stillLift);
+        _stillLift = lifts;
+        if (moving)
         {
-            if (!IsGround(parts[index])) DrawPart(canvas, parts[index], index, projection, frame, LiftOf(parts[index].Unit));
+            ClearPictures();
+            foreach (var index in sequence) Op(canvas, index);
+            return;
         }
+        if (_segments.Count == 0 || key != _stillKey)
+        {
+            ClearPictures();
+            _stillKey = key;
+            var bounds = canvas.LocalClipBounds;
+            SKPictureRecorder? recorder = null;
+            SKCanvas? recording = null;
+            void Flush()
+            {
+                if (recorder is null) return;
+                _segments.Add((recorder.EndRecording(), -2));
+                recorder.Dispose();
+                recorder = null;
+                recording = null;
+            }
+            foreach (var index in sequence)
+            {
+                if (index >= 0 && _live[index])
+                {
+                    Flush();
+                    _segments.Add((null, index));
+                    continue;
+                }
+                if (recorder is null)
+                {
+                    recorder = new SKPictureRecorder();
+                    recording = recorder.BeginRecording(bounds);
+                }
+                Op(recording!, index);
+            }
+            Flush();
+        }
+        foreach (var (picture, index) in _segments)
+        {
+            if (picture is not null) canvas.DrawPicture(picture);
+            else Op(canvas, index);
+        }
+    }
+
+    private bool[] _live = [];
+    private float[] _stillLift = [];
+    private StillKey _stillKey;
+    private readonly List<(SKPicture? Picture, int Part)> _segments = [];
+
+    /// <summary>What a recorded still frame depends on besides the camera and lifts.</summary>
+    private readonly record struct StillKey(
+        (float, float, float, float, float, float) Camera,
+        UnitId? Selected,
+        UnitId? Hovered,
+        int Alerts,
+        bool Details,
+        SolidPalette? Palette);
+
+    private static int AlertMask(IReadOnlyCollection<UnitId> alerting)
+    {
+        var mask = 0;
+        foreach (var u in alerting) mask |= 1 << (int)u;
+        return mask;
+    }
+
+    private void ClearPictures()
+    {
+        foreach (var (picture, _) in _segments) picture?.Dispose();
+        _segments.Clear();
     }
 
     private float[] _shadowLift = [];
 
-    private static bool IsGround(SolidPart part) => part.Name.StartsWith("stand.", StringComparison.Ordinal);
+    /// <summary>
+    /// The same parts list as last frame. Callers pass <c>ImmutableArray</c>s, a struct boxed afresh
+    /// on every call, so reference equality alone always failed and every frame rebuilt and re-sorted
+    /// every shape as if the camera had moved (Release trace, 2026-10-15: still plant at 12 fps).
+    /// </summary>
+    private static bool SameParts(IReadOnlyList<SolidPart> a, IReadOnlyList<SolidPart>? b) =>
+        ReferenceEquals(a, b) || (a is ImmutableArray<SolidPart> x && b is ImmutableArray<SolidPart> y && x == y);
+
+    /// <summary>Flat on the plate (plate, feet, pads, strip, label): no higher than a pad. Piers and sleepers stand up and cast shadows.</summary>
+    private static bool IsGround(SolidPart part) =>
+        part.Name.StartsWith("stand.", StringComparison.Ordinal) && part.Volume.Y1 <= PlantSolids.PadHeight + 0.01f;
 
     /// <summary>
     /// One path holding every part's ground shadow: the hull of its base and its top, each pushed
@@ -213,7 +322,7 @@ public sealed class SolidRenderer : IDisposable
             canvas.Save();
             canvas.Translate(0, projection.Rise(lift));
         }
-        DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered);
+        DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered, part.Circuit);
         if (frame.Details && part.Details is { } details)
         {
             DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds);
@@ -233,18 +342,30 @@ public sealed class SolidRenderer : IDisposable
                     break;
                 case DetailKind.Flow:
                     // Dashes move along the line at 12 px/s, so the direction of flow reads at a glance.
-                    using (var dash = SKPathEffect.CreateDash([3, 5], (float)(-(seconds * 12) % 8)))
-                    {
-                        _line.PathEffect = dash;
-                        StrokeLine(canvas, d.Points, Palette.Leader, 1);
-                        _line.PathEffect = null;
-                    }
+                    _line.PathEffect = FlowDash(seconds);
+                    StrokeLine(canvas, d.Points, Palette.Leader, 1);
+                    _line.PathEffect = null;
                     break;
                 default:
                     StrokeLine(canvas, d.Points, ToneColor(d.Tone), Palette.Hairline);
                     break;
             }
         }
+    }
+
+    private SKPathEffect? _flowDash;
+    private double _flowDashSeconds = double.NaN;
+
+    /// <summary>
+    /// One dash effect per frame, shared by every flow mark. Creating one per pipe (about 50 a frame
+    /// with the thermal cycle's runs) kept the finalizer thread busy enough to starve frames.
+    /// </summary>
+    private SKPathEffect FlowDash(double seconds)
+    {
+        if (_flowDash is not null && seconds == _flowDashSeconds) return _flowDash;
+        _flowDash?.Dispose();
+        _flowDashSeconds = seconds;
+        return _flowDash = SKPathEffect.CreateDash([3, 5], (float)(-(seconds * 12) % 8));
     }
 
     private SKColor ToneColor(EdgeTone tone) => tone switch
@@ -266,9 +387,19 @@ public sealed class SolidRenderer : IDisposable
         canvas.DrawPath(_path, _line);
     }
 
-    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert, bool hovered = false)
+    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert, bool hovered = false, Circuit circuit = Circuit.None)
     {
         var pal = Palette;
+        if (circuit != Circuit.None && pal.Circuits.TryGetValue(circuit, out var tint))
+        {
+            // A circuit's pipe: shades run from its deep tone to its base, the top a step lighter than
+            // the base, and the outline in the circuit's own ink, so a run reads end to end.
+            Fill(canvas, shape.Fill, tint.Base);
+            for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.ShadeFaces[s], Lerp(tint.Deep, tint.Base, s / 3f));
+            Fill(canvas, shape.Top, Lerp(tint.Base, tint.Deep, -0.35f));
+            Stroke(canvas, shape.Outline, Lerp(tint.Deep, pal.Silhouette, 0.5f), pal.SilhouetteStroke);
+            return;
+        }
         Fill(canvas, shape.Fill, lit ? pal.LitFace : pal.Paper);
         for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.ShadeFaces[s], lit ? pal.LitShade : pal.Shades[s]);
         Fill(canvas, shape.Top, lit ? pal.LitTop : pal.Top);
@@ -292,6 +423,13 @@ public sealed class SolidRenderer : IDisposable
             ? (pal.Silhouette, pal.SilhouetteStroke)
             : (edge == EdgeTone.Lo ? pal.Mid : pal.Lo, pal.Hairline);
         Stroke(canvas, shape.Outline, lit ? pal.Lit : hovered ? pal.Hi : ink, lit || hovered ? pal.LitStroke : width);
+    }
+
+    /// <summary>Linear blend from a to b (t outside 0..1 extrapolates, clamped per channel).</summary>
+    private static SKColor Lerp(SKColor a, SKColor b, float t)
+    {
+        static byte Mix(byte x, byte y, float t) => (byte)Math.Clamp(MathF.Round(x + (y - x) * t), 0, 255);
+        return new(Mix(a.Red, b.Red, t), Mix(a.Green, b.Green, t), Mix(a.Blue, b.Blue, t), Mix(a.Alpha, b.Alpha, t));
     }
 
     private void Fill(SKCanvas canvas, Vec2[] polygon, SKColor color)
@@ -340,6 +478,8 @@ public sealed class SolidRenderer : IDisposable
         _fill.Dispose();
         _line.Dispose();
         _shadow.Dispose();
+        _flowDash?.Dispose();
+        ClearPictures();
         _alertDash.Dispose();
     }
 }
