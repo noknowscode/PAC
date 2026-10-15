@@ -247,6 +247,50 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 - **Cost to watch:** the z-buffer test takes ~16 s. Per-frame cost of 139 builds + sort is not measured yet (phase 4 budget: < 4 ms).
 - **Phase 4 inputs:** the figure's plate is 320 × 220 against the old 208 × 144 platform, so `OrbitProjection.ForViewport`'s scale constants need retuning; the figure palette on `#131313` reads very dark in the card, so measure the shade steps against `CardBrush` (Risks → contrast).
 
+## Illustration fidelity (2026-10-15, after the instrument redesign)
+
+**Aspiration.** The user's reference: *Isometric Swimming Pool* by Andrew Kras (dribbble.com/shots/25669636). It's a technical isometric drawn from real engineering drawings for professionals who would catch a wrong detail, by an illustrator who was a nuclear power plant engineer. The bar is: if a pool plant room can look that intricate and correct, a thermal power plant should look better.
+
+**What the reference does, and where each habit lands in our renderer.**
+
+| Habit | Measure in the reference | Ours before | Phase |
+|---|---|---|---|
+| Two line weights | Navy silhouette about 1.5 px; interior lines about 0.7 px | One grey hairline, 0.8 px | A (done) |
+| Flat ground shadows | One light direction, shadows fall down-right, one flat tone | Blurred halo under a lifted unit only | A (done) |
+| Cool limited palette | #FFFFFF, #B3D8E6, #8CB8CC, #254465, #9EA0B6, #4A6B88, #A28CA8 | Neutral greys | A (done; slate-navy kept) |
+| Pipework as the hero | Doubled tube lines, radiused elbows, flange rings at every joint, valves with handwheels, supports on plinths, runs that turn on the grid | Straight tubes on one rack | B |
+| Equipment density | Pumps on plinths with motors, cabinets with displays and handles, gauges, ladders and rails, grating, tile grids | 139 solids, sparse | B |
+| Circuits coded by colour | Two circuits: pink (supply) and navy (return) | None | C |
+| Technical truth | Drawn from the client's engineering drawings | A believable layout, but no thermal cycle (no boiler) | B |
+
+**Phase A (done): renderer and palette, every unit lifted at once.**
+- The silhouette is inked in `SolidSilhouetteColor` at `SolidStrokeSilhouette` (1.15 px). Stand and fittings keep the hairline at 0.7 px; creases drop to 0.5 px.
+- One flat ground shadow path covers every non-stand part. Each shadow is the hull of the part's base and top, pushed away from a viewer-relative light (right and toward the viewer, 0.55 per unit of height). It's drawn opaque after the stand, so overlaps never darken. It replaces the blurred halo, which also removes the per-frame blur the trace flagged; a lifted unit's shadow slides out from under it.
+- Framing fits the plant's outline taken across 36 yaws, cached per elevation. The plant now fills Fig. 1, the frame doesn't breathe while orbiting, and "the whole plant fits its frame" still passes.
+
+**Phase B: kit and plant detail.**
+- New builders: `Elbow` (a radiused tube bend), `Flange` (a ring at each joint), `Valve` (body, bonnet and handwheel), `PumpSet` (plinth, pump volute, coupling and motor), `Cabinet` (box, door seam, display, handle), `Ladder`/`Rail` (lines on a part), `Grating` (a hatch on a top face).
+- Routed pipe runs: a polyline on the plan grid becomes tubes, elbows and flanges, on supports at fixed spacing.
+- The plant gains a believable thermal cycle:
+  - a boiler beside the turbine
+  - feedwater pumps
+  - a valve station on the main steam line
+  - cooling-water runs from the condenser
+  - cable trays from the generator to a step-up transformer
+  - control cabinets at each unit
+  - ladders and rails on the silo, tanks and stacks
+- Target: 139 solids to 350–450. Every new part keeps the depth-order invariants (convex hulls, no interpenetration). The z-buffer test is still the gate.
+
+**Phase C: circuits.**
+- Steam, feedwater, cooling water and flue each get a pipe tone; the legend sits in the Fig. 1 caption.
+- Orange stays reserved for selection, so circuit tones are muted.
+
+**Phase D: performance budget for the extra detail.**
+- About 1,100 paths per frame today. The detail could triple that, and the orbit already misses frames at p90.
+- Plan: cache the static plant as an `SKPicture` per camera and replay it when only time-based details change (fans, flow).
+- While the camera moves, skip parts and details below a screen-size threshold (level of detail).
+- Measure with the `FrameCostTests` harness and a Release run, as before.
+
 ## Unresolved Questions
 
 - **Omitted (accepted):** light theme (app is dark-only); interactive fan speed (see Decisions).

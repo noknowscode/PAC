@@ -44,5 +44,6 @@
   <Color x:Key="SolidLineLoColor">#5A6168</Color>
   <Color x:Key="SolidLineFaintColor">#33383E</Color>
   <Color x:Key="SolidLeaderColor">#6E767F</Color>
-  <Color x:Key="SolidHaloColor">#E6050607</Color>
+  <Color x:Key="SolidShadowColor">#0E1012</Color>
+  <Color x:Key="SolidSilhouetteColor">#8E97A1</Color>
 </ResourceDictionary>

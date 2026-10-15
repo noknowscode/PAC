@@ -20,8 +20,10 @@ public sealed record SolidPalette(
     SKColor Lit,
     SKColor Alert,
     SKColor Leader,
-    SKColor Halo,
+    SKColor Shadow,
+    SKColor Silhouette,
     float Hairline,
+    float SilhouetteStroke,
     float LitStroke)
 {
     /// <summary>The console palette from <c>Styles/Tokens.xaml</c> (the Solid* colours), so every plant drawing matches its card.</summary>
@@ -48,8 +50,10 @@ public sealed record SolidPalette(
             Lit: C("AccentBrush"),
             Alert: C("AlertBrush"),
             Leader: C("SolidLeaderColor"),
-            Halo: C("SolidHaloColor"),
+            Shadow: C("SolidShadowColor"),
+            Silhouette: C("SolidSilhouetteColor"),
             Hairline: D("SolidStrokeHairline"),
+            SilhouetteStroke: D("SolidStrokeSilhouette"),
             LitStroke: D("SolidStrokeLit"));
     }
 }
@@ -64,10 +68,11 @@ public readonly record struct SolidFrame(
     UnitId? Hovered = null);
 
 /// <summary>
-/// Paints solids back to front. Orders the parts for the camera (lifted units raised), builds each
-/// part's shape, fills paper, shades and top, strokes crease, bevel and outline, then draws the
-/// part's line work. A lifted unit is drawn translated up the screen, and its pad gets a soft
-/// shadow. Paints, path effects and the scratch path are created once and reused.
+/// Paints solids back to front, the way a technical isometric is inked: the stand first, then one
+/// flat ground shadow for everything standing on it, then each part (fills, then fine interior lines,
+/// then a heavier silhouette). Shadows fall away from a light at the camera's upper left, so they
+/// read the same at every yaw; a lifted unit's shadow slides out from under it. Paints, path effects
+/// and paths are created once and reused.
 /// </summary>
 public sealed class SolidRenderer : IDisposable
 {
@@ -77,7 +82,7 @@ public sealed class SolidRenderer : IDisposable
     private readonly SKPath _path = new() { FillType = SKPathFillType.Winding };
     private readonly SKPaint _fill = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
     private readonly SKPaint _line = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
-    private readonly SKPaint _halo = new() { Style = SKPaintStyle.Fill, IsAntialias = true, MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 4) };
+    private readonly SKPath _shadow = new() { FillType = SKPathFillType.Winding };
     private readonly SKPathEffect _alertDash = SKPathEffect.CreateDash([4, 3], 0);
 
     public required SolidPalette Palette { get; init; }
@@ -121,43 +126,99 @@ public sealed class SolidRenderer : IDisposable
             _orderLift = lifts;
         }
         var order = _order;
+        if (cameraChanged || lifts.AsSpan().SequenceEqual(_shadowLift) is false) BuildShadows(parts, lifts, projection);
 
+        // The stand (plate, pads, strip) lies under everything, so it goes first; then the shadows
+        // that fall on it; then every other part in depth order.
         foreach (var index in order)
         {
-            var part = parts[index];
-            var lift = LiftOf(part.Unit);
-            var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
-            var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
-            var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
-
-            if (lift > 0)
-            {
-                canvas.Save();
-                canvas.Translate(0, projection.Rise(lift));
-            }
-            DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered);
-            if (frame.Details && part.Details is { } details)
-            {
-                DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds);
-            }
-            if (lift > 0) canvas.Restore();
-
-            if (part.PadOf is { } padUnit && LiftOf(padUnit) is var raised and > 0) DrawHalo(canvas, part.Volume, raised, projection);
+            if (IsGround(parts[index])) DrawPart(canvas, parts[index], index, projection, frame, LiftOf(parts[index].Unit));
+        }
+        _fill.Color = Palette.Shadow;
+        canvas.DrawPath(_shadow, _fill);
+        foreach (var index in order)
+        {
+            if (!IsGround(parts[index])) DrawPart(canvas, parts[index], index, projection, frame, LiftOf(parts[index].Unit));
         }
     }
 
-    /// <summary>A soft shadow on the pad under a lifted unit, darker the higher it lifts (alpha 0.8 x lift / full).</summary>
-    private void DrawHalo(SKCanvas canvas, Volume pad, float lift, OrbitProjection p)
+    private float[] _shadowLift = [];
+
+    private static bool IsGround(SolidPart part) => part.Name.StartsWith("stand.", StringComparison.Ordinal);
+
+    /// <summary>
+    /// One path holding every part's ground shadow: the hull of its base and its top, each pushed
+    /// away from the light in proportion to its height above the surface it stands on (a unit's pad,
+    /// or the plate). Drawn opaque in a single pass, so overlaps never darken.
+    /// </summary>
+    private void BuildShadows(IReadOnlyList<SolidPart> parts, float[] lifts, OrbitProjection p)
     {
-        var minX = pad.Footprint.Min(q => q.X) + 10;
-        var maxX = pad.Footprint.Max(q => q.X) - 10;
-        var minZ = pad.Footprint.Min(q => q.Z) + 10;
-        var maxZ = pad.Footprint.Max(q => q.Z) - 10;
-        var ring = new Plan(minX, minZ, maxX - minX, maxZ - minZ, 6).Ring(6);
-        _path.Rewind();
-        AddPolygon([.. ring.Select(q => p.Project(new(q.X, pad.Y1, q.Z)))]);
-        _halo.Color = Palette.Halo.WithAlpha((byte)(Palette.Halo.Alpha * 0.8f * Math.Clamp(lift / FullLift, 0, 1)));
-        canvas.DrawPath(_path, _halo);
+        _shadowLift = lifts;
+        _shadow.Rewind();
+        var padTop = parts.FirstOrDefault(q => q.PadOf is not null)?.Volume.Y1 ?? 0;
+        // Light from the viewer's upper left: shadows fall to the right and toward the viewer at every
+        // yaw, as in an inked isometric. The plan direction comes from the screen gradients of world
+        // X and Z, so it needs no knowledge of the projection's sign conventions.
+        var o = p.Project(new(0, 0, 0));
+        var ax = p.Project(new(1, 0, 0));
+        var az = p.Project(new(0, 0, 1));
+        var (rx, rz) = Unit(ax.X - o.X, az.X - o.X);   // plan direction that moves right on screen
+        var (tx, tz) = Unit(ax.Y - o.Y, az.Y - o.Y);   // plan direction that moves down (toward the viewer)
+        var (dx, dz) = Unit(0.75f * rx + 0.65f * tx, 0.75f * rz + 0.65f * tz);
+        dx *= ShadowLength;
+        dz *= ShadowLength;
+        var points = new List<Vec2>(64);
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (IsGround(part)) continue;
+            var v = part.Volume;
+            var ground = part.Unit is null ? 0 : padTop;
+            var low = MathF.Max(0, v.Y0 + lifts[i] - ground);
+            var high = MathF.Max(0, v.Y1 + lifts[i] - ground);
+            if (high <= 0) continue;
+            points.Clear();
+            foreach (var q in v.Bottom) points.Add(new(q.X + dx * low, q.Z + dz * low));
+            foreach (var q in v.Top) points.Add(new(q.X + dx * high, q.Z + dz * high));
+            var hull = SolidBuilder.ConvexHull(points);
+            if (hull.Length < 3) continue;
+            var first = p.Project(new(hull[0].X, ground, hull[0].Y));
+            _shadow.MoveTo(first.X, first.Y);
+            for (var k = 1; k < hull.Length; k++)
+            {
+                var s = p.Project(new(hull[k].X, ground, hull[k].Y));
+                _shadow.LineTo(s.X, s.Y);
+            }
+            _shadow.Close();
+        }
+    }
+
+    private static (float X, float Z) Unit(float x, float z)
+    {
+        var length = MathF.Sqrt(x * x + z * z);
+        return length < 1e-5f ? (0, 0) : (x / length, z / length);
+    }
+
+    /// <summary>Shadow length per unit of height (a sun about 60 degrees up).</summary>
+    private const float ShadowLength = 0.55f;
+
+    private void DrawPart(SKCanvas canvas, SolidPart part, int index, OrbitProjection projection, SolidFrame frame, float lift)
+    {
+        var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
+        var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
+        var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
+
+        if (lift > 0)
+        {
+            canvas.Save();
+            canvas.Translate(0, projection.Rise(lift));
+        }
+        DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered);
+        if (frame.Details && part.Details is { } details)
+        {
+            DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds);
+        }
+        if (lift > 0) canvas.Restore();
     }
 
     private void DrawDetails(SKCanvas canvas, IEnumerable<DetailLine> details, double seconds)
@@ -213,8 +274,8 @@ public sealed class SolidRenderer : IDisposable
         Fill(canvas, shape.Top, lit ? pal.LitTop : pal.Top);
         if (crease)
         {
-            Stroke(canvas, shape.Crease, pal.Faint);
-            Stroke(canvas, shape.Bevel, pal.Faint);
+            Stroke(canvas, shape.Crease, pal.Faint, pal.Hairline * 0.75f);
+            Stroke(canvas, shape.Bevel, pal.Faint, pal.Hairline * 0.75f);
         }
         if (alert)
         {
@@ -224,8 +285,13 @@ public sealed class SolidRenderer : IDisposable
             _line.PathEffect = null;
             return;
         }
-        // Hover brightens the outline to the hi tone; selection is the amber lit outline.
-        Stroke(canvas, shape.Outline, lit ? pal.Lit : hovered ? pal.Hi : ToneColor(edge), lit || hovered ? pal.LitStroke : pal.Hairline);
+        // Two line weights, as an inked isometric: equipment (hi / mid edges) gets the ink silhouette,
+        // the stand and fittings (lo / faint) a lighter hairline. Hover inks the outline in the hi tone;
+        // selection is the orange lit outline.
+        var (ink, width) = edge is EdgeTone.Hi or EdgeTone.Mid
+            ? (pal.Silhouette, pal.SilhouetteStroke)
+            : (edge == EdgeTone.Lo ? pal.Mid : pal.Lo, pal.Hairline);
+        Stroke(canvas, shape.Outline, lit ? pal.Lit : hovered ? pal.Hi : ink, lit || hovered ? pal.LitStroke : width);
     }
 
     private void Fill(SKCanvas canvas, Vec2[] polygon, SKColor color)
@@ -273,8 +339,7 @@ public sealed class SolidRenderer : IDisposable
         _path.Dispose();
         _fill.Dispose();
         _line.Dispose();
-        _halo.MaskFilter?.Dispose();
-        _halo.Dispose();
+        _shadow.Dispose();
         _alertDash.Dispose();
     }
 }
