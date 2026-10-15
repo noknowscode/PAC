@@ -234,6 +234,14 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 - **Verification: rooted session.** Implementation runs in a session opened with `Open-RootedSession.ps1`, which seeds `.mcp.json`, resuming from `HANDOFF.md`.
 - **Release path: out of scope for this port.** Needs a remote the user creates; tracked in the backlog, not a blocker.
 
+## Phase 1 result (2026-10-15, commit `5210b96`)
+
+- **Exit met.** Extrusions match the kit point for point within 0.06 px at the hero camera (fixture `PacConsole.Tests/Fixtures/tka-reference.json`, exported by `docs/anatomy/plant/export-tka.mjs`); turned parts match by shaded area within 1% and creases point for point. TKA-02 orbited through 8 yaws in the running app via the App MCP with no misordering.
+- **Decision: separating-plane order replaces support graph + footprint depth.** Each part carries a convex prism hull (`Volume`: footprint + Y range). Two parts whose screen boxes overlap are ordered by a plane that separates them: horizontal when their heights do not overlap (the upper paints last), else an edge normal of either footprint (the side facing the viewer paints last); a topological sort, farthest first, gives the order. Reason: exact for convex, non-interpenetrating parts at any yaw and elevation, and it subsumes the support graph (a roof's Y range sits above its hall's). Tradeoff: turned parts on a horizontal axis use a box hull, so hulls must stay disjoint where the solids are (the figure's spacing already guarantees it); phase 3's z-buffer test is still the gate.
+- **Kept from the spike:** `Core/Solids/` (`SolidBuilder`, `DepthOrder`, `SolidShape`, `PlantSolids.Tka()`), `Rendering/SolidRenderer.cs` (figure palette until phase 4 swaps in tokens). The scratch `SolidSpikeCanvas` and its viewport swap are uncommitted in the working tree; phase 4 replaces them with `PlantCanvas`.
+- **Found and fixed:** `WireframeCanvas`/`WireframeThumb` disposed their renderer on `Unloaded` and crashed on the next render after a reload (`74253b2`). Every new canvas follows the same Loaded/Unloaded lifetime.
+- **Phase 4 inputs:** the figure's plate is 320 × 220 against the old 208 × 144 platform, so `OrbitProjection.ForViewport`'s scale constants need retuning; the figure palette on `#131313` reads very dark in the card, so measure the shade steps against `CardBrush` (Risks → contrast).
+
 ## Unresolved Questions
 
 - **Omitted (accepted):** light theme (app is dark-only); interactive fan speed (see Decisions).
