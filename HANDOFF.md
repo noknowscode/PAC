@@ -1,30 +1,33 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-15 14:30
+Updated: 2026-10-15 15:10
 
 ## Where we are
-SPEC phases 1–3 are done, and most of phases 4–6 landed early at the user's request. Every plant drawing (viewport, ISO / elevation / plan presets, unit preview) now renders as shaded solids in the console palette (`Solid*` tokens). Tags are pinned to their units through one shared projection (`PlantSolids.ViewProjection`) with leader lines. The plant has the figure's line work and motion: the selected unit lifts with a shadow under it, the condenser fans turn, and flow dashes run along the pipes. Alerting units get a dashed coral outline. A ui-craft / impeccable audit / polish pass ran on the whole console: safe fixes are committed, and the larger findings wait on the user (see Open questions). Design context is recorded in `.impeccable.md`.
+Every plant drawing renders as solids with the figure's line work and motion (lift + shadow, turning fans, pipe flow, dashed alert outline). Units select by clicking the drawing as well as tags and tiles. The design-audit findings are resolved: dead rail sections and the selected-unit overlay are removed, the vibration duplication is dropped, live figures use tabular mono digits, control borders pass 3:1, and below 1360 px the telemetry column stacks under the plant and the body scrolls. A **light theme** (slate greys, burnt orange, whites) switches at runtime from the header toggle. Animation stutter was partly fixed; a tail of slow frames remains (see Open questions).
 
 ## Last verified state
-- Build: pass, `net10.0-desktop`, **0 warnings** (Pulse AutoReverse and the Control.CharacterSpacing setters removed).
-- Tests: 144/144 (`dotnet test PacConsole.Tests`, ~15 s, mostly the z-buffer order test).
-- Runtime (App MCP): tags stay on their units through orbit and rotate steps. Selecting TKA moves the lift, and CND drops to the dashed alert outline. All five drawings are solid. Not verified: keyboard focus order (`uno_app_key_press` failed), narrow or short windows (the MCP cannot resize), frame cost.
-- Git: `main` at `3bd340b`. Untracked: `.mcp.json`, figure screenshots, an empty `docs/spike/`.
+- Build: pass, `net10.0-desktop`, 0 warnings (Debug and Release).
+- Tests: 149/149 (`dotnet test PacConsole.Tests`). Explicit timing tests: `FrameCostTests` (Core work 1.78 ms/frame in Release).
+- Runtime (App MCP + direct Release runs): click-to-select, the light/dark round trip including charts, the 1100 × 720 stacked layout and the 1424 × 861 wide layout. Frame timing (Release, orbiting): render p50 2.3 ms; frame interval p50 8 ms, **p90 45 ms**.
+- Git: `main` at `a73d94c`.
 
 ## Next actions (in order)
-1. Measure the per-frame cost (139 shapes + details rebuilt at 30–60 fps). Budget < 4 ms; cache static parts per pose if over.
-2. Remaining phase 4 items: hover outline + click-to-select hit test on the drawing; the unit preview's vibration gauge plus the `SelectedVib`/`VibrationLimit` fields (phase 6); phase 7 cleanup (delete `Wireframe*` and the `PlantGeometry` segment builders; the user approves deletions).
-3. Walk the user through the audit's open findings below, then decide whether to run `xaml-art-direction` (they said they are open to a new direction).
+1. Stutter tail: capture a Release `dotnet-trace` while orbiting and find what fills the 40–50 ms frames (our code is about 2.4 ms per frame). Then consider reusing shape buffers (allocation is 70–80 MB/s) or a steady 30 fps ambient cap.
+2. Record three runtime gotchas in `~/.claude/rules/uno-runtime-gotchas.md`, with evidence excerpts per the handoff skill:
+   - A keyed `ResourceDictionary` nested in a merged dictionary stops the desktop window from ever appearing, silently (process alive, no window).
+   - Simple's implicit `TextBlock` style sets Foreground locally, so an explicit `TextBlock` inside a Button or ToggleButton ignores the control's Foreground (fix: an explicit empty style).
+   - LiveCharts2 2.0.5: replacing a paint on a drawn chart disposes the shared label `SKTypeface` and freezes that chart (fix: recolour paints in place).
+3. Remaining SPEC items: the unit preview's vibration gauge (`SelectedVib`, `VibrationLimit`), then phase 7 cleanup (delete `Wireframe*` and the `PlantGeometry` segment builders; deletions need the user's OK).
 
 ## Open questions
-- Six of the seven rail sections open "NOT IN THIS BUILD". In a demo that impersonates capability: remove them, or disable them with a reason?
-- The selected unit is shown five times (tag, tile, SELECTED overlay, preview, telemetry header), and vibration twice (VIB tile + VIBRATION card).
-- Identity: cyan-on-dark with neon amber, monospace caps everywhere and pulsing dots read as generic "sci-fi dashboard". The user is open to a new direction.
-- Values use proportional digits (Chakra Petch), so live numbers shift width; tabular numerals were not verified on Uno.
-- Release path: no remote or CI (kept out of scope by SPEC → Decisions).
+- The theme choice isn't persisted (it resets to dark on launch).
+- The lint still flags TOKENTHEME (theme values live in `Palette.Light.xaml` and are copied into brushes, a deliberate fallback per the converter gotcha), plus the existing HEX, ICON and CODEBEHIND counts (+1 for the theme click handler, marked allow).
+- Debug builds (what `uno_app_start` launches) render about 3× slower; demo in Release.
+- Release path: no remote or CI.
 
 ## Relaunch
 ```
 cd C:\Users\Platform006\UnoProjects\PacConsole
 dotnet build PacConsole/PacConsole.csproj -f net10.0-desktop
-# rooted session: uno_app_start (PacConsole\PacConsole.csproj, net10.0-desktop); close + Stop-Process before rebuilding
+# App MCP: uno_app_start (Debug). If it never connects: uno_app_select_solution forceRestart, then retry.
+# Demo / timing: dotnet run --project PacConsole -f net10.0-desktop -c Release
 ```
