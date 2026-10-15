@@ -56,7 +56,7 @@
       <Button x:Name="Reset" Content="RESET" Style="{StaticResource ToolbarButton}" />
     </StackPanel>
 
-    <TextBlock Text="DRAG TO ORBIT · CLICK A TAG TO SELECT"
+    <TextBlock Text="DRAG TO ORBIT · CLICK A UNIT TO SELECT"
                Style="{StaticResource TypeMicro}"
                Foreground="{StaticResource FaintBrush}"
                Margin="0,0,16,16"

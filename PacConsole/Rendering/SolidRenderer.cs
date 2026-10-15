@@ -60,7 +60,8 @@ public readonly record struct SolidFrame(
     IReadOnlyCollection<UnitId> Alerting,
     IReadOnlyDictionary<UnitId, float>? Lift = null,
     double Seconds = 0,
-    bool Details = true);
+    bool Details = true,
+    UnitId? Hovered = null);
 
 /// <summary>
 /// Paints solids back to front. Orders the parts for the camera (lifted units raised), builds each
@@ -96,13 +97,14 @@ public sealed class SolidRenderer : IDisposable
             var lift = LiftOf(part.Unit);
             var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
             var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
+            var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
 
             if (lift > 0)
             {
                 canvas.Save();
                 canvas.Translate(0, projection.Rise(lift));
             }
-            DrawShape(canvas, part.Build(projection), part.Edge, part.Crease, lit, alert);
+            DrawShape(canvas, part.Build(projection), part.Edge, part.Crease, lit, alert, hovered);
             if (frame.Details && part.Details is { } details) DrawDetails(canvas, details(projection, frame.Seconds), frame.Seconds);
             if (lift > 0) canvas.Restore();
 
@@ -169,7 +171,7 @@ public sealed class SolidRenderer : IDisposable
         canvas.DrawPath(_path, _line);
     }
 
-    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert)
+    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert, bool hovered = false)
     {
         var pal = Palette;
         Fill(canvas, shape.Fill, lit ? pal.LitFace : pal.Paper);
@@ -188,7 +190,8 @@ public sealed class SolidRenderer : IDisposable
             _line.PathEffect = null;
             return;
         }
-        Stroke(canvas, shape.Outline, lit ? pal.Lit : ToneColor(edge), lit ? pal.LitStroke : pal.Hairline);
+        // Hover brightens the outline to the hi tone; selection is the amber lit outline.
+        Stroke(canvas, shape.Outline, lit ? pal.Lit : hovered ? pal.Hi : ToneColor(edge), lit || hovered ? pal.LitStroke : pal.Hairline);
     }
 
     private void Fill(SKCanvas canvas, Vec2[] polygon, SKColor color)

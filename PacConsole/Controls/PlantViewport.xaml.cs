@@ -40,6 +40,10 @@ public sealed partial class PlantViewport : UserControl
 
     // Plant motion: per-unit lift toward its target, and a clock for fans and pipe flow.
     private readonly Dictionary<UnitId, float> _lift = UnitCatalog.All.ToDictionary(u => u.Id, _ => 0f);
+
+    // The unit under the pointer (outlined), and whether the current press began on a tag button.
+    private UnitId? _hovered;
+    private bool _pressOnTag;
     private double _seconds;
 
     // Tween
@@ -81,7 +85,7 @@ public sealed partial class PlantViewport : UserControl
         Root.PointerEntered += (_, _) => { _hover = true; Refresh(); };
         // Fallback: a pointer that arrives by warp (no enter event on some X11 setups) still pauses the orbit.
         Root.PointerMoved += (_, _) => { if (!_hover) { _hover = true; Refresh(); } };
-        Root.PointerExited += (_, _) => { _hover = false; Refresh(); };
+        Root.PointerExited += (_, _) => { _hover = false; _hovered = null; Refresh(); };
         GotFocus += (_, _) => { _hover = true; Refresh(); };
         LostFocus += (_, _) => { _hover = false; Refresh(); };
 
@@ -262,7 +266,7 @@ public sealed partial class PlantViewport : UserControl
             ApplyTagState(tag, isSelected, isAlert);
         }
 
-        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds);
+        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered);
         Pose = _pose;
 
         CaptionDetail.Text = $"{PresetName()} · YAW {_pose.YawDegrees:000}° · EL {_pose.ElevationDegrees:00}°";
@@ -291,12 +295,39 @@ public sealed partial class PlantViewport : UserControl
         // Don't capture yet: a press that doesn't move must still click a tag.
         _pressAt = e.GetCurrentPoint(Surface).Position;
         _pressPose = _pose;
+        _pressOnTag = IsInTagLayer(e.OriginalSource as DependencyObject);
+    }
+
+    private bool IsInTagLayer(DependencyObject? d)
+    {
+        for (; d is not null; d = VisualTreeHelper.GetParent(d))
+        {
+            if (ReferenceEquals(d, TagLayer)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>The unit drawn under a point on the surface, using the same projection as the drawing.</summary>
+    private UnitId? UnitAt(Windows.Foundation.Point at)
+    {
+        var projection = PlantSolids.ViewProjection(_pose, (float)Surface.ActualWidth, (float)Surface.ActualHeight);
+        return PlantSolids.Default.UnitAt(projection, new((float)at.X, (float)at.Y), _lift);
     }
 
     private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
     {
-        if (_pressAt is not { } start) return;
         var p = e.GetCurrentPoint(Surface).Position;
+        if (_pressAt is not { } start)
+        {
+            // Hover: outline the unit under the pointer, so it is clear the drawing is clickable.
+            var hovered = IsInTagLayer(e.OriginalSource as DependencyObject) ? null : UnitAt(p);
+            if (hovered != _hovered)
+            {
+                _hovered = hovered;
+                Draw();
+            }
+            return;
+        }
         double dx = p.X - start.X, dy = p.Y - start.Y;
 
         if (!_dragging)
@@ -315,7 +346,15 @@ public sealed partial class PlantViewport : UserControl
 
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
     {
-        if (_dragging) Surface.ReleasePointerCapture(e.Pointer);
+        if (_dragging)
+        {
+            Surface.ReleasePointerCapture(e.Pointer);
+        }
+        else if (!_pressOnTag && _pressAt is not null && UnitAt(e.GetCurrentPoint(Surface).Position) is { } unit)
+        {
+            // A click (no drag) on a unit's drawing selects it, as its tag does.
+            SelectCommand?.Execute(unit);
+        }
         EndDrag();
     }
 

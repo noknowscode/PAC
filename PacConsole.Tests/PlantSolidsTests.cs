@@ -54,6 +54,36 @@ public class PlantSolidsTests
         }
     }
 
+    [TestCase(0.61f, 0.49f)]
+    [TestCase(2.3f, 0.9f)]
+    [TestCase(4.4f, 0.3f)]
+    public void Clicking_a_units_top_selects_that_unit(float yaw, float elevation)
+    {
+        var p = PlantSolids.ViewProjection(new CameraPose(yaw, elevation), 1240, 760);
+        foreach (var (id, anchor) in Plant.Anchors)
+        {
+            // Just below the anchor: on the unit's tallest part, where a person would click.
+            var hit = p.Project(anchor with { Y = anchor.Y - 1 });
+            Plant.UnitAt(p, hit).Should().Be(id);
+        }
+    }
+
+    [Test]
+    public void Clicking_empty_space_selects_nothing()
+    {
+        var p = PlantSolids.ViewProjection(CameraPose.Iso, 1240, 760);
+        Plant.UnitAt(p, new(5, 5)).Should().BeNull();
+    }
+
+    [Test]
+    public void A_lifted_unit_is_hit_where_it_is_drawn()
+    {
+        var p = PlantSolids.ViewProjection(CameraPose.Iso, 1240, 760);
+        var anchor = Plant.Anchors[UnitId.Sil];
+        var lifted = p.Project(anchor with { Y = anchor.Y + 10 - 1 });
+        Plant.UnitAt(p, lifted, new Dictionary<UnitId, float> { [UnitId.Sil] = 10 }).Should().Be(UnitId.Sil);
+    }
+
     [Test]
     public void Part_count_matches_the_figure()
     {
