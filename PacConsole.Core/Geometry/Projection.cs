@@ -36,9 +36,9 @@ public static class CameraPresets
 {
     public static readonly ImmutableArray<CameraPreset> All =
     [
-        new("iso", "ISO · NE", "YAW 35° / EL 28°", CameraPose.Iso),
-        new("elevation", "ELEVATION · S", "YAW 0° / EL 6°", CameraPose.Front),
-        new("plan", "PLAN", "YAW 0° / EL 86°", CameraPose.Plan),
+        new("iso", "Isometric", "Yaw 35° · el 28°", CameraPose.Iso),
+        new("elevation", "Elevation", "Yaw 0° · el 6°", CameraPose.Front),
+        new("plan", "Plan", "Yaw 0° · el 86°", CameraPose.Plan),
     ];
 }
 

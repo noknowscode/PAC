@@ -19,12 +19,10 @@ public sealed partial class ConsolePage : Page
     {
         // The toggle sits inside the FeedView template, so it arrives as the sender, not a field.
         if (sender is not ToggleButton toggle) return;
-        var light = toggle.IsChecked == true;
-        Styles.ConsoleTheme.Apply(light, XamlRoot?.Content as FrameworkElement ?? this);
-        if (toggle.Content is TextBlock label) label.Text = light ? "DARK" : "LIGHT";
-        AutomationProperties.SetName(toggle, light ? "Dark theme" : "Light theme");
-        // The cyan grid backdrop belongs to the dark console; the light one sits on plain slate.
-        Backdrop.Visibility = light ? Visibility.Collapsed : Visibility.Visible;
+        var dark = toggle.IsChecked == true;
+        Styles.ConsoleTheme.Apply(dark, XamlRoot?.Content as FrameworkElement ?? this);
+        if (toggle.Content is TextBlock label) label.Text = dark ? "Light" : "Dark";
+        AutomationProperties.SetName(toggle, dark ? "Light theme" : "Dark theme");
     }
 
     private void OnViewportLoaded(object sender, RoutedEventArgs e) => _viewport = sender as PlantViewport;

@@ -52,7 +52,7 @@ public class TagLayoutTests
         var projection = OrbitProjection.ForViewport(pose, width, height);
         var requests = UnitCatalog.All.Select(u =>
         {
-            var label = u.Id == alerting ? $"{u.Code} · ALERT" : u.Code;
+            var label = u.Id == alerting ? $"{u.Code} · alert" : u.Code;
             return new TagRequest(u.Id, projection.Project(Plant.Anchors[u.Id]), TagLayout.EstimateWidth(label));
         }).ToList();
         return TagLayout.Solve(requests, width);

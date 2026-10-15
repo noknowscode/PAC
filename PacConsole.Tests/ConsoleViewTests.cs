@@ -27,7 +27,7 @@ public class ConsoleViewTests
         var view = Compose();
         view.Selected.Should().Be(UnitId.Cnd);
         view.SelectedIsAlert.Should().BeTrue();
-        view.AlertText.Should().Be("1 ACTIVE ALERT · CND-05");
+        view.AlertText.Should().Be("1 alert · CND-05");
     }
 
     [Test]
@@ -41,25 +41,25 @@ public class ConsoleViewTests
     {
         Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(9)).DataIsStale.Should().BeFalse();
         var held = Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(12));
-        held.DataText.Should().Be("DATA HELD 12s");
+        held.DataText.Should().Be("Held 12 s");
         held.DataIsStale.Should().BeTrue();
-        held.SelectedStatusLine.Should().Be("ALERT · HELD");
+        held.SelectedStatusLine.Should().Be("Alert · held");
     }
 
     [Test]
     public void Held_tiles_dim_except_alert_values()
     {
         var tiles = Compose(ControlMode.Hold).Tiles;
-        tiles.Single(t => t.Label == "VIB").Should().Match<MetricTileView>(t => t.IsHigh && !t.IsHeld);
-        tiles.Where(t => t.Label != "VIB").Should().OnlyContain(t => t.IsHeld);
+        tiles.Single(t => t.Label == "Vibration").Should().Match<MetricTileView>(t => t.IsHigh && !t.IsHeld);
+        tiles.Where(t => t.Label != "Vibration").Should().OnlyContain(t => t.IsHeld);
     }
 
     [Test]
     public void Low_turbine_limit_raises_a_second_alert()
     {
         var view = Compose(setpoints: Setpoints.Default with { TurbineLimitBar = 150 }, selected: UnitId.Trb);
-        view.AlertText.Should().Be("2 ACTIVE ALERTS · TRB-04, CND-05");
-        view.Tiles.Single(t => t.Label == "PRESS").IsHigh.Should().BeTrue();
+        view.AlertText.Should().Be("2 alerts · TRB-04, CND-05");
+        view.Tiles.Single(t => t.Label == "Pressure").IsHigh.Should().BeTrue();
     }
 
     [Test]
@@ -68,8 +68,8 @@ public class ConsoleViewTests
         var units = Compose().Units;
         units.Should().HaveCount(6);
         units.Single(u => u.IsSelected).Id.Should().Be(UnitId.Cnd);
-        units.Single(u => u.Id == UnitId.Cnd).Subtitle.Should().Be("05 · ALERT");
-        units.Single(u => u.Id == UnitId.Stk).Subtitle.Should().Be("01 · OK");
+        units.Single(u => u.Id == UnitId.Cnd).Subtitle.Should().Be("05 · alert");
+        units.Single(u => u.Id == UnitId.Stk).Subtitle.Should().Be("01");
     }
 
     [TestCase(Metric.Press, 0.0912, "0.09")]

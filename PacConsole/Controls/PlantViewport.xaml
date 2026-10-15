@@ -7,11 +7,8 @@
              FocusVisualPrimaryBrush="{StaticResource AccentBrush}"
              AutomationProperties.Name="Plant 3D model">
 
-  <Grid x:Name="Root"
-        Background="{StaticResource CardBrush}"
-        BorderBrush="{StaticResource HairlineBrush}"
-        BorderThickness="1"
-        CornerRadius="{StaticResource RadiusCard}">
+  <!-- Fig. 1: the plant sits on the ground with no frame; its caption and tools sit beneath it. -->
+  <Grid x:Name="Root" RowDefinitions="*,Auto" RowSpacing="12" Background="Transparent">
 
     <!-- Drag surface + solid plant. Tags sit in a Canvas above it so they stay real, focusable Buttons. -->
     <Grid x:Name="Surface" Background="Transparent">
@@ -19,49 +16,43 @@
       <Canvas x:Name="TagLayer" />
     </Grid>
 
-    <!-- Caption -->
-    <StackPanel Margin="16,14,0,0"
-                Spacing="4"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                IsHitTestVisible="False">
-      <TextBlock Text="PLANT MODEL" Style="{StaticResource TypeSection}" />
-      <TextBlock x:Name="CaptionDetail" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
-    </StackPanel>
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+      <!-- Caption, set like a figure plate: number, title, then what the view shows. -->
+      <StackPanel Spacing="2" VerticalAlignment="Center" IsHitTestVisible="False">
+        <TextBlock Style="{StaticResource TypeSection}">
+          <Run Text="Fig. 1" Foreground="{StaticResource MutedBrush}" /><Run Text="    Plant 02, thermal" />
+        </TextBlock>
+        <TextBlock Style="{StaticResource TypeMicro}">
+          <Run x:Name="CaptionDetail" /><Run Text=" · drag to orbit, click a unit to select it" />
+        </TextBlock>
+      </StackPanel>
 
-    <!-- Toolbar -->
-    <StackPanel Margin="0,12,12,0"
-                Orientation="Horizontal"
-                Spacing="6"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top">
-      <Button x:Name="RotateLeft"
-              Style="{StaticResource IconButton}"
-              AutomationProperties.Name="Rotate left 45 degrees"
-              ToolTipService.ToolTip="Rotate left">
-        <Path Data="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5" Style="{StaticResource PathIconStyle}" Stroke="{StaticResource CyanBrush}" />
-      </Button>
-      <Button x:Name="RotateRight"
-              Style="{StaticResource IconButton}"
-              AutomationProperties.Name="Rotate right 45 degrees"
-              ToolTipService.ToolTip="Rotate right">
-        <Path Data="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" Style="{StaticResource PathIconStyle}" Stroke="{StaticResource CyanBrush}" />
-      </Button>
-      <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
-          <TextBlock x:Name="AutoOrbitLabel" Text="AUTO ORBIT ON" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-        </StackPanel>
-      </ToggleButton>
-      <Button x:Name="Reset" Content="RESET" Style="{StaticResource ToolbarButton}" />
-    </StackPanel>
-
-    <TextBlock Text="DRAG TO ORBIT · CLICK A UNIT TO SELECT"
-               Style="{StaticResource TypeMicro}"
-               Foreground="{StaticResource FaintBrush}"
-               Margin="0,0,16,16"
-               HorizontalAlignment="Right"
-               VerticalAlignment="Bottom"
-               IsHitTestVisible="False" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+        <Button x:Name="RotateLeft"
+                Style="{StaticResource IconButton}"
+                AutomationProperties.Name="Rotate left 45 degrees"
+                ToolTipService.ToolTip="Rotate left">
+          <!-- Fluent "Rotate" glyph, mirrored for the anticlockwise turn. -->
+          <FontIcon Glyph="&#xE7AD;" FontSize="16" RenderTransformOrigin="0.5,0.5">
+            <FontIcon.RenderTransform>
+              <ScaleTransform ScaleX="-1" />
+            </FontIcon.RenderTransform>
+          </FontIcon>
+        </Button>
+        <Button x:Name="RotateRight"
+                Style="{StaticResource IconButton}"
+                AutomationProperties.Name="Rotate right 45 degrees"
+                ToolTipService.ToolTip="Rotate right">
+          <FontIcon Glyph="&#xE7AD;" FontSize="16" />
+        </Button>
+        <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
+            <TextBlock x:Name="AutoOrbitLabel" Text="Auto orbit" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+          </StackPanel>
+        </ToggleButton>
+        <Button x:Name="Reset" Content="Reset view" Style="{StaticResource ToolbarButton}" />
+      </StackPanel>
+    </Grid>
   </Grid>
 </UserControl>

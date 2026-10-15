@@ -192,7 +192,7 @@ public sealed partial class PlantViewport : UserControl
         var needsLoop = IsOrbiting || _tweening || !LiftSettled || _animationsEnabled;
         if (needsLoop) StartLoop(); else StopLoop();
 
-        AutoOrbitLabel.Text = !_auto ? "AUTO ORBIT OFF" : _hover || _dragging ? "AUTO ORBIT PAUSED" : "AUTO ORBIT ON";
+        AutoOrbitLabel.Text = !_auto ? "Auto orbit" : _hover || _dragging ? "Orbit paused" : "Orbiting";
         Draw();
     }
 
@@ -260,7 +260,7 @@ public sealed partial class PlantViewport : UserControl
 
         var requests = UnitCatalog.All.Select(u =>
         {
-            var label = alerting.Contains(u.Id) ? $"{u.Code} · ALERT" : u.Code;
+            var label = alerting.Contains(u.Id) ? $"{u.Code} · alert" : u.Code;
             return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id] with { Y = PlantSolids.Default.Anchors[u.Id].Y + _lift[u.Id] }), TagLayout.EstimateWidth(label));
         }).ToList();
         var placements = TagLayout.Solve(requests, width);
@@ -273,7 +273,7 @@ public sealed partial class PlantViewport : UserControl
             var isSelected = selected == p.Unit;
             // Only touch what changed: a new Content string re-measures and re-shapes the label's
             // text, and this runs every animation frame.
-            var label = isAlert ? $"{info.Code} · ALERT" : info.Code;
+            var label = isAlert ? $"{info.Code} · alert" : info.Code;
             if (!Equals(tag.Content, label)) tag.Content = label;
             if (tag.Width != p.Width) tag.Width = p.Width;
             Canvas.SetLeft(tag, p.Left);
@@ -284,7 +284,7 @@ public sealed partial class PlantViewport : UserControl
         PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered);
         Pose = _pose;
 
-        var caption = $"{PresetName()} · YAW {_pose.YawDegrees:000}° · EL {_pose.ElevationDegrees:00}°";
+        var caption = $"{PresetName()}, yaw {_pose.YawDegrees:000}°, elevation {_pose.ElevationDegrees:00}°";
         if (CaptionDetail.Text != caption) CaptionDetail.Text = caption;
         var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
         var help = $"6 units. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
@@ -293,7 +293,7 @@ public sealed partial class PlantViewport : UserControl
     }
 
     private string PresetName() =>
-        CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Label ?? "FREE ORBIT";
+        CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Label ?? "Free orbit";
 
     private static void ApplyTagState(Button tag, bool selected, bool alert)
     {
@@ -301,8 +301,9 @@ public sealed partial class PlantViewport : UserControl
         if (Equals(tag.DataContext, key)) return; // avoid restyling every frame
         tag.DataContext = key;
         var r = Application.Current.Resources;
+        // A plate in the ground colour (so the label reads over line work), no outline. The selected
+        // plate is the one orange object on the page; an alert keeps its word in the label.
         tag.Background = (Brush)r[selected ? "AccentBrush" : "OverlayBrush"];
-        tag.BorderBrush = (Brush)r[selected ? "AccentBrush" : alert ? "AlertBrush" : "BorderBrushStrong"];
         tag.Foreground = (Brush)r[selected ? "OnAccentBrush" : alert ? "AlertTextBrush" : "TextPrimaryBrush"];
     }
 

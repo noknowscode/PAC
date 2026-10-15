@@ -11,7 +11,7 @@ public sealed partial class OutputChart : ConsoleChart
 {
     private readonly RectangularSection _target = new() { Yi = 620, Yj = 620, Stroke = Dashed(TextPrimary, alpha: 180) };
     private readonly LineSeries<ObservableValue> _line;
-    private readonly Axis _axis = FixedAxis(480, 700, visible: true, step: 50);
+    private readonly Axis _axis = FixedAxis(500, 700, visible: true, step: 100);
 
     public OutputChart()
     {
@@ -21,7 +21,7 @@ public sealed partial class OutputChart : ConsoleChart
             {
                 Values = Points,
                 Stroke = Stroke(Accent, 1.5f),
-                Fill = Fill(Accent, 31),
+                Fill = Fill(Accent, 20),
                 GeometrySize = 0,
                 GeometryStroke = null,
                 GeometryFill = null,
@@ -39,7 +39,7 @@ public sealed partial class OutputChart : ConsoleChart
     {
         Recolor(_target.Stroke, TextPrimary, 180);
         Recolor(_line.Stroke, Accent);
-        Recolor(_line.Fill, Accent, 31);
+        Recolor(_line.Fill, Accent, 20);
         Repaint(_axis);
     }
 
@@ -79,8 +79,8 @@ public sealed partial class HourlyChart : ConsoleChart
             _hours = new ColumnSeries<ObservableValue>
             {
                 Values = Points,
-                Fill = Fill(Accent, 179),
-                Stroke = Stroke(Accent, 0.6f),
+                Fill = Fill(InkSoft, 64),
+                Stroke = null,
                 MaxBarWidth = 9,
                 Padding = 2,
                 IgnoresBarPosition = true,
@@ -89,8 +89,8 @@ public sealed partial class HourlyChart : ConsoleChart
             _now = new ColumnSeries<ObservableValue>
             {
                 Values = _current,
-                Fill = Fill(Cyan, 217),
-                Stroke = Stroke(TextPrimary, 0.6f),
+                Fill = Fill(Accent, 255),
+                Stroke = null,
                 MaxBarWidth = 9,
                 Padding = 2,
                 IgnoresBarPosition = true,
@@ -104,14 +104,12 @@ public sealed partial class HourlyChart : ConsoleChart
 
     private readonly ColumnSeries<ObservableValue> _hours;
     private readonly ColumnSeries<ObservableValue> _now;
-    private readonly Axis _axis = FixedAxis(400, 700, visible: true, step: 150);
+    private readonly Axis _axis = FixedAxis(300, 700, visible: true, step: 200);
 
     protected override void ApplyTheme()
     {
-        Recolor(_hours.Fill, Accent, 179);
-        Recolor(_hours.Stroke, Accent);
-        Recolor(_now.Fill, Cyan, 217);
-        Recolor(_now.Stroke, TextPrimary);
+        Recolor(_hours.Fill, InkSoft, 64);
+        Recolor(_now.Fill, Accent);
         Repaint(_axis);
     }
 
@@ -139,7 +137,7 @@ public sealed partial class VibrationChart : ConsoleChart
         _line = new LineSeries<ObservableValue>
         {
             Values = Points,
-            Stroke = Stroke(Cyan, 1.3f),
+            Stroke = Stroke(InkSoft, 1.3f),
             Fill = null,
             GeometrySize = 0,
             GeometryStroke = null,
@@ -161,7 +159,7 @@ public sealed partial class VibrationChart : ConsoleChart
     protected override void ApplyTheme()
     {
         Recolor(_limit.Stroke, Alert, 204);
-        Recolor(_line.Stroke, IsHigh ? AlertText : Cyan);
+        Recolor(_line.Stroke, IsHigh ? AlertText : InkSoft);
     }
 
     public bool IsHigh
@@ -173,7 +171,7 @@ public sealed partial class VibrationChart : ConsoleChart
     public static readonly DependencyProperty IsHighProperty =
         DependencyProperty.Register(nameof(IsHigh), typeof(bool), typeof(VibrationChart),
             new PropertyMetadata(false, (d, e) =>
-                Recolor(((VibrationChart)d)._line.Stroke, (bool)e.NewValue ? AlertText : Cyan)));
+                Recolor(((VibrationChart)d)._line.Stroke, (bool)e.NewValue ? AlertText : InkSoft)));
 
     protected override void OnPointsUpdated(IReadOnlyList<double> values)
     {

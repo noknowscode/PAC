@@ -12,8 +12,8 @@ namespace PacConsole.Controls.Charts;
 public static class ConsoleChartTheme
 {
     public static SKColor Accent { get; private set; }
-    public static SKColor Cyan { get; private set; }
-    public static SKColor CyanLine { get; private set; }
+    public static SKColor InkSoft { get; private set; }
+    public static SKColor Grid { get; private set; }
     public static SKColor Alert { get; private set; }
     public static SKColor AlertText { get; private set; }
     public static SKColor Faint { get; private set; }
@@ -28,19 +28,19 @@ public static class ConsoleChartTheme
             ? new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A)
             : SKColors.Magenta;
         Accent = C(r, "AccentBrush");
-        Cyan = C(r, "CyanBrush");
-        CyanLine = C(r, "FaintBrush");
+        InkSoft = C(r, "InkSoftBrush");
+        Grid = C(r, "HairlineBrush");
         Alert = C(r, "AlertBrush");
         AlertText = C(r, "AlertTextBrush");
-        Faint = C(r, "FaintBrush");
+        Faint = C(r, "MutedBrush");
         TextPrimary = C(r, "TextPrimaryBrush");
     }
 
-    public const float LabelSize = 10;
+    public const float LabelSize = 11;
 
-    public static SolidColorPaint AxisLabels() => new(Faint) { SKTypeface = MonoTypeface };
+    public static SolidColorPaint AxisLabels() => new(Faint) { SKTypeface = LabelTypeface };
 
-    public static SolidColorPaint GridLines() => new(CyanLine.WithAlpha(31)) { StrokeThickness = 1 };
+    public static SolidColorPaint GridLines() => new(Grid) { StrokeThickness = 1 };
 
     public static SolidColorPaint Stroke(SKColor color, float thickness) => new(color) { StrokeThickness = thickness };
 
@@ -78,9 +78,9 @@ public static class ConsoleChartTheme
     {
         if (!axis.IsVisible) return;
         Recolor(axis.LabelsPaint, Faint);
-        Recolor(axis.SeparatorsPaint, CyanLine, 31);
+        Recolor(axis.SeparatorsPaint, Grid);
     }
 
-    /// <summary>IBM Plex Mono from the app's own assets, so chart labels match the XAML type.</summary>
-    public static SKTypeface? MonoTypeface { get; set; }
+    /// <summary>IBM Plex Sans from the app's own assets, so chart labels match the XAML type.</summary>
+    public static SKTypeface? LabelTypeface { get; set; }
 }

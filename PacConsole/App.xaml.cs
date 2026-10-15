@@ -81,15 +81,15 @@ public partial class App : Application
         );
     }
 
-    /// <summary>Chart labels use the same IBM Plex Mono the XAML uses.</summary>
+    /// <summary>Chart labels use the same IBM Plex Sans the XAML uses.</summary>
     private static void LoadChartTypeface()
     {
         try
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "IBMPlexMono-Regular.ttf");
+            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "IBMPlexSans-Regular.ttf");
             if (File.Exists(path))
             {
-                ConsoleChartTheme.MonoTypeface = SKTypeface.FromFile(path);
+                ConsoleChartTheme.LabelTypeface = SKTypeface.FromFile(path);
             }
         }
         catch (IOException)

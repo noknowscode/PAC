@@ -47,7 +47,7 @@ public sealed record ConsoleView
     public bool IsAuto => Mode == ControlMode.Auto;
     public bool IsManual => Mode == ControlMode.Manual;
     public bool IsHold => Mode == ControlMode.Hold;
-    public string ModeText => Mode switch { ControlMode.Manual => "MAN", ControlMode.Hold => "HOLD", _ => "AUTO" };
+    public string ModeText => Mode switch { ControlMode.Manual => "Manual", ControlMode.Hold => "Hold", _ => "Auto" };
 
     // Selected unit readout
     public string SelectedCode { get; init; } = "";
@@ -111,8 +111,8 @@ public sealed record ConsoleView
         var vibHigh = reading.Vib > AlertRules.VibrationLimit;
 
         string AlertTextFor() => alerting.IsEmpty
-            ? "ALL SYSTEMS NOMINAL"
-            : $"{alerting.Length} ACTIVE ALERT{(alerting.Length > 1 ? "S" : "")} · {string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code))}";
+            ? "All units nominal"
+            : $"{alerting.Length} alert{(alerting.Length > 1 ? "s" : "")} · {string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code))}";
 
         return new ConsoleView
         {
@@ -122,7 +122,7 @@ public sealed record ConsoleView
             AlertText = AlertTextFor(),
             HasAlert = !alerting.IsEmpty,
             Clock = now.ToString("HH:mm:ss", Inv),
-            DataText = held ? $"DATA HELD {age}s" : "DATA LIVE",
+            DataText = held ? $"Held {age} s" : "Live",
             DataIsLive = !held,
             DataIsStale = held && age >= StaleAfterSeconds,
 
@@ -132,7 +132,7 @@ public sealed record ConsoleView
                 return new UnitTileView(
                     u.Id,
                     u.ShortCode,
-                    $"{u.Index} · {(isAlert ? "ALERT" : "OK")}",
+                    $"{u.Index}{(isAlert ? " · alert" : "")}",
                     u.Id == selected,
                     isAlert,
                     $"{u.Code} {u.Name}{(isAlert ? ", alert" : "")}");
@@ -141,8 +141,8 @@ public sealed record ConsoleView
 
             SelectedCode = info.Code,
             SelectedName = info.Name,
-            SelectedStatus = selectedIsAlert ? "ALERT" : "NOMINAL",
-            SelectedStatusLine = (selectedIsAlert ? "ALERT" : "NOMINAL") + (held ? " · HELD" : ""),
+            SelectedStatus = selectedIsAlert ? "Alert" : "Nominal",
+            SelectedStatusLine = (selectedIsAlert ? "Alert" : "Nominal") + (held ? " · held" : ""),
             SelectedIsAlert = selectedIsAlert,
             SelectedUptime = info.Uptime,
             SelectedService = info.LastService,
@@ -151,10 +151,10 @@ public sealed record ConsoleView
             {
                 var high = alerts.Any(a => a.Unit == selected && a.Metric == m);
                 return new MetricTileView(
-                    m.ToString().ToUpperInvariant(),
+                    LabelOf(m),
                     FormatMetric(m, reading.Get(m)),
                     UnitOf(m),
-                    high ? "HIGH" : "OK",
+                    high ? "high" : "",
                     high,
                     held && !high);
             })],
@@ -163,7 +163,7 @@ public sealed record ConsoleView
             OutputNow = Math.Round(outputNow).ToString("0", Inv),
             OutputDelta = $"Δ {(delta > 0 ? "+" : delta < 0 ? "−" : "±")}{Math.Abs(delta)} vs target {setpoints.TargetMw.ToString("0", Inv)}",
             TargetMw = setpoints.TargetMw,
-            LiveText = held ? "HELD" : "LIVE",
+            LiveText = held ? "Held" : "Live",
 
             HourlySeries = hourly,
             HourlyPeak = Math.Round(hourly.Max()).ToString("0", Inv),
@@ -171,14 +171,14 @@ public sealed record ConsoleView
             VibrationSeries = vibSeries,
             VibrationNow = reading.Vib.ToString("0.0", Inv),
             VibrationIsHigh = vibHigh,
-            VibrationStatus = vibHigh ? "HIGH" : "OK",
-            VibrationZone = vibHigh ? "ZONE C" : reading.Vib > 2.8 ? "ZONE B" : "ZONE A",
+            VibrationStatus = vibHigh ? "High" : "Normal",
+            VibrationZone = vibHigh ? "Zone C" : reading.Vib > 2.8 ? "Zone B" : "Zone A",
 
             Valves = [.. valves.Select(v => new ValveView(
                 v.Id,
                 v.Id.ToString(Inv),
                 v.Open,
-                v.Open ? "OPEN" : "SHUT",
+                v.Open ? "open" : "shut",
                 $"Valve {v.Code} {(v.Open ? "open" : "shut")}"))],
             OpenValvesText = $"{openValves}/{valves.Length}",
         };
@@ -193,6 +193,18 @@ public sealed record ConsoleView
             : Math.Abs(value) < 10 ? value.ToString("0.0", Inv)
             : Math.Round(value).ToString("#,0", Inv),
         _ => value.ToString(Inv),
+    };
+
+    /// <summary>The reading's name as a datasheet prints it: a word, not an abbreviation.</summary>
+    public static string LabelOf(Metric metric) => metric switch
+    {
+        Metric.Temp => "Temperature",
+        Metric.Press => "Pressure",
+        Metric.Flow => "Flow",
+        Metric.Load => "Load",
+        Metric.Eff => "Efficiency",
+        Metric.Vib => "Vibration",
+        _ => metric.ToString(),
     };
 
     public static string UnitOf(Metric metric) => metric switch

@@ -2,131 +2,124 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!--
-    Console tokens, from the ui-craft pass on the prototype. The counts are fixed:
-    4 text colours, 3 cyan border levels, 7 type sizes (10 px minimum), 2 control heights.
-    Simple's roles carry the shared palette (App.xaml); these brushes add the tones Simple
-    has no role for (alpha steps of the hologram cyan and the accent).
+    Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Light is the base theme;
+    Palette.Dark.xaml holds the graphite values, copied over these by ConsoleTheme on a switch.
+    Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 5 type sizes.
+    Contrast on the ground (#F4F5F6): ink 14.2, soft ink 8.6, muted 5.6, accent 4.9, alert 6.1.
   -->
 
-  <!-- Fonts. The TTF family names are weight-suffixed, so the fragments must match exactly. -->
-  <FontFamily x:Key="DisplayFont">ms-appx:///Assets/Fonts/ChakraPetch-Medium.ttf#Chakra Petch Medium</FontFamily>
-  <FontFamily x:Key="DisplayStrongFont">ms-appx:///Assets/Fonts/ChakraPetch-SemiBold.ttf#Chakra Petch SemiBold</FontFamily>
-  <FontFamily x:Key="MonoFont">ms-appx:///Assets/Fonts/IBMPlexMono-Regular.ttf#IBM Plex Mono</FontFamily>
-  <FontFamily x:Key="MonoMediumFont">ms-appx:///Assets/Fonts/IBMPlexMono-Medium.ttf#IBM Plex Mono Medium</FontFamily>
+  <!-- One family. IBM Plex Sans digits are tabular by default (all 600 units), so live values hold still.
+       The TTF family names are weight-suffixed, so the fragments must match exactly. -->
+  <FontFamily x:Key="SansFont">ms-appx:///Assets/Fonts/IBMPlexSans-Regular.ttf#IBM Plex Sans</FontFamily>
+  <FontFamily x:Key="SansMediumFont">ms-appx:///Assets/Fonts/IBMPlexSans-Medium.ttf#IBM Plex Sans Medm</FontFamily>
+  <FontFamily x:Key="SansStrongFont">ms-appx:///Assets/Fonts/IBMPlexSans-SemiBold.ttf#IBM Plex Sans SmBld</FontFamily>
 
-  <!-- Ground and surfaces -->
-  <SolidColorBrush x:Key="GroundBrush" Color="#03070A" />
-  <SolidColorBrush x:Key="PanelBrush" Color="#8C081A26" />
-  <SolidColorBrush x:Key="CardBrush" Color="#80041018" />
-  <SolidColorBrush x:Key="OverlayBrush" Color="#D1030C12" />
+  <!-- xaml-lint: allow tokentheme - ConsoleTheme repaints these brushes in place from Palette.Dark.xaml; ThemeDictionaries would hand converters a snapshot (uno-runtime-gotchas, Theming and color). -->
+  <!-- Ground and surfaces: the page is the ground; white is reserved for things you touch or read closely. -->
+  <SolidColorBrush x:Key="GroundBrush" Color="#F4F5F6" />
+  <SolidColorBrush x:Key="PanelBrush" Color="#F4F5F6" />
+  <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="OverlayBrush" Color="#EBF4F5F6" />
 
-  <!-- Text: primary, cyan, muted, faint -->
-  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DFF5FF" />
-  <SolidColorBrush x:Key="CyanBrush" Color="#8ADCFF" />
-  <SolidColorBrush x:Key="MutedBrush" Color="#86AABB" />
-  <SolidColorBrush x:Key="FaintBrush" Color="#6F95A8" />
+  <!-- Text: ink, soft ink, muted, faint (faint is for non-text marks and placeholders only) -->
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1E2833" />
+  <SolidColorBrush x:Key="InkSoftBrush" Color="#3E4B5A" />
+  <SolidColorBrush x:Key="MutedBrush" Color="#5A6573" />
+  <SolidColorBrush x:Key="FaintBrush" Color="#8A939E" />
 
-  <!-- Cyan borders: hairline 0.24 (dividers), default 0.45 (control edges, 3:1 on a card), strong 0.55 -->
-  <SolidColorBrush x:Key="HairlineBrush" Color="#3D6ED2FF" />
-  <SolidColorBrush x:Key="BorderBrushDefault" Color="#736ED2FF" />
-  <SolidColorBrush x:Key="BorderBrushStrong" Color="#8C6ED2FF" />
-  <SolidColorBrush x:Key="CyanFillBrush" Color="#246ED2FF" />
-  <SolidColorBrush x:Key="CyanTintBrush" Color="#0A6ED2FF" />
+  <!-- Lines and fills. Controls are filled, not outlined; the border keys serve focus rings and the valve ring. -->
+  <SolidColorBrush x:Key="HairlineBrush" Color="#D9DDE2" />
+  <SolidColorBrush x:Key="BorderBrushDefault" Color="#8A939E" />
+  <SolidColorBrush x:Key="BorderBrushStrong" Color="#3E4B5A" />
+  <SolidColorBrush x:Key="FillBrush" Color="#E9ECEF" />
+  <SolidColorBrush x:Key="FillStrongBrush" Color="#D5DAE0" />
 
-  <!-- Accent: selection and data -->
-  <SolidColorBrush x:Key="AccentBrush" Color="#F5A83B" />
-  <SolidColorBrush x:Key="AccentFillBrush" Color="#2EF5A83B" />
-  <SolidColorBrush x:Key="AccentTintBrush" Color="#12F5A83B" />
-  <SolidColorBrush x:Key="AccentBorderBrush" Color="#99F5A83B" />
-  <SolidColorBrush x:Key="OnAccentBrush" Color="#140C02" />
+  <!-- Accent: the one orange indicator. Selected and live, nothing else. -->
+  <SolidColorBrush x:Key="AccentBrush" Color="#C2410C" />
+  <SolidColorBrush x:Key="AccentFillBrush" Color="#1FC2410C" />
+  <SolidColorBrush x:Key="AccentTintBrush" Color="#0DC2410C" />
+  <SolidColorBrush x:Key="AccentBorderBrush" Color="#99C2410C" />
+  <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
 
-  <!-- Alert: always paired with a word (ALERT, HIGH) or a dashed stroke -->
-  <SolidColorBrush x:Key="AlertBrush" Color="#FF6F61" />
-  <SolidColorBrush x:Key="AlertTextBrush" Color="#FF8A7E" />
-  <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3FF6F61" />
-  <SolidColorBrush x:Key="AlertTintBrush" Color="#14FF6F61" />
+  <!-- Alert: always paired with the word (alert, high) or a dashed stroke -->
+  <SolidColorBrush x:Key="AlertBrush" Color="#C0261B" />
+  <SolidColorBrush x:Key="AlertTextBrush" Color="#B42318" />
+  <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3C0261B" />
+  <SolidColorBrush x:Key="AlertTintBrush" Color="#12C0261B" />
 
-  <!-- Type ramp: 10 / 11 / 13 / 15 / 18 / 22 / 28.
-       CharacterSpacing is a no-op on the Skia text stack but correct markup elsewhere. -->
+  <!-- Type ramp, closed: 12 / 13 / 16 / 22 / 56, weights 400 / 500 / 600, sentence case. -->
   <Style x:Key="TypeMicro" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource MonoMediumFont}" />
-    <Setter Property="FontSize" Value="10" />
-    <Setter Property="CharacterSpacing" Value="140" />
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16" />
     <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
   </Style>
   <Style x:Key="TypeBody" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="20" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeSection" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="CharacterSpacing" Value="160" />
+    <Setter Property="LineHeight" Value="20" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeCode" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
-    <Setter Property="FontSize" Value="15" />
-    <Setter Property="CharacterSpacing" Value="100" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-  </Style>
-  <!-- Live figures use IBM Plex Mono: every digit is 600 units wide, so values do not shift as they
-       tick. Chakra Petch's digits run 366 to 636 and it has no tabular-figures feature. -->
-  <Style x:Key="TypeValue" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource MonoMediumFont}" />
-    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
+    <Setter Property="FontSize" Value="16" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeTitle" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource DisplayStrongFont}" />
-    <Setter Property="FontSize" Value="22" />
-    <Setter Property="CharacterSpacing" Value="140" />
+    <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
+    <Setter Property="FontSize" Value="16" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
-  <Style x:Key="TypeFigure" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource MonoMediumFont}" />
+  <Style x:Key="TypeValue" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="22" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
+  <Style x:Key="TypeFigure" TargetType="TextBlock" BasedOn="{StaticResource TypeValue}" />
+  <!-- The one display figure on the page (net output): 56 against 13 body, 4.3x. -->
   <Style x:Key="TypeHero" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
-    <Setter Property="FontSize" Value="28" />
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="FontSize" Value="56" />
+    <Setter Property="LineHeight" Value="60" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
 
   <!--
-    Plant drawings (hero, presets, unit preview): the Anatomy figure's solid look in the console
-    palette. Paper is CardBrush composited over the panel, so solid fills match their card. Shades
-    and tops keep the figure's luminance steps (-4, -1, +2, +5; top +9; lit +8/+10/+19).
+    Plant drawings (hero, presets, unit preview): the Anatomy figure's solid look, drawn straight on
+    the ground. Paper is the ground colour, so the figure's silhouette sits on the page with no frame.
+    Shades step down from paper, tops step up; the selected unit is lit with a faint orange.
   -->
-  <Color x:Key="SolidPaperColor">#051018</Color>
-  <Color x:Key="SolidShade0Color">#010C14</Color>
-  <Color x:Key="SolidShade1Color">#040F17</Color>
-  <Color x:Key="SolidShade2Color">#07121A</Color>
-  <Color x:Key="SolidShade3Color">#0A151D</Color>
-  <Color x:Key="SolidTopColor">#0E1921</Color>
-  <Color x:Key="SolidLitFaceColor">#0D1820</Color>
-  <Color x:Key="SolidLitShadeColor">#0F1A22</Color>
-  <Color x:Key="SolidLitTopColor">#18232B</Color>
-  <Color x:Key="SolidLineHiColor">#DFF5FF</Color>
-  <Color x:Key="SolidLineMidColor">#B386AABB</Color>
-  <Color x:Key="SolidLineLoColor">#596ED2FF</Color>
-  <Color x:Key="SolidLineFaintColor">#336ED2FF</Color>
-  <Color x:Key="SolidLeaderColor">#998ADCFF</Color>
-  <!-- Shadow under a lifted unit: a tinted near-black (never pure black), faded by lift. -->
-  <Color x:Key="SolidHaloColor">#E6010406</Color>
+  <Color x:Key="SolidPaperColor">#F4F5F6</Color>
+  <Color x:Key="SolidShade0Color">#D3D8DE</Color>
+  <Color x:Key="SolidShade1Color">#DDE1E6</Color>
+  <Color x:Key="SolidShade2Color">#E6E9ED</Color>
+  <Color x:Key="SolidShade3Color">#EDEFF2</Color>
+  <Color x:Key="SolidTopColor">#FFFFFF</Color>
+  <Color x:Key="SolidLitFaceColor">#FCEBDF</Color>
+  <Color x:Key="SolidLitShadeColor">#F6D9C6</Color>
+  <Color x:Key="SolidLitTopColor">#FFF7F1</Color>
+  <Color x:Key="SolidLineHiColor">#1E2833</Color>
+  <Color x:Key="SolidLineMidColor">#6B7684</Color>
+  <Color x:Key="SolidLineLoColor">#A9B1BB</Color>
+  <Color x:Key="SolidLineFaintColor">#D3D8DE</Color>
+  <Color x:Key="SolidLeaderColor">#8A939E</Color>
+  <!-- Shadow under a lifted unit: tinted slate (never pure black), faded by lift. -->
+  <Color x:Key="SolidHaloColor">#59334155</Color>
   <x:Double x:Key="SolidStrokeHairline">0.8</x:Double>
   <x:Double x:Key="SolidStrokeLit">1.3</x:Double>
 
-  <!-- The light theme's colours live in Palette.Light.xaml, loaded by ConsoleTheme on a switch. -->
-
-  <!-- Radii and spacing -->
+  <!-- Radii: soft, one step per scale. Spacing follows a 4 px grid. -->
   <CornerRadius x:Key="RadiusTag">4</CornerRadius>
-  <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+  <CornerRadius x:Key="RadiusControl">8</CornerRadius>
   <CornerRadius x:Key="RadiusRail">8</CornerRadius>
-  <CornerRadius x:Key="RadiusCard">10</CornerRadius>
-  <CornerRadius x:Key="RadiusPanel">18</CornerRadius>
-  <x:Double x:Key="ControlHeight">36</x:Double>
-  <x:Double x:Key="ControlHeightLarge">48</x:Double>
+  <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+  <CornerRadius x:Key="RadiusPanel">12</CornerRadius>
+  <x:Double x:Key="ControlHeight">32</x:Double>
+  <x:Double x:Key="ControlHeightLarge">44</x:Double>
 </ResourceDictionary>
