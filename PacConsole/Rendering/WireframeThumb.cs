@@ -13,11 +13,14 @@ namespace PacConsole.Rendering;
 /// </summary>
 public sealed partial class WireframeThumb : SKCanvasElement
 {
-    private readonly WireframeRenderer _renderer = new();
+    // Created on Loaded, disposed on Unloaded: an element can be unloaded and loaded again, and a
+    // render after Dispose touches a freed native path.
+    private WireframeRenderer? _renderer;
 
     public WireframeThumb()
     {
-        Unloaded += (_, _) => _renderer.Dispose();
+        Loaded += (_, _) => { _renderer ??= new(); Invalidate(); };
+        Unloaded += (_, _) => { _renderer?.Dispose(); _renderer = null; };
     }
 
     /// <summary>Camera pose (a <see cref="CameraPose"/>).</summary>
@@ -68,6 +71,7 @@ public sealed partial class WireframeThumb : SKCanvasElement
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {
+        if (_renderer is null) return;
         var plant = PlantGeometry.Default;
         var pose = Pose as CameraPose? ?? CameraPose.Iso;
         var selected = Selected as UnitId?;
