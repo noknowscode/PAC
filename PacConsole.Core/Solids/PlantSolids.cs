@@ -16,12 +16,19 @@ public enum EdgeTone
 /// One solid of the plant: its hull for ordering and a builder that draws it for a camera.
 /// <see cref="Lit"/> parts take the selection colours when their unit is selected.
 /// </summary>
-public sealed record SolidPart(string Name, UnitId? Unit, Volume Volume, Func<OrbitProjection, SolidShape> Build, EdgeTone Edge = EdgeTone.Mid, bool Lit = false, bool Crease = true);
+public sealed record SolidPart(string Name, UnitId? Unit, Volume Volume, Func<OrbitProjection, SolidShape> Build, EdgeTone Edge = EdgeTone.Mid, bool Lit = false, bool Crease = true)
+{
+    /// <summary>Line work drawn over the part (seams, bolts, fan blades), given the camera and the time in seconds.</summary>
+    public Func<OrbitProjection, double, IEnumerable<DetailLine>>? Details { get; init; }
+
+    /// <summary>Set on a pad: the unit standing on it, whose lift shadow is drawn on this pad.</summary>
+    public UnitId? PadOf { get; init; }
+}
 
 /// <summary>
 /// The plant as solids, from the reference figure's <c>docs/anatomy/plant/build.mjs</c>. The figure
 /// is Z-up; here the figure's (x, y, z) is (X, Z, Y), so every plan keeps the figure's numbers.
-/// Line decorations (seams, bolts, ticks, fan blades) are not solids and are not in this list.
+/// Line work (seams, bolts, ticks, fan blades, pipe flow) rides on its part as <see cref="SolidPart.Details"/>.
 /// </summary>
 public sealed class PlantSolids
 {
@@ -120,6 +127,12 @@ public sealed class PlantSolids
     /// <summary>One unit's solids, standing on its pad.</summary>
     public ImmutableArray<SolidPart> UnitWithPad(UnitId id) => [Pads[id], .. All.Where(p => p.Unit == id)];
 
+    /// <summary>Attaches line work to the part just added.</summary>
+    private void With(Func<OrbitProjection, double, IEnumerable<DetailLine>> details) => _parts[^1] = _parts[^1] with { Details = details };
+
+    /// <summary>Fan speed, radians per second (the figure's 1.6).</summary>
+    public const float FanSpeed = 1.6f;
+
     // Builders, with the figure's defaults (slab: 4 steps, 0.5 bevel; post: 28 steps, no bevel).
     private void Slab(UnitId? unit, string name, Plan plan, float y, float height, int steps = 4, float bevel = 0.5f, EdgeTone edge = EdgeTone.Mid, bool lit = false, bool crease = true) =>
         _parts.Add(new(name, unit, Volume.Box(plan, y, height), p => SolidBuilder.Slab(plan, y, height, p, steps, bevel), edge, lit, crease));
@@ -181,13 +194,31 @@ public sealed class PlantSolids
             Post(null, "stand.foot", c.X, c.Z, 6, -PlateHeight - FootHeight + 1.6f, FootHeight - 1.6f);
         }
         Slab(null, "stand.plate", Plate, -PlateHeight, PlateHeight, steps: 8, bevel: 1.6f, edge: EdgeTone.Lo);
-        Slab(null, "stand.strip", new(-140, Plate.Z + Plate.D - 13, 196, 7, 1), 0, 0.6f, steps: 3, bevel: 0, edge: EdgeTone.Lo, crease: false);
-        Slab(null, "stand.label", new(72, Plate.Z + Plate.D - 18, 60, 12, 1.2f), 0, 0.8f, bevel: 0, edge: EdgeTone.Lo);
+        var screws = Corners(Plate, 10);
+        With((p, _) => [
+            Details.PlanOutline(EdgeTone.Faint, new(Plate.X + 5, Plate.Z + 5, Plate.W - 10, Plate.D - 10, Plate.R - 5), 0, p),
+            .. screws.Select(c => Details.Ring(EdgeTone.Lo, c.X, c.Z, 2.2f, 0, p, 16)),
+            .. Details.Dots(EdgeTone.Mid, screws.Select(c => new Vec3(c.X, 0, c.Z)), p),
+        ]);
+        var strip = new Plan(-140, Plate.Z + Plate.D - 13, 196, 7, 1);
+        Slab(null, "stand.strip", strip, 0, 0.6f, steps: 3, bevel: 0, edge: EdgeTone.Lo, crease: false);
+        With((p, _) => Details.Ticks(strip.X + 4, strip.X + strip.W - 4, 4, 5, strip.Z + 0.8f, 0.6f, 2, 3.6f, p));
+        var label = new Plan(72, Plate.Z + Plate.D - 18, 60, 12, 1.2f);
+        Slab(null, "stand.label", label, 0, 0.8f, bevel: 0, edge: EdgeTone.Lo);
+        With((p, _) => [
+            Details.PlanOutline(EdgeTone.Faint, new(label.X + 1.6f, label.Z + 1.6f, label.W - 3.2f, label.D - 3.2f, 0), 0.8f, p, 4),
+            .. new[] { (4f, 38f), (6.5f, 30f), (9f, 22f) }.Select(l => Details.OnTop(EdgeTone.Lo, label.X + 5, label.Z + l.Item1, label.X + 5 + l.Item2, label.Z + l.Item1, 0.8f, p)),
+        ]);
 
         foreach (var (id, c) in Centres)
         {
             var plan = new Plan(c.X - PadHalf, c.Z - PadHalf, PadHalf * 2, PadHalf * 2, 4);
-            var pad = new SolidPart("stand.pad", null, Volume.Box(plan, 0, PadHeight), p => SolidBuilder.Slab(plan, 0, PadHeight, p, 4, 0.4f), EdgeTone.Lo);
+            var bolts = Corners(plan, 4).Select(q => new Vec3(q.X, PadHeight, q.Z)).ToArray();
+            var pad = new SolidPart("stand.pad", null, Volume.Box(plan, 0, PadHeight), p => SolidBuilder.Slab(plan, 0, PadHeight, p, 4, 0.4f), EdgeTone.Lo)
+            {
+                PadOf = id,
+                Details = (p, _) => Details.Dots(EdgeTone.Mid, bolts, p),
+            };
             _pads[id] = pad;
             _parts.Add(pad);
         }
@@ -200,14 +231,20 @@ public sealed class PlantSolids
         var (cx, cz) = (Centres[u].X, Centres[u].Z);
         Slab(u, "stk.foundation", new(cx - 24, cz - 16, 48, 32, 3), PadHeight, 4.8f, bevel: 0.6f);
         const float y0 = PadHeight + 4.8f;
-        Slab(u, "stk.duct", new(cx - 5, cz - 5, 11, 10, 1.5f), y0 + 2, 10);
+        var duct = new Plan(cx - 5, cz - 5, 11, 10, 1.5f);
+        Slab(u, "stk.duct", duct, y0 + 2, 10);
+        With((p, _) => Details.SideSeam(EdgeTone.Faint, duct, y0 + 7, p));
         foreach (var (x, r, deck, top) in new[] { (cx - 12, 7f, 72f, 100f), (cx + 12, 6f, 58f, 80f) })
         {
             Post(u, "stk.flange", x, cz, r + 1.6f, y0, 2, bevel: 0.4f);
+            With((p, _) => Details.DotRing(EdgeTone.Mid, x, cz, r + 0.9f, y0 + 2, 12, p));
             Post(u, "stk.shaft", x, cz, r, y0 + 2, deck - y0 - 2, steps: 48, lit: true);
+            With((p, _) => [Details.SideArc(EdgeTone.Faint, x, cz, r, deck - 40, p, 32), Details.SideArc(EdgeTone.Faint, x, cz, r, deck - 20, p, 32)]);
             Post(u, "stk.gallery", x, cz, r + 3.6f, deck, 1.6f);
+            With((p, _) => [Details.Ring(EdgeTone.Lo, x, cz, r + 3, deck + 1.6f, p), .. Details.DotRing(EdgeTone.Mid, x, cz, r + 3, deck + 1.6f, 16, p)]);
             Post(u, "stk.shaft", x, cz, r, deck + 1.6f, top - deck - 1.6f, steps: 48, lit: true);
             Post(u, "stk.lip", x, cz, r + 0.8f, top, 3);
+            With((p, _) => [Details.Ring(EdgeTone.Lo, x, cz, r - 0.6f, top + 3, p)]);
         }
     }
 
@@ -234,6 +271,7 @@ public sealed class PlantSolids
 
         var skid = new Plan(cx + 6, cz + 16, 18, 9, 0.8f);
         Slab(u, "tka.skid", skid, PadHeight, 2, steps: 2, bevel: 0.3f);
+        With((p, _) => Details.Dots(EdgeTone.Mid, [new(skid.X + 1.5f, PadHeight + 2, skid.Z + 1.5f), new(skid.X + skid.W - 1.5f, PadHeight + 2, skid.Z + 1.5f)], p));
         var pumpAxis = new Frame(new(0, PadHeight + 5, skid.Z + 4.5f), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
         foreach (var (name, s0, s1, r) in new[] { ("tka.motor", cx + 7.5f, cx + 15, 3f), ("tka.coupling", cx + 15, cx + 16.5f, 1.4f), ("tka.pump", cx + 16.5f, cx + 22, 3f) })
         {
@@ -244,6 +282,7 @@ public sealed class PlantSolids
         {
             const float top = 30;
             Post(u, "tka.tank", x, z, 13, PadHeight, top - PadHeight, steps: 56, bevel: 0.6f, lit: true);
+            With((p, _) => [Details.SideArc(EdgeTone.Faint, x, z, 13, 11, p, 40), Details.SideArc(EdgeTone.Faint, x, z, 13, 21, p, 40)]);
             TurnedUp(u, "tka.roof", x, z, [(top, 13), (top + 7, 2.5f)]);
             Post(u, "tka.vent", x, z, 1.6f, top + 7, 3);
             Post(u, "tka.cap", x, z, 2.4f, top + 10, 1.2f);
@@ -255,13 +294,17 @@ public sealed class PlantSolids
     {
         const UnitId u = UnitId.Gen;
         var (cx, cz) = (Centres[u].X, Centres[u].Z);
-        Slab(u, "gen.hall", new(cx - 30, cz - 24, 60, 36, 1.5f), PadHeight, 30 - PadHeight, bevel: 0.6f, lit: true);
+        var hall = new Plan(cx - 30, cz - 24, 60, 36, 1.5f);
+        Slab(u, "gen.hall", hall, PadHeight, 30 - PadHeight, bevel: 0.6f, lit: true);
+        With((p, _) => [.. Details.SideSeam(EdgeTone.Faint, hall, 10, p), .. Details.SideSeam(EdgeTone.Faint, hall, 20, p)]);
 
         var ridge = new Frame(new(cx - 31, 30, cz - 6), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
         (float, float)[] gable = [(-19, 0), (19, 0), (0, 9)];
         _parts.Add(new("gen.roof", u, Volume.Box(new(cx - 31, cz - 25, 62, 38, 0), 30, 9), p => SolidBuilder.Prism(ridge, gable, 0, 62, p), Lit: true));
 
-        Slab(u, "gen.door", new(cx - 22, cz + 12, 18, 1, 0.3f), PadHeight, 19, steps: 2, bevel: 0);
+        var door = new Plan(cx - 22, cz + 12, 18, 1, 0.3f);
+        Slab(u, "gen.door", door, PadHeight, 19, steps: 2, bevel: 0);
+        With((p, _) => new[] { 4f, 7f, 10f, 13f, 16f }.SelectMany(dy => Details.SideSeam(EdgeTone.Lo, door, PadHeight + dy, p, 2)));
         foreach (var z in new[] { cz - 19, cz - 10, cz - 1 })
         {
             Slab(u, "gen.louvre", new(cx + 30, z, 0.8f, 6, 0.3f), 18, 6, steps: 2, bevel: 0);
@@ -269,6 +312,9 @@ public sealed class PlantSolids
 
         var tx = new Plan(cx + 4, cz + 18, 20, 12, 1.5f);
         Slab(u, "gen.transformer", tx, PadHeight, 12);
+        // Cooling fins on the front face, drawn only while that face is toward the viewer.
+        With((p, _) => p.CosYaw <= 0 ? [] : Enumerable.Range(0, 7).Select(i =>
+            Details.Segment(EdgeTone.Lo, new(tx.X + 2.5f + i * 2.5f, PadHeight, tx.Z + tx.D), new(tx.X + 2.5f + i * 2.5f, PadHeight + 12, tx.Z + tx.D), p)));
         foreach (var x in new[] { tx.X + 5, tx.X + 10, tx.X + 15 })
         {
             Post(u, "gen.bushing", x, tx.Z + 6, 1.2f, PadHeight + 12, 5, steps: 16);
@@ -294,13 +340,16 @@ public sealed class PlantSolids
                 Slab(u, "trb.column", new(x, z, 4, 4, 0.6f), PadHeight, 12 - PadHeight, steps: 2, bevel: 0.3f);
             }
         }
-        Slab(u, "trb.deck", new(cx - 30, cz - 12, 60, 24, 2), 12, 4, bevel: 0.6f);
+        var deck = new Plan(cx - 30, cz - 12, 60, 24, 2);
+        Slab(u, "trb.deck", deck, 12, 4, bevel: 0.6f);
+        With((p, _) => Details.SideSeam(EdgeTone.Faint, deck, 14, p));
         foreach (var (z0, z1, top) in new[] { (16.5f, 18f, 5.2f), (15f, 16.5f, 9.2f), (13.5f, 15f, 13.2f), (12f, 13.5f, 16f) })
         {
             Slab(u, "trb.step", new(cx + 8, cz + z0, 6, z1 - z0, 0.2f), PadHeight, top - PadHeight, steps: 2, bevel: 0);
         }
         var oil = new Plan(cx - 28, cz + 18, 14, 10, 1.2f);
         Slab(u, "trb.oil", oil, PadHeight, 6, bevel: 0.4f);
+        With((p, _) => Details.SideSeam(EdgeTone.Faint, oil, PadHeight + 3, p));
         Post(u, "trb.filler", oil.X + 10, oil.Z + 5, 1.4f, PadHeight + 6, 1.6f, steps: 16);
 
         const float shaftY = 28;
@@ -325,12 +374,25 @@ public sealed class PlantSolids
         const UnitId u = UnitId.Cnd;
         var (cx, cz) = (Centres[u].X, Centres[u].Z);
         Slab(u, "cnd.basin", new(cx - 30, cz - 24, 60, 48, 2), PadHeight, 4);
-        Slab(u, "cnd.cell", new(cx - 28, cz - 22, 56, 44, 2), PadHeight + 4, 25, bevel: 0.6f, lit: true);
+        var cell = new Plan(cx - 28, cz - 22, 56, 44, 2);
+        Slab(u, "cnd.cell", cell, PadHeight + 4, 25, bevel: 0.6f, lit: true);
+        // Louvred air inlets low on the cell, and a faint band below the fan deck.
+        With((p, _) => [
+            .. new[] { 8f, 10f, 12f, 14f, 16f }.SelectMany(dy => Details.SideSeam(EdgeTone.Lo, cell, PadHeight + dy, p)),
+            .. Details.SideSeam(EdgeTone.Faint, cell, PadHeight + 19, p),
+        ]);
         foreach (var x in new[] { cx - 18, cx, cx + 18 })
         {
             foreach (var z in new[] { cz - 11, cz + 11 })
             {
                 Post(u, "cnd.stack", x, z, 7.5f, FanTop - 6, 6, steps: 40, bevel: 0.5f, lit: true);
+                // Guard ring, hub and five blades; the blades turn with time, each fan a little out of phase.
+                var phase = (x + z) * 0.37f;
+                With((p, t) => [
+                    Details.Ring(EdgeTone.Lo, x, z, 6.3f, FanTop, p),
+                    Details.Ring(EdgeTone.Mid, x, z, 1.4f, FanTop, p, 16),
+                    .. Details.Blades(x, z, FanTop, phase + (float)(t * FanSpeed % (Math.PI * 2)), p),
+                ]);
             }
         }
     }
@@ -360,6 +422,7 @@ public sealed class PlantSolids
         Post(u, "sil.chute", cx, cz, 2, 8, 6, steps: 20);
         TurnedUp(u, "sil.hopper", cx, cz, [(14, 3), (26, 10.5f)]);
         Post(u, "sil.body", cx, cz, 13, 26, 36, steps: 56, bevel: 0.6f, lit: true);
+        With((p, _) => [Details.SideArc(EdgeTone.Faint, cx, cz, 13, 38, p, 40), Details.SideArc(EdgeTone.Faint, cx, cz, 13, 50, p, 40)]);
         TurnedUp(u, "sil.roof", cx, cz, [(62, 13), (68, 3)]);
         Post(u, "sil.vent", cx, cz, 2, 68, 3, steps: 16);
         Post(u, "sil.filter", cx, cz, 3.2f, 71, 5, steps: 24, bevel: 0.4f);
@@ -371,7 +434,11 @@ public sealed class PlantSolids
     /// </summary>
     private void Pipework()
     {
-        void Pier(Plan plan, float height) => Slab(null, "stand.pier", plan, 0, height, bevel: 0.4f);
+        void Pier(Plan plan, float height)
+        {
+            Slab(null, "stand.pier", plan, 0, height, bevel: 0.4f);
+            With((p, _) => Details.Dots(EdgeTone.Mid, [new(plan.X + plan.W / 2, height, plan.Z + 1.6f), new(plan.X + plan.W / 2, height, plan.Z + plan.D - 1.6f)], p));
+        }
         void Pipe(string name, Vec3 a, Vec3 b, float r)
         {
             var along = b - a;
@@ -382,6 +449,8 @@ public sealed class PlantSolids
             Vec3 At(float s) => new(a.X + dir.X * s, a.Y + dir.Y * s, a.Z + dir.Z * s);
             var axis = Frame.Along(a, along);
             _parts.Add(new(name, null, BoxAlong(axis, t, length - t, r), p => SolidBuilder.Tube(At(t), At(length - t), r, p)));
+            // A flow mark along the crown, in the direction the line runs.
+            With((p, _) => [Details.Flow(At(t), At(length - t), r, p)]);
             Disc(null, name + ".flange", axis, 0, t, rim);
             Disc(null, name + ".flange", axis, length - t, length, rim);
         }
@@ -393,7 +462,7 @@ public sealed class PlantSolids
             Slab(null, "stand.sleeper", new(x - 1.5f, -6.5f, 3, 13, 0.3f), 0, 3.3f, steps: 2, bevel: 0);
         }
         Pipe("rack.north", new(-142, 5.5f, -3), new(142, 5.5f, -3), 2.2f);
-        Pipe("rack.south", new(-142, 5.5f, 3), new(142, 5.5f, 3), 2.2f);
+        Pipe("rack.south", new(142, 5.5f, 3), new(-142, 5.5f, 3), 2.2f); // the return header runs west
 
         Pier(new(37, 42, 5, 12, 0.6f), 12);
         Pier(new(53, 42, 5, 12, 0.6f), 12);

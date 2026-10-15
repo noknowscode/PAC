@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Input;
 using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Solids;
+using PacConsole.Rendering;
 using Windows.System;
 
 namespace PacConsole.Controls;
@@ -22,6 +23,12 @@ public sealed partial class PlantViewport : UserControl
     private const double DragThresholdPx = 4;
     private static readonly TimeSpan TweenDuration = TimeSpan.FromMilliseconds(600);
 
+    // The selected unit lifts off its pad: exponential follow, so a new selection mid-lift just
+    // retargets (the figure's tau 0.28 s). Reduced motion snaps.
+    private const double LiftTau = 0.28;
+    private static readonly TimeSpan FrameFast = TimeSpan.FromMilliseconds(16);
+    private static readonly TimeSpan FrameAmbient = TimeSpan.FromMilliseconds(33);
+
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly Dictionary<UnitId, Button> _tags = [];
     private readonly bool _animationsEnabled = AnimationsEnabled();
@@ -30,6 +37,10 @@ public sealed partial class PlantViewport : UserControl
     private DateTimeOffset _lastFrame;
     private bool _auto;
     private bool _hover;
+
+    // Plant motion: per-unit lift toward its target, and a clock for fans and pipe flow.
+    private readonly Dictionary<UnitId, float> _lift = UnitCatalog.All.ToDictionary(u => u.Id, _ => 0f);
+    private double _seconds;
 
     // Tween
     private CameraPose _tweenFrom, _tweenTo;
@@ -105,7 +116,7 @@ public sealed partial class PlantViewport : UserControl
     }
 
     public static readonly DependencyProperty SelectedUnitProperty =
-        DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, _) => ((PlantViewport)d).Draw()));
+        DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, _) => ((PlantViewport)d).Refresh()));
 
     /// <summary>Units in alert (an <see cref="ImmutableArray{UnitId}"/>), drawn coral and dashed.</summary>
     public object? AlertingUnits
@@ -159,10 +170,21 @@ public sealed partial class PlantViewport : UserControl
 
     private bool IsOrbiting => _auto && !_hover && !_dragging;
 
+    private float LiftTarget(UnitId id) => SelectedUnit as UnitId? == id ? SolidRenderer.FullLift : 0;
+
+    private bool LiftSettled => _lift.All(kv => kv.Value == LiftTarget(kv.Key));
+
     /// <summary>Starts or stops the frame loop to match the state, then draws once.</summary>
     private void Refresh()
     {
-        var needsLoop = IsOrbiting || _tweening;
+        if (!_animationsEnabled)
+        {
+            foreach (var id in _lift.Keys.ToList()) _lift[id] = LiftTarget(id);
+        }
+        // The camera or a lift moving needs full rate; fans and pipe flow alone run at 30 fps.
+        var moving = IsOrbiting || _tweening || !LiftSettled;
+        _timer.Interval = moving ? FrameFast : FrameAmbient;
+        var needsLoop = moving || _animationsEnabled;
         if (needsLoop && !_timer.IsEnabled)
         {
             _lastFrame = DateTimeOffset.Now;
@@ -182,6 +204,15 @@ public sealed partial class PlantViewport : UserControl
         var now = DateTimeOffset.Now;
         var dt = (float)(now - _lastFrame).TotalSeconds;
         _lastFrame = now;
+
+        _seconds += dt;
+        var follow = (float)(1 - Math.Exp(-dt / LiftTau));
+        foreach (var id in _lift.Keys.ToList())
+        {
+            var target = LiftTarget(id);
+            var next = _lift[id] + (target - _lift[id]) * follow;
+            _lift[id] = Math.Abs(target - next) < 0.02f ? target : next;
+        }
 
         if (_tweening)
         {
@@ -214,7 +245,7 @@ public sealed partial class PlantViewport : UserControl
         var requests = UnitCatalog.All.Select(u =>
         {
             var label = alerting.Contains(u.Id) ? $"{u.Code} · ALERT" : u.Code;
-            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id]), TagLayout.EstimateWidth(label));
+            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id] with { Y = PlantSolids.Default.Anchors[u.Id].Y + _lift[u.Id] }), TagLayout.EstimateWidth(label));
         }).ToList();
         var placements = TagLayout.Solve(requests, width);
 
@@ -231,7 +262,7 @@ public sealed partial class PlantViewport : UserControl
             ApplyTagState(tag, isSelected, isAlert);
         }
 
-        PlantDrawing.Show(_pose, selected, alerting, placements);
+        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds);
         Pose = _pose;
 
         CaptionDetail.Text = $"{PresetName()} · YAW {_pose.YawDegrees:000}° · EL {_pose.ElevationDegrees:00}°";

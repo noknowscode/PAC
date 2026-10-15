@@ -99,10 +99,11 @@ public sealed partial class SolidThumb : SKCanvasElement
             // Follows the viewport's yaw, turned half a radian so the preview shows another face.
             var (centre, radius) = plant.Sphere(unit);
             var p = OrbitProjection.AroundSphere(new CameraPose(pose.Yaw + 0.5f, 0.45f), centre, radius, w, h, 2);
-            _renderer.Draw(canvas, plant.UnitWithPad(unit), p, selected, alerting);
+            _renderer.Draw(canvas, plant.UnitWithPad(unit), p, new SolidFrame(selected, alerting));
             return;
         }
 
-        _renderer.Draw(canvas, plant.All, PlantSolids.Fit(pose, plant.All, w, h, 4), selected, alerting);
+        // Thumbnails skip line work: at this scale it turns to noise.
+        _renderer.Draw(canvas, plant.All, PlantSolids.Fit(pose, plant.All, w, h, 4), new SolidFrame(selected, alerting, Details: false));
     }
 }
