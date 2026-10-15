@@ -23,7 +23,6 @@
     <Setter Property="Foreground" Value="{StaticResource CyanBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource MonoMediumFont}" />
     <Setter Property="FontSize" Value="10" />
-    <Setter Property="CharacterSpacing" Value="140" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -231,6 +230,17 @@
     <Setter Property="Template" Value="{StaticResource ConsoleCheckableTemplate}" />
   </Style>
 
+  <!-- Valve labels: no Foreground setter, so the toggle's checked/unchecked ink still applies.
+       The state line is one size smaller instead of faded (text opacity breaks contrast). -->
+  <Style x:Key="ValveNumber" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoMediumFont}" />
+    <Setter Property="FontSize" Value="11" />
+  </Style>
+  <Style x:Key="ValveState" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="10" />
+  </Style>
+
   <Style x:Key="ValveToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource ConsoleButtonBase}">
     <Setter Property="Template" Value="{StaticResource CyanCheckableTemplate}" />
     <Setter Property="Height" Value="{StaticResource ControlHeight}" />
@@ -344,7 +354,6 @@
     <Setter Property="Padding" Value="7,0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusTag}" />
     <Setter Property="FontSize" Value="10" />
-    <Setter Property="CharacterSpacing" Value="100" />
   </Style>
 
   <Style x:Key="PathIconStyle" TargetType="Path">
