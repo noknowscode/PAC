@@ -82,14 +82,39 @@ public sealed class SolidRenderer : IDisposable
 
     public required SolidPalette Palette { get; init; }
 
+    // Shapes depend only on the camera; a lift is a screen translation. So a still camera with a
+    // lifting unit, turning fans or moving flow rebuilds nothing, and re-sorts only when a lift moves.
+    private IReadOnlyList<SolidPart>? _cachedParts;
+    private (float, float, float, float, float, float) _cachedCamera;
+    private SolidShape[] _shapes = [];
+    private int[] _order = [];
+    private float[] _orderLift = [];
+
     /// <summary>Paints <paramref name="parts"/> back to front. Lit parts of the selected unit take the accent; of an alerting unit, a dashed alert outline.</summary>
     public void Draw(SKCanvas canvas, IReadOnlyList<SolidPart> parts, OrbitProjection projection, SolidFrame frame)
     {
         float LiftOf(UnitId? unit) => unit is { } u && frame.Lift is not null && frame.Lift.TryGetValue(u, out var l) ? l : 0;
 
-        var volumes = new List<Volume>(parts.Count);
-        foreach (var part in parts) volumes.Add(part.Volume.Raised(LiftOf(part.Unit)));
-        var order = DepthOrder.Sort(volumes, projection);
+        var camera = (projection.SinYaw, projection.CosYaw, projection.SinElevation, projection.Scale, projection.CenterX, projection.CenterY);
+        var cameraChanged = !ReferenceEquals(parts, _cachedParts) || camera != _cachedCamera;
+        if (cameraChanged)
+        {
+            _cachedParts = parts;
+            _cachedCamera = camera;
+            _shapes = new SolidShape[parts.Count];
+            for (var i = 0; i < parts.Count; i++) _shapes[i] = parts[i].Build(projection);
+        }
+
+        var lifts = new float[parts.Count];
+        for (var i = 0; i < parts.Count; i++) lifts[i] = LiftOf(parts[i].Unit);
+        if (cameraChanged || !lifts.AsSpan().SequenceEqual(_orderLift))
+        {
+            var volumes = new List<Volume>(parts.Count);
+            for (var i = 0; i < parts.Count; i++) volumes.Add(parts[i].Volume.Raised(lifts[i]));
+            _order = DepthOrder.Sort(volumes, projection);
+            _orderLift = lifts;
+        }
+        var order = _order;
 
         foreach (var index in order)
         {
@@ -104,7 +129,7 @@ public sealed class SolidRenderer : IDisposable
                 canvas.Save();
                 canvas.Translate(0, projection.Rise(lift));
             }
-            DrawShape(canvas, part.Build(projection), part.Edge, part.Crease, lit, alert, hovered);
+            DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered);
             if (frame.Details && part.Details is { } details) DrawDetails(canvas, details(projection, frame.Seconds), frame.Seconds);
             if (lift > 0) canvas.Restore();
 

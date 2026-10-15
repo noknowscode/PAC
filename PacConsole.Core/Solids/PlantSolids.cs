@@ -163,7 +163,10 @@ public sealed class PlantSolids
     public ImmutableDictionary<UnitId, SolidPart> Pads { get; }
 
     /// <summary>One unit's solids, standing on its pad.</summary>
-    public ImmutableArray<SolidPart> UnitWithPad(UnitId id) => [Pads[id], .. All.Where(p => p.Unit == id)];
+    public ImmutableArray<SolidPart> UnitWithPad(UnitId id) => _unitWithPad.GetOrAdd(id, u => [Pads[u], .. All.Where(p => p.Unit == u)]);
+
+    // One array per unit, so a renderer's shape cache (keyed on the parts list) holds across frames.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<UnitId, ImmutableArray<SolidPart>> _unitWithPad = new();
 
     /// <summary>Attaches line work to the part just added.</summary>
     private void With(Func<OrbitProjection, double, IEnumerable<DetailLine>> details) => _parts[^1] = _parts[^1] with { Details = details };

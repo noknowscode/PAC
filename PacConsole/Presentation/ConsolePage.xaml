@@ -25,6 +25,9 @@
     <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="CyanFillBrush" />
     <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="CyanFillBrush" />
 
+    <!-- Below 1360 px the two-column console no longer fits: the telemetry column stacks under the plant. -->
+    <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="1360" />
+
     <Style x:Key="CardHeader" TargetType="TextBlock" BasedOn="{StaticResource TypeMicro}">
       <Setter Property="CharacterSpacing" Value="160" />
     </Style>
@@ -81,7 +84,8 @@
                 </Border>
                 <TextBlock Grid.Column="1" Text="CENTRAL CONTROL UNIT (PAC)" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
                 <Border Grid.Column="2" Width="1" Height="24" Background="{StaticResource BorderBrushDefault}" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6"
+                            Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=Collapsed, Wide=Visible}">
                   <TextBlock Text="PLANT 02 · THERMAL /" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" />
                   <TextBlock x:Name="Breadcrumb" Text="OVERVIEW" Style="{StaticResource TypeBody}" />
                 </StackPanel>
@@ -119,10 +123,15 @@
               </Grid>
 
               <!-- ============ BODY ============ -->
-              <Grid Grid.Row="1" ColumnDefinitions="*,500" ColumnSpacing="16">
+              <ScrollViewer Grid.Row="1" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto" Margin="0,0,-12,0" Padding="0,0,12,0">
+              <Grid ColumnDefinitions="*,500" RowDefinitions="*,Auto" ColumnSpacing="16"
+                    RowSpacing="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=16, Wide=0}"
+                    MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=1400, Wide=680}">
 
                 <!-- ============ OVERVIEW: main column ============ -->
-                <Grid x:Name="OverviewMain" RowDefinitions="*,200" RowSpacing="16">
+                <Grid x:Name="OverviewMain" RowDefinitions="*,200" RowSpacing="16"
+                      Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}">
 
                   <Grid>
                     <controls:PlantViewport x:Name="Viewport"
@@ -205,7 +214,10 @@
                 </Grid>
 
                 <!-- ============ OVERVIEW: telemetry column ============ -->
-                <Grid x:Name="OverviewAside" Grid.Column="1" ColumnDefinitions="*,*,*" RowDefinitions="190,170,*,Auto"
+                <Grid x:Name="OverviewAside" ColumnDefinitions="*,*,*" RowDefinitions="190,170,*,Auto"
+                      Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=0, Wide=1}"
+                      Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=1, Wide=0}"
+                      Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
                       ColumnSpacing="12" RowSpacing="12" AutomationProperties.Name="Telemetry">
 
                   <!-- Net output -->
@@ -305,7 +317,7 @@
                   </Border>
 
                   <!-- Hourly generation -->
-                  <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource CardStyle}">
+                  <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource CardStyle}" MinHeight="170">
                     <Grid RowDefinitions="Auto,*" RowSpacing="8">
                       <TextBlock Text="HOURLY GENERATION · MWh" Style="{StaticResource CardHeader}" />
                       <TextBlock Style="{StaticResource CardHeader}" HorizontalAlignment="Right">
@@ -316,7 +328,7 @@
                   </Border>
 
                   <!-- Vibration -->
-                  <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource CardStyle}"
+                  <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource CardStyle}" MinHeight="170"
                           BorderBrush="{Binding Data.VibrationIsHigh, Converter={StaticResource Tone}, ConverterParameter=True=AlertBorderBrush|False=HairlineBrush}">
                     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="4">
                       <TextBlock Text="VIBRATION TREND" Style="{StaticResource CardHeader}" />
@@ -371,6 +383,7 @@
                   </Border>
                 </Grid>
               </Grid>
+              </ScrollViewer>
             </Grid>
           </Border>
       </DataTemplate>

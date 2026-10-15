@@ -26,15 +26,17 @@ public sealed partial class PlantViewport : UserControl
     // The selected unit lifts off its pad: exponential follow, so a new selection mid-lift just
     // retargets (the figure's tau 0.28 s). Reduced motion snaps.
     private const double LiftTau = 0.28;
-    private static readonly TimeSpan FrameFast = TimeSpan.FromMilliseconds(16);
-    private static readonly TimeSpan FrameAmbient = TimeSpan.FromMilliseconds(33);
 
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
+    // Frames come from CompositionTarget.Rendering, in step with the display. A 16 ms
+    // DispatcherTimer ticked on Windows' 15.6 ms timer grid, alternating 16 and 31 ms frames
+    // (measured p90 31 ms), which read as judder. Time comes from a Stopwatch, not the wall clock.
+    private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
+    private bool _looping;
+    private double _lastFrameSeconds;
     private readonly Dictionary<UnitId, Button> _tags = [];
     private readonly bool _animationsEnabled = AnimationsEnabled();
 
     private CameraPose _pose = CameraPose.Iso;
-    private DateTimeOffset _lastFrame;
     private bool _auto;
     private bool _hover;
 
@@ -76,7 +78,7 @@ public sealed partial class PlantViewport : UserControl
             TagLayer.Children.Add(tag);
         }
 
-        _timer.Tick += (_, _) => OnFrame();
+
         RotateLeft.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
         RotateRight.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
         Reset.Click += (_, _) => GoTo(CameraPose.Iso);
@@ -99,7 +101,7 @@ public sealed partial class PlantViewport : UserControl
 
         SizeChanged += (_, _) => Draw();
         Loaded += (_, _) => Refresh();
-        Unloaded += (_, _) => _timer.Stop();
+        Unloaded += (_, _) => StopLoop();
     }
 
     /// <summary>The current camera pose, updated every frame (a <see cref="CameraPose"/>).</summary>
@@ -185,29 +187,39 @@ public sealed partial class PlantViewport : UserControl
         {
             foreach (var id in _lift.Keys.ToList()) _lift[id] = LiftTarget(id);
         }
-        // The camera or a lift moving needs full rate; fans and pipe flow alone run at 30 fps.
-        var moving = IsOrbiting || _tweening || !LiftSettled;
-        _timer.Interval = moving ? FrameFast : FrameAmbient;
-        var needsLoop = moving || _animationsEnabled;
-        if (needsLoop && !_timer.IsEnabled)
-        {
-            _lastFrame = DateTimeOffset.Now;
-            _timer.Start();
-        }
-        else if (!needsLoop && _timer.IsEnabled)
-        {
-            _timer.Stop();
-        }
+        // Fans and pipe flow keep the loop running while animations are on; with them off it runs
+        // only while the camera or a lift moves.
+        var needsLoop = IsOrbiting || _tweening || !LiftSettled || _animationsEnabled;
+        if (needsLoop) StartLoop(); else StopLoop();
 
         AutoOrbitLabel.Text = !_auto ? "AUTO ORBIT OFF" : _hover || _dragging ? "AUTO ORBIT PAUSED" : "AUTO ORBIT ON";
         Draw();
     }
 
+    private void StartLoop()
+    {
+        if (_looping) return;
+        _looping = true;
+        _lastFrameSeconds = _clock.Elapsed.TotalSeconds;
+        CompositionTarget.Rendering += OnRendering;
+    }
+
+    private void StopLoop()
+    {
+        if (!_looping) return;
+        _looping = false;
+        CompositionTarget.Rendering -= OnRendering;
+    }
+
+    private void OnRendering(object? sender, object e) => OnFrame();
+
     private void OnFrame()
     {
         var now = DateTimeOffset.Now;
-        var dt = (float)(now - _lastFrame).TotalSeconds;
-        _lastFrame = now;
+        var nowSeconds = _clock.Elapsed.TotalSeconds;
+        // Capped so a hitch (GC, a telemetry refresh) never makes the camera or a lift jump.
+        var dt = (float)Math.Min(nowSeconds - _lastFrameSeconds, 0.05);
+        _lastFrameSeconds = nowSeconds;
 
         _seconds += dt;
         var follow = (float)(1 - Math.Exp(-dt / LiftTau));
@@ -259,8 +271,11 @@ public sealed partial class PlantViewport : UserControl
             var info = UnitCatalog.Get(p.Unit);
             var isAlert = alerting.Contains(p.Unit);
             var isSelected = selected == p.Unit;
-            tag.Content = isAlert ? $"{info.Code} · ALERT" : info.Code;
-            tag.Width = p.Width;
+            // Only touch what changed: a new Content string re-measures and re-shapes the label's
+            // text, and this runs every animation frame.
+            var label = isAlert ? $"{info.Code} · ALERT" : info.Code;
+            if (!Equals(tag.Content, label)) tag.Content = label;
+            if (tag.Width != p.Width) tag.Width = p.Width;
             Canvas.SetLeft(tag, p.Left);
             Canvas.SetTop(tag, p.Top);
             ApplyTagState(tag, isSelected, isAlert);
@@ -269,11 +284,12 @@ public sealed partial class PlantViewport : UserControl
         PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered);
         Pose = _pose;
 
-        CaptionDetail.Text = $"{PresetName()} · YAW {_pose.YawDegrees:000}° · EL {_pose.ElevationDegrees:00}°";
+        var caption = $"{PresetName()} · YAW {_pose.YawDegrees:000}° · EL {_pose.ElevationDegrees:00}°";
+        if (CaptionDetail.Text != caption) CaptionDetail.Text = caption;
         var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
-        AutomationProperties.SetHelpText(this,
-            $"6 units. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
-            $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.");
+        var help = $"6 units. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
+            $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";
+        if (AutomationProperties.GetHelpText(this) != help) AutomationProperties.SetHelpText(this, help);
     }
 
     private string PresetName() =>
