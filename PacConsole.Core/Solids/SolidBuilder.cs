@@ -17,6 +17,20 @@ public readonly record struct Frame(Vec3 O, Vec3 A, Vec3 U, Vec3 V)
 
     /// <summary>A vertical axis through (x, z) on the floor, radial directions along X and Z.</summary>
     public static Frame Vertical(float x, float z) => new(new(x, 0, z), new(0, 1, 0), new(1, 0, 0), new(0, 0, 1));
+
+    /// <summary>An axis from <paramref name="o"/> along <paramref name="a"/>, with any radial pair (the kit's <c>frameAlong</c>).</summary>
+    public static Frame Along(Vec3 o, Vec3 a)
+    {
+        var axis = Unit(a);
+        // The kit's helper is its Z (up), which is the app's Y.
+        var helper = MathF.Abs(axis.Y) > 0.9f ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+        var u = Unit(Cross(helper, axis));
+        return new(o, axis, u, Cross(axis, u));
+    }
+
+    private static Vec3 Unit(Vec3 v) => new(v.X / v.Length, v.Y / v.Length, v.Z / v.Length);
+
+    private static Vec3 Cross(Vec3 a, Vec3 b) => new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
 }
 
 /// <summary>
@@ -151,6 +165,85 @@ public static class SolidBuilder
         return Lathe([(profile[0].S, 0), .. profile, (profile[^1].S, 0)], f, p, StepsFor(most, 32, 160, p.Scale));
     }
 
+    /// <summary>
+    /// A straight pipe from <paramref name="a"/> to <paramref name="b"/>: a disc along its own axis,
+    /// shaded like every other turned part. (The kit draws tubes as flat ribbons; solids need a hull.)
+    /// </summary>
+    public static SolidShape Tube(Vec3 a, Vec3 b, float r, OrbitProjection p)
+    {
+        var along = b - a;
+        return Disc(0, along.Length, r, Frame.Along(a, along), p);
+    }
+
+    /// <summary>
+    /// A polygon in a frame's (u, v) plane swept along its axis from <paramref name="s0"/> to
+    /// <paramref name="s1"/>: the kit's <c>prismOf</c> (the generator hall's gable roof).
+    /// </summary>
+    public static SolidShape Prism(Frame f, (float X, float Y)[] polygon, float s0, float s1, OrbitProjection p)
+    {
+        var view = ViewOf(p);
+        var light = LightOf(p);
+        var ring = polygon.ToArray();
+        var area = 0f;
+        for (var i = 0; i < ring.Length; i++) area += ring[i].X * ring[(i + 1) % ring.Length].Y - ring[(i + 1) % ring.Length].X * ring[i].Y;
+        if (area < 0) Array.Reverse(ring);
+        var n = ring.Length;
+        Vec3 At(float s, (float X, float Y) q) => new(
+            f.O.X + f.A.X * s + f.U.X * q.X + f.V.X * q.Y,
+            f.O.Y + f.A.Y * s + f.U.Y * q.X + f.V.Y * q.Y,
+            f.O.Z + f.A.Z * s + f.U.Z * q.X + f.V.Z * q.Y);
+        var low = ring.Select(q => p.Project(At(s0, q))).ToArray();
+        var high = ring.Select(q => p.Project(At(s1, q))).ToArray();
+
+        var buckets = NewBuckets(5);
+        var seen = new bool[n];
+        for (var j = 0; j < n; j++)
+        {
+            var (x0, y0) = ring[j];
+            var (x1, y1) = ring[(j + 1) % n];
+            var normal = Normalize(new(
+                f.U.X * (y1 - y0) - f.V.X * (x1 - x0),
+                f.U.Y * (y1 - y0) - f.V.Y * (x1 - x0),
+                f.U.Z * (y1 - y0) - f.V.Z * (x1 - x0)));
+            seen[j] = Dot(normal, view) > 1e-6f;
+            if (seen[j]) buckets[BandOf(Dot(normal, light))].Add([low[j], low[(j + 1) % n], high[(j + 1) % n], high[j]]);
+        }
+        var back = new Vec3(-f.A.X, -f.A.Y, -f.A.Z);
+        (Vec2[] Points, bool Seen)[] ends = [(low, Dot(back, view) > 1e-6f), (high, Dot(f.A, view) > 1e-6f)];
+        if (ends[0].Seen) buckets[BandOf(Dot(back, light))].Add(low);
+        if (ends[1].Seen) buckets[BandOf(Dot(f.A, light))].Add(high);
+
+        var crease = new List<Vec2[]>();
+        for (var j = 0; j < n; j++)
+        {
+            var prev = (j - 1 + n) % n;
+            float ax = ring[j].X - ring[prev].X, ay = ring[j].Y - ring[prev].Y;
+            float bx = ring[(j + 1) % n].X - ring[j].X, by = ring[(j + 1) % n].Y - ring[j].Y;
+            var lengths = MathF.Sqrt(ax * ax + ay * ay) * MathF.Sqrt(bx * bx + by * by);
+            var sharp = (ax * bx + ay * by) / (lengths == 0 ? 1 : lengths) < MathF.Cos(0.35f);
+            if (sharp && seen[j] && seen[prev]) crease.Add([low[j], high[j]]);
+            foreach (var (points, capSeen) in ends)
+            {
+                if (capSeen && seen[j]) crease.Add([points[j], points[(j + 1) % n]]);
+            }
+        }
+
+        var hull = ConvexHull([.. low, .. high]);
+        return new SolidShape
+        {
+            Fill = hull,
+            ShadeFaces = [buckets[0], buckets[1], buckets[2], buckets[3]],
+            Top = buckets[4],
+            Outline = [[.. hull, hull[0]]],
+            Crease = crease,
+            Bevel = [],
+        };
+    }
+
+    private static Vec3 ViewOf(OrbitProjection p) => new(p.SinYaw * p.CosElevation, p.SinElevation, p.CosYaw * p.CosElevation);
+
+    private static Vec3 LightOf(OrbitProjection p) => Normalize(new(-p.CosYaw, LightUp, p.SinYaw));
+
     public static int StepsFor(float radius, int least, int most, float scale) =>
         Math.Max(least, Math.Min(most, (int)MathF.Ceiling(Tau * radius * scale / 3)));
 
@@ -160,8 +253,8 @@ public static class SolidBuilder
     /// </summary>
     public static SolidShape Lathe((float S, float R)[] meridian, Frame f, OrbitProjection p, int steps)
     {
-        var view = new Vec3(p.SinYaw * p.CosElevation, p.SinElevation, p.CosYaw * p.CosElevation);
-        var light = Normalize(new(-p.CosYaw, LightUp, p.SinYaw));
+        var view = ViewOf(p);
+        var light = LightOf(p);
         float aV = Dot(f.A, view), uV = Dot(f.U, view), vV = Dot(f.V, view);
         float aL = Dot(f.A, light), uL = Dot(f.U, light), vL = Dot(f.V, light);
         var n = steps;

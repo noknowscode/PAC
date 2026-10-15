@@ -48,6 +48,9 @@ public partial class SolidBuilderTests
                 return SolidBuilder.Slab(new(P("x"), P("y"), P("w"), P("d"), P("r")), F("z"), F("h"), p, args.GetProperty("steps").GetInt32(), F("bevel"));
             case "cylinder":
                 return SolidBuilder.Cylinder(F("x"), F("y"), F("r"), F("z"), F("h"), p, args.GetProperty("steps").GetInt32(), F("bevel"));
+            case "prism":
+                var polygon = args.GetProperty("polygon").EnumerateArray().Select(k => (k[0].GetSingle(), k[1].GetSingle())).ToArray();
+                return SolidBuilder.Prism(new Frame(V("o"), V("a"), V("u"), V("v")), polygon, F("s0"), F("s1"), p);
             default:
                 var frame = new Frame(V("o"), V("a"), V("u"), V("v"));
                 var profile = args.GetProperty("profile").EnumerateArray().Select(k => (k[0].GetSingle(), k[1].GetSingle())).ToArray();
@@ -65,7 +68,7 @@ public partial class SolidBuilderTests
         foreach (var (name, part) in KitParts())
         {
             var args = part.GetProperty("args");
-            if (args.GetProperty("kind").GetString() == "lathe") continue;
+            if (args.GetProperty("kind").GetString() is "lathe" or "prism") continue;
             var shape = Build(args, p);
 
             // The hull may keep or drop a point that sits on a straight edge, so compare what it covers.
@@ -104,9 +107,36 @@ public partial class SolidBuilderTests
     }
 
     [Test]
+    public void The_gable_roof_matches_the_kit_point_for_point()
+    {
+        var p = HeroProjection();
+        var (name, part) = KitParts().Single(k => k.Name == "gen.roof");
+        var shape = Build(part.GetProperty("args"), p);
+
+        var kitFill = Area(Parse(part.GetProperty("fill").GetString()!));
+        Area([shape.Fill]).Should().BeApproximately(kitFill, 0.2f + 0.002f * kitFill, "the kit rounds to tenths");
+        Same(name + " crease", shape.Crease, part.GetProperty("crease").GetString()!);
+        Same(name + " top", shape.Top, part.GetProperty("top").GetString()!);
+        SameShades(name, shape, part.GetProperty("shades"));
+    }
+
+    [Test]
+    public void A_tube_is_a_disc_along_its_own_axis()
+    {
+        var p = HeroProjection();
+        var tube = SolidBuilder.Tube(new(-142, 5.5f, -3), new(142, 5.5f, -3), 2.2f, p);
+        var a = p.Project(new(-142, 5.5f, -3));
+        var b = p.Project(new(142, 5.5f, -3));
+
+        tube.Fill.Min(q => q.X).Should().BeApproximately(MathF.Min(a.X, b.X), 3);
+        tube.Fill.Max(q => q.X).Should().BeApproximately(MathF.Max(a.X, b.X), 3);
+        tube.ShadeFaces.Sum(f => f.Count).Should().BeGreaterThan(0);
+    }
+
+    [Test]
     public void Spike_unit_has_every_part_of_the_figure()
     {
-        PlantSolids.Tka().Should().HaveCount(KitParts().Count() + 6, "the fixture leaves out the three steps, the skid, the coupling and the pump");
+        PlantSolids.Tka().Should().HaveCount(KitParts().Count(k => k.Name != "gen.roof") + 6, "the fixture leaves out the three steps, the skid, the coupling and the pump");
     }
 
     [TestCase(0)]

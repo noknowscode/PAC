@@ -1,4 +1,4 @@
-// Exports the TKA-02 parts of the plant figure, as the kit draws them at the hero camera, for the
+// Exports the TKA-02 parts (and GEN-03's gable roof) of the plant figure, as the kit draws them at the hero camera, for the
 // C# port's cross-check test (PacConsole.Tests/Fixtures/tka-reference.json).
 // node export-tka.mjs
 import { writeFileSync } from "node:fs";
@@ -40,6 +40,13 @@ for (const [x, y] of [[cx + 12, cy - 10], [cx - 12, cy + 10]]) {
 const skidY = cy + 16;
 const FP = G.frameOf([0, skidY + 4.5, PAD_H + 5], X, Y, UP);
 keep("motor", { kind: "lathe", o: FP.o, a: FP.a, u: FP.u, v: FP.v, profile: [[cx + 7.5, 0], [cx + 7.5, 3], [cx + 15, 3], [cx + 15, 0]], raw: true }, G.disc(cx + 7.5, cx + 15, 3, FP, P));
+
+// GEN-03's gable roof, the figure's one prism.
+{
+  const F = G.frameOf([95 - 31, -48 - 6, 30], X, Y, UP);
+  const gable = [[-19, 0], [19, 0], [0, 9]];
+  keep("gen.roof", { kind: "prism", o: F.o, a: F.a, u: F.u, v: F.v, polygon: gable, s0: 0, s1: 62 }, G.prismOf(F, gable, 0, 62, P));
+}
 
 const out = join(HERE, "..", "..", "..", "PacConsole.Tests", "Fixtures", "tka-reference.json");
 writeFileSync(out, JSON.stringify({ projection: P, parts }, null, 1));
