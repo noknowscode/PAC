@@ -10,6 +10,7 @@ const kitUrl = (path) => pathToFileURL(join(SKILL, path)).href;
 const k = await import(kitUrl("kit/iso-kit.mjs"));
 const G = await import(kitUrl("kit/lathe.mjs"));
 const A = await import(kitUrl("kit/audit.mjs"));
+const { tubePieces, tubeSvg } = await import(kitUrl("kit/tube.mjs"));
 const { kitScript } = await import(kitUrl("scripts/inline-kit.mjs"));
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -220,6 +221,39 @@ function scene(P) {
     post(5, "sil.filter", cx, cy, 3.2, 71, 5, { steps: 24, bevel: 0.4 });
   }
 
+  // Pipework between the units: straight runs on the base plate, each ending in a bolted flange on
+  // a concrete pier, so a unit lifts off its pad without tearing a line. Bends are left out on
+  // purpose: a horizontal bend seen at 30° folds on screen.
+  const V = G.viewOf(P);
+  function pipe(name, a, b, r, touch) {
+    const total = G.pathLength([a, b]), t = Math.max(0.9, r * 0.55), along = G.unit3(G.sub3(b, a)), rim = r * 1.55;
+    const gaps = [[0, t], [total - t, total]];
+    R.route(name, [a, b], r, { owner: name, gaps, touch, rims: [rim, rim] });
+    tubePieces([a, b], r, P, { maxLength: 18, gaps }).forEach((part, index) =>
+      R.put({ at: part.mid, svg: tubeSvg(part, { tone: "mid" }), name: `${name}:${index}`, route: name, chunk: index, shapes: [A.tube(part.points, part.radii)] }),
+    );
+    for (const centre of [G.add3(a, G.mul3(along, t / 2)), G.sub3(b, G.mul3(along, t / 2))]) {
+      const F = G.frameAlong(centre, along), id = R.nameFor(`${name}.flange`);
+      const face = G.dot3(F.a, V) > 0 ? t / 2 : -t / 2;
+      const bolts = Math.abs(G.dot3(F.a, V)) > 0.12 ? k.dotsSvg(G.dotsOf(F, face, rim * 0.74, 8, P, { all: true }), { size: 0.4, tone: "mid" }) : "";
+      R.put({ at: centre, name: id, svg: k.solidSvg(G.disc(-t / 2, t / 2, rim, F, P), { tone: "mid" }) + bolts, shapes: [R.solid(A.disc(F, -t / 2, t / 2, rim, { name: id, owner: name }))] });
+    }
+  }
+  const pier = (plan, h) => slab(-1, "stand.pier", plan, 0, h, { bevel: 0.4, extra: D([[plan.x + plan.w / 2, plan.y + 1.6, h], [plan.x + plan.w / 2, plan.y + plan.d - 1.6, h]], { size: 0.4 }) });
+  // The rack: two headers down the corridor between the rows, on sleepers, pier to pier.
+  pier({ x: -150, y: -8, w: 8, d: 16, r: 0.8 }, 10);
+  pier({ x: 142, y: -8, w: 8, d: 16, r: 0.8 }, 10);
+  for (const x of [-122, -84, -47.5, -12, 20, 47.5, 84, 122]) slab(-1, "stand.sleeper", { x: x - 1.5, y: -6.5, w: 3, d: 13, r: 0.3 }, 0, 3.3, { steps: 2, bevel: 0 });
+  pipe("rack.north", [-142, -3, 5.5], [142, -3, 5.5], 2.2, ["stand.sleeper"]);
+  pipe("rack.south", [-142, 3, 5.5], [142, 3, 5.5], 2.2, ["stand.sleeper"]);
+  // Exhaust steam, turbine house to condenser bank; fuel, tank farm to generator hall.
+  pier({ x: 37, y: 42, w: 5, d: 12, r: 0.6 }, 12);
+  pier({ x: 53, y: 42, w: 5, d: 12, r: 0.6 }, 12);
+  pipe("steam", [42, 48, 6.5], [53, 48, 6.5], 2.6);
+  pier({ x: 37, y: -35, w: 5, d: 10, r: 0.6 }, 9);
+  pier({ x: 53, y: -35, w: 5, d: 10, r: 0.6 }, 9);
+  pipe("fuel", [42, -30, 4.8], [53, -30, 4.8], 1.6);
+
   A.settle(R, P);
   R.items.sort((a, b) => a.key - b.key);
   const body = R.items.map((item) => (item.unit >= 0 ? `<g data-unit="${item.unit}">${item.svg}</g>` : item.svg)).join("");
@@ -273,6 +307,176 @@ const thumbs = VIEWS.map((view) => {
   const svg = k.figureSvg({ width: 300, height: 220, label: `The same plant seen from yaw ${view.azimuth}°, elevation ${view.elevation}°.`, body: [body] });
   return k.plateHtml({ fig: view.fig, title: view.title, hint: `yaw ${view.azimuth}°`, readout: `el ${view.elevation}°`, body: `<div class="iso-stage pc-view">${svg}</div>` });
 });
+
+// Fig 5 · CND-05 close-up: one fan cell of the condenser bank, and why it is in alert. A vibration
+// sensor on the fan gearbox reads into a dial gauge with the 4.5 mm/s limit marked.
+const VIB = { base: 4.85, limit: 4.5, full: 10 }; // UnitCatalog BaseVib for CND-05; the console's LIMIT 4.5
+const DIAL = { cx: 55, cy: 12, r: 16, z: 30, h: 8, from: -0.75 * Math.PI, span: 1.5 * Math.PI };
+const FAN = { cx: -24, cy: 8, r: 26, z: 36, h: 8 };
+const dialAngle = (v) => DIAL.from + (DIAL.span * Math.min(v, VIB.full)) / VIB.full;
+const needleOf = (v, P) => {
+  const a = dialAngle(v), { cx, cy, r, z, h } = DIAL;
+  return k.lineOnTop([cx - Math.sin(a) * 3, cy + Math.cos(a) * 3], [cx + Math.sin(a) * (r - 3.5), cy - Math.cos(a) * (r - 3.5)], z + h + 0.2, P);
+};
+const fanBlades = (a, P) => {
+  let d = "";
+  for (let b = 0; b < 6; b++) {
+    const t = a + (b * Math.PI) / 3;
+    d += k.lineOnTop([FAN.cx + Math.cos(t) * 3, FAN.cy + Math.sin(t) * 3], [FAN.cx + Math.cos(t) * (FAN.r - 2), FAN.cy + Math.sin(t) * (FAN.r - 2)], FAN.z + FAN.h, P);
+  }
+  return d;
+};
+
+function cellScene(P) {
+  const R = A.recorder(P);
+  const at = (point) => k.iso(point, P);
+  const L = (d, style) => k.lineSvg(d, style);
+  const D = (points, style) => k.dotsSvg(points.map(at), style);
+  const put = (centre, svg, shape) => R.put({ at: centre, svg, name: shape.name, shapes: [R.solid(shape)] });
+  const slab = (name, plan, z, h, { tone = "mid", steps = 4, bevel = 0.5, crease, inner = "", extra = "", owner } = {}) =>
+    put([plan.x + plan.w / 2, plan.y + plan.d / 2, z + h / 2], k.solidSvg(k.slabOf(plan, z, h, P, steps, bevel), { tone, crease, inner }) + extra, A.slab(plan, z, h, { name: R.nameFor(name), owner }, steps));
+  const post = (name, cx, cy, r, z, h, { tone = "mid", steps = 28, bevel = 0, inner = "", extra = "", owner } = {}) =>
+    put([cx, cy, z + h / 2], k.solidSvg(k.cylinder(cx, cy, r, z, h, P, steps, bevel), { tone, inner }) + extra, A.cylinder(cx, cy, r, z, h, { name: R.nameFor(name), owner }));
+  const along = (name, F, s0, s1, r, { tone = "mid", inner = "", owner } = {}) =>
+    put([s0 / 2 + s1 / 2, F.o[1], F.o[2]], k.solidSvg(G.disc(s0, s1, r, F, P), { tone, inner }), A.disc(F, s0, s1, r, { name: R.nameFor(name), owner }));
+
+  // Base plate on feet, groove and screws.
+  const BASE = { x: -104, y: -44, w: 186, d: 96, r: 8 };
+  for (const [x, y] of k.corners(BASE, 18)) {
+    post("stand.foot", x, y, 6.5, -14, 1.6, { tone: "lo" });
+    post("stand.foot", x, y, 5, -12.4, 4.4);
+  }
+  const screws = k.corners(BASE, 8);
+  slab("stand.plate", BASE, -8, 8, {
+    tone: "lo", steps: 8, bevel: 1.4,
+    extra: L(k.planOutline(k.insetPlan(BASE, 4.5), 0, P), { tone: "faint" }) + L(screws.map(([x, y]) => k.ring(x, y, 2, 0, P, 16)).join(""), { tone: "lo" }) + D(screws.map(([x, y]) => [x, y, 0]), { size: 0.5 }),
+  });
+
+  // Motor on its mounting base, ribbed frame, terminal box beside it.
+  slab("motor.base", { x: -82, y: -2, w: 26, d: 20, r: 1.2 }, 0, 3, { bevel: 0.4, extra: D([[-80, 0, 3], [-58, 0, 3], [-80, 16, 3], [-58, 16, 3]], { size: 0.45 }) });
+  const FM = G.frameOf([0, 8, 12], X, Y, UP);
+  const ribs = G.ribsOf(FM, -79, -57, 9, 32, P, { fade: [0.1, 0.55], seams: true });
+  put([-68, 8, 12], k.solidSvg(G.solidOf([[-82, 7], [-80, 9], [-57, 9], [-55, 7.5]], FM, P), { tone: "mid", inner: k.fadedSvg(ribs, { tone: "lo" }) }), A.solid(FM, [[-82, 7], [-80, 9], [-57, 9], [-55, 7.5]], { name: "motor.frame", owner: "drive" }));
+  slab("motor.terminal", { x: -72, y: 20, w: 9, d: 6, r: 0.8 }, 0, 9, { bevel: 0.4, extra: L(k.planOutline({ x: -70.5, y: 21.5, w: 6, d: 3, r: 0.6 }, 9, P, 3), { tone: "faint" }) });
+
+  // Drive: shaft, coupling guard, shaft into the right-angle gearbox.
+  along("drive.shaft", FM, -55, -46, 1.8, { owner: "drive" });
+  along("drive.coupling", FM, -46, -41, 4.2, { owner: "drive", inner: L(G.arcOf(FM, -43.5, 4.2, P), { tone: "faint" }) });
+  along("drive.shaft", FM, -41, -36, 1.8, { owner: "drive" });
+  const box = { x: -36, y: -2, w: 24, d: 20, r: 2 };
+  slab("gearbox", box, 0, 24, { tone: "mid", bevel: 0.6, owner: "drive", inner: L(k.sideSeam(box, 12, P, 4), { tone: "faint" }), extra: D(k.corners(box, 2.5).map(([x, y]) => [x, y, 24]), { size: 0.45 }) });
+  post("drive.output", FAN.cx, FAN.cy, 2, 24, FAN.z - 24, { steps: 20, owner: "drive" });
+  along("motor.cowl", FM, -87, -82, 6.4, { owner: "drive", inner: L(G.arcOf(FM, -84.5, 6.4, P), { tone: "faint" }) });
+  post("gearbox.breather", box.x + 5, box.y + 4, 1, 24, 3, { steps: 14, owner: "drive" });
+  post("gearbox.breather", box.x + 5, box.y + 4, 1.7, 27, 1.4, { steps: 16, owner: "drive" });
+  // Oil sight glass on the gearbox's near face: a bezel ring and its glass.
+  slab("gearbox.sight", { x: box.x + 15, y: box.y + box.d, w: 5, d: 0.6, r: 0.2 }, 5, 5, { steps: 2, bevel: 0, owner: "drive", extra: L(k.sideRing([box.x + 17.5, box.y + box.d + 0.6, 7.5], 1.5, "y", P), { tone: "lo" }) });
+
+  // Fan stack on four legs: the shroud's top is the guard, with the blades turning under it.
+  for (const [dx, dy] of [[-17, -17], [17, -17], [-17, 17], [17, 17]]) slab("fan.leg", { x: FAN.cx + dx - 1.5, y: FAN.cy + dy - 1.5, w: 3, d: 3, r: 0.4 }, 0, FAN.z, { steps: 2, bevel: 0.3 });
+  post("fan.shroud", FAN.cx, FAN.cy, FAN.r, FAN.z, FAN.h, {
+    tone: "mid", steps: 72, bevel: 0.6, owner: "drive",
+    inner: L(k.sideArc(FAN.cx, FAN.cy, FAN.r, FAN.z + 4, P, 48), { tone: "faint" }),
+    extra:
+      L([8, 16].map((r) => k.ring(FAN.cx, FAN.cy, r, FAN.z + FAN.h, P, 56)).join(""), { tone: "faint" }) +
+      L(k.ring(FAN.cx, FAN.cy, FAN.r - 2, FAN.z + FAN.h, P, 72) + k.ring(FAN.cx, FAN.cy, 3, FAN.z + FAN.h, P, 20), { tone: "lo" }) +
+      `<path class="iso-line" data-tone="mid" data-cell-fan d="${fanBlades(0, P)}"/>`,
+  });
+
+  // Vibration sensor on the gearbox's side, its cable along the plate to the gauge's junction box.
+  const FS = G.frameOf([0, 12, 16], X, Y, UP);
+  along("sensor.body", FS, -12, -9.4, 1.8, { tone: "hi" });
+  along("sensor.plug", FS, -9.4, -8, 1.1, { tone: "hi" });
+  const cable = [[-8, 12, 16], [41, 12, 16]];
+  post("cable.hanger", 16, 12, 1.2, 0, 15.4, { steps: 16, extra: "" });
+  R.route("sensor.cable", cable, 0.6, { limp: true, touch: ["cable.hanger"], rims: [1.1, 1.1] });
+  tubePieces(cable, 0.6, P, { maxLength: 10 }).forEach((part, index) => R.put({ at: part.mid, svg: tubeSvg(part, { tone: "lo" }), name: `sensor.cable:${index}`, route: "sensor.cable", chunk: index, shapes: [A.tube(part.points, part.radii)] }));
+
+  // The gauge: base, post, junction box, and a face-up dial from 0 to 10 mm/s with the limit marked.
+  const { cx, cy, r, z, h } = DIAL;
+  slab("gauge.base", { x: cx - 10, y: cy - 10, w: 20, d: 20, r: 2 }, 0, 3, { bevel: 0.5, extra: D(k.corners({ x: cx - 10, y: cy - 10, w: 20, d: 20, r: 2 }, 3).map(([x, y]) => [x, y, 3]), { size: 0.45 }) });
+  post("gauge.post", cx, cy, 2.5, 3, z - 3, { steps: 24, inner: L(k.sideArc(cx, cy, 2.5, 20, P, 16), { tone: "faint" }) });
+  slab("gauge.arm", { x: cx - 10.5, y: cy - 1, w: 8, d: 2, r: 0.3 }, 15, 2, { steps: 2, bevel: 0 });
+  slab("gauge.junction", { x: cx - 14, y: cy - 2.5, w: 3.5, d: 5, r: 0.6 }, 12, 8, { steps: 2, bevel: 0.3, extra: D([[cx - 12.25, cy - 1.2, 20], [cx - 12.25, cy + 1.2, 20]], { size: 0.4 }) });
+  const ticks = k.radialTicks(cx, cy, r - 2.2, 50, 5, z + h, [1.2, 2.6], P, DIAL.from, DIAL.span);
+  const la = dialAngle(VIB.limit), ra = r - 2.2;
+  const zone = Array.from({ length: 25 }, (_, i) => { const a = la + ((DIAL.from + DIAL.span - la) * i) / 24; return [cx + Math.sin(a) * (ra - 1.2), cy - Math.cos(a) * (ra - 1.2)]; });
+  post("gauge.dial", cx, cy, r, z, h, {
+    tone: "hi", steps: 72, bevel: 0.8,
+    inner: L(k.sideArc(cx, cy, r, z + h - 3, P, 48), { tone: "faint" }),
+    extra:
+      L(k.ring(cx, cy, ra, z + h, P, 72), { tone: "lo" }) + L(ticks.minor, { tone: "lo" }) + L(ticks.major, { tone: "mid" }) +
+      L(k.onTop(zone, z + h, P), { tone: "mid" }) +
+      L(k.lineOnTop([cx + Math.sin(la) * (ra - 4.5), cy - Math.cos(la) * (ra - 4.5)], [cx + Math.sin(la) * ra, cy - Math.cos(la) * ra], z + h, P), { tone: "hi" }) +
+      L(k.ring(cx, cy, 1.6, z + h, P, 16), { tone: "mid" }) +
+      `<path data-cell-needle class="iso-line" data-tone="lit" data-free="start" d="${needleOf(VIB.base, P)}" style="stroke-width:1.1"/>`,
+  });
+
+  A.settle(R, P);
+  R.items.sort((a, b) => a.key - b.key);
+  return { R, body: R.items.map((item) => item.svg).join("") };
+}
+
+const W5 = 640, H5 = 360;
+const P5 = k.fitProjection([...k.boxCorners({ x: -104, y: -44, w: 186, d: 96, r: 8 }, -14, 0), [FAN.cx, FAN.cy - FAN.r, FAN.z + FAN.h], [DIAL.cx, DIAL.cy, DIAL.z + DIAL.h]], W5, H5, { pad: 30, azimuth: 45 });
+const cell = cellScene(P5);
+A.auditOrExit(cell.R, P5);
+const cellPlate = k.plateHtml({
+  fig: "Fig 5",
+  title: "CND-05 · fan cell",
+  hint: "Move across to set fan speed",
+  readout: `fan 100% · vib ${VIB.base.toFixed(2)} mm/s · high`,
+  keys: [
+    { mark: "lit", label: "Gauge needle: vibration at the gearbox, mm/s" },
+    { mark: "raised", label: "Motor, coupling, right-angle gearbox, fan under its guard" },
+  ],
+  caption: `One fan cell of the condenser bank. A sensor on the fan gearbox reads into a 0–10 mm/s gauge; the mark at ${VIB.limit} is the console's limit. At full speed it reads ${VIB.base} mm/s, the catalog figure for CND-05, which is why the unit is in alert. Below full speed the reading follows a simple imbalance model, vibration ∝ speed², so it drops under the limit near 96%.`,
+  body: `<div class="iso-stage pc-unit" tabindex="0" role="slider" aria-label="Fan speed: arrow keys change it" aria-valuemin="30" aria-valuemax="100" aria-valuenow="100">${k.figureSvg({ width: W5, height: H5, label: "One condenser fan cell: a motor drives a right-angle gearbox through a coupling, the gearbox turns a fan under its guard on four legs, and a vibration sensor on the gearbox is cabled to a dial gauge reading 0 to 10 mm/s with the 4.5 limit marked.", body: [cell.body] })}</div>`,
+});
+
+const cellLive = `
+{
+const P = ${JSON.stringify(P5)};
+const VIB = ${JSON.stringify(VIB)}, DIAL = ${JSON.stringify(DIAL)}, FAN = ${JSON.stringify(FAN)};
+const dialAngle = ${dialAngle.toString()};
+const needleOf = ${needleOf.toString().replaceAll("k.lineOnTop", "lineOnTop")};
+const fanBlades = ${fanBlades.toString().replaceAll("k.lineOnTop", "lineOnTop")};
+const stage = document.querySelector(".pc-unit");
+const svg = stage.querySelector("svg");
+const needle = svg.querySelector("[data-cell-needle]");
+const blades = svg.querySelector("[data-cell-fan]");
+const readout = stage.closest(".iso-plate").querySelector("[data-readout]");
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+let speed = 1, target = 1, touring = !still.matches, clock = 0, spin = 0, last = 0, frame = 0, visible = false, idle = 0;
+const vibAt = (s) => VIB.base * s * s;
+function tick(now) {
+  const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60;
+  last = now;
+  const calm = still.matches;
+  if (touring) { clock += dt; target = 0.93 + 0.07 * (0.5 + 0.5 * Math.cos(clock * 0.9)); }
+  speed = calm ? target : speed + (target - speed) * (1 - Math.exp(-dt / 0.6));
+  const ripple = calm ? 0 : 0.04 * Math.sin(now / 90) + 0.025 * Math.sin(now / 37);
+  const v = vibAt(speed) + ripple * speed;
+  needle.setAttribute("d", needleOf(v, P));
+  if (!calm) { spin += dt * 9 * speed; blades.setAttribute("d", fanBlades(spin, P)); }
+  const text = "fan " + Math.round(speed * 100) + "% · vib " + vibAt(speed).toFixed(2) + " mm/s · " + (vibAt(speed) > VIB.limit ? "high" : "ok");
+  if (readout.textContent !== text) readout.textContent = text;
+  stage.setAttribute("aria-valuenow", String(Math.round(speed * 100)));
+  stage.setAttribute("aria-valuetext", text);
+  frame = visible && !calm ? requestAnimationFrame(tick) : 0;
+}
+const run = () => { if (!frame && visible) { last = 0; frame = requestAnimationFrame(tick); } };
+const steer = (s) => { touring = false; target = Math.min(1, Math.max(0.3, s)); clearTimeout(idle); idle = setTimeout(() => { touring = !still.matches; clock = 0; run(); }, 3600); if (still.matches) tick(performance.now()); run(); };
+new IntersectionObserver((entries) => { visible = entries[entries.length - 1].isIntersecting; if (visible) run(); else if (still.matches) tick(performance.now()); }, { rootMargin: "120px 0px" }).observe(stage);
+stage.addEventListener("pointermove", (event) => { const box = svg.getBoundingClientRect(); steer(0.3 + 0.7 * Math.min(1, Math.max(0, ((event.clientX - box.left) / box.width - 0.15) / 0.7))); });
+stage.addEventListener("keydown", (event) => {
+  const step = event.key === "ArrowRight" || event.key === "ArrowUp" ? 0.05 : event.key === "ArrowLeft" || event.key === "ArrowDown" ? -0.05 : 0;
+  if (!step) return;
+  event.preventDefault();
+  steer(target + step);
+});
+}
+`;
 
 const live = `
 const P = ${JSON.stringify(P)};
@@ -350,12 +554,12 @@ const heroPlate = k.plateHtml({
     { mark: "raised", label: "Six units: stacks, tank farm, generator hall, turbine, condenser bank, ash silo" },
   ],
   caption:
-    "Plant 02 as the console shows it: six units on one base plate. CND-05, the condenser bank, is the unit in alert and the tour starts there. Hover or use the arrow keys to pick a unit; the readout gives its code, name and uptime from the console's unit catalog.",
+    "Plant 02 as the console shows it: six units on one base plate, two header pipes on sleepers down the corridor between the rows, and steam and fuel lines between neighbours, each ending on a flange on a pier so a unit lifts free. CND-05, the condenser bank, is the unit in alert and the tour starts there. Hover or use the arrow keys to pick a unit; the readout gives its code, name and uptime from the console's unit catalog.",
   body: `<div class="iso-stage pc-hero" tabindex="0" role="slider" aria-label="Plant units: arrow keys pick a unit" aria-valuemin="0" aria-valuemax="5" aria-valuenow="${ALERT}">${heroSvg}</div>`,
 });
 
-const css = `<style>.pc-views{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}.pc-views .iso-figure{margin:0}@media (max-width:720px){.pc-views{grid-template-columns:1fr}}</style>`;
-const page = k.pageHtml({ title: "PAC plant 02", theme, width: 960, body: `${css}${heroPlate}<div class="pc-views">${thumbs.join("")}</div>`, script: kitScript() + live });
+const css = `<style>.pc-views{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}.pc-views .iso-figure{margin:0}.pc-cell{margin-top:24px}@media (max-width:720px){.pc-views{grid-template-columns:1fr}}@media (max-width:640px){.pc-hero,.pc-unit{overflow:hidden}.iso-plate .pc-hero .iso-svg,.iso-plate .pc-unit .iso-svg{width:118%;margin:-4% -9% -3%}}</style>`;
+const page = k.pageHtml({ title: "PAC plant 02", theme, width: 960, body: `${css}${heroPlate}<div class="pc-views">${thumbs.join("")}</div><div class="pc-cell">${cellPlate}</div>`, script: kitScript() + live + cellLive });
 const out = theme === "light" ? "plant-light.html" : "plant.html";
 writeFileSync(join(HERE, out), page);
 console.log("wrote", out, "·", hero.R.items.length, "items,", hero.R.solids.length, "solids");
