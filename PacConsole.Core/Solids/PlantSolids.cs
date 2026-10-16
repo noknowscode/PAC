@@ -41,6 +41,32 @@ public sealed partial class PlantSolids
 {
     public const float PadHeight = 1.2f;
     public const float PadHalf = 36;
+
+    /// <summary>Half the side of a unit's pad: the condenser stands on a smaller one in the boiler bay.</summary>
+    public static float PadHalfOf(UnitId id) => id == UnitId.Cnd ? CondenserPadHalf : PadHalf;
+
+    public const float CondenserPadHalf = 24;
+
+    /// <summary>
+    /// Whether a part belongs to a process system, so the plant view can fade the rest. A unit's parts
+    /// follow <see cref="PlantSystems.Contains"/>; pipes follow their circuit; the boiler serves both
+    /// the steam cycle and the fuel and flue-gas path; the transformer and cabinets are electrical.
+    /// The stand is the ground, so it is in every system.
+    /// </summary>
+    public static bool InSystem(SolidPart part, PlantSystem system)
+    {
+        if (system == PlantSystem.All || part.Name.StartsWith("stand.", StringComparison.Ordinal)) return true;
+        if (part.Unit is { } unit) return PlantSystems.Contains(system, unit);
+        bool Named(params string[] prefixes) => prefixes.Any(p => part.Name.StartsWith(p, StringComparison.Ordinal));
+        return system switch
+        {
+            PlantSystem.SteamWater => part.Circuit is Circuit.Steam or Circuit.Water || Named("boiler.", "fw."),
+            PlantSystem.Cooling => part.Circuit == Circuit.Cooling,
+            PlantSystem.FuelFlue => part.Circuit == Circuit.Fuel || Named("boiler.", "flue.", "ash"),
+            PlantSystem.Electrical => Named("xfmr.", "cab."),
+            _ => false,
+        };
+    }
     public const float PlateHeight = 10, FootHeight = 6;
     /// <summary>The stand. It reaches west of the figure's plate (x -160) to hold the boiler bay.</summary>
     public static readonly Plan Plate = new(-250, -110, 410, 220, 10);
@@ -57,8 +83,11 @@ public sealed partial class PlantSolids
         [UnitId.Tka] = new(0, -48),
         [UnitId.Gen] = new(95, -48),
         [UnitId.Trb] = new(0, 48),
-        [UnitId.Cnd] = new(95, 48),
+        [UnitId.Clg] = new(95, 48),
         [UnitId.Sil] = new(-95, 48),
+        // The water-cooled condenser (console v3) sits in the boiler bay's free southern half, fed
+        // by an exhaust run from the turbine along the south margin.
+        [UnitId.Cnd] = new(-197, 64),
     }.ToImmutableDictionary();
 
     private readonly ImmutableArray<SolidPart>.Builder _parts = ImmutableArray.CreateBuilder<SolidPart>();
@@ -296,7 +325,8 @@ public sealed partial class PlantSolids
 
         foreach (var (id, c) in Centres)
         {
-            var plan = new Plan(c.X - PadHalf, c.Z - PadHalf, PadHalf * 2, PadHalf * 2, 4);
+            var half = PadHalfOf(id);
+            var plan = new Plan(c.X - half, c.Z - half, half * 2, half * 2, 4);
             var bolts = Corners(plan, 4).Select(q => new Vec3(q.X, PadHeight, q.Z)).ToArray();
             var pad = new SolidPart("stand.pad", null, Volume.Box(plan, 0, PadHeight), p => SolidBuilder.Slab(plan, 0, PadHeight, p, 4, 0.4f), EdgeTone.Lo)
             {
@@ -452,14 +482,14 @@ public sealed partial class PlantSolids
         Turned(u, "trb.gen", shaft, [(20.5f, 7.5f), (28.5f, 7.5f)], lit: true);
     }
 
-    /// <summary>CND-05: a mechanical-draft cell on its basin with six fan stacks on top.</summary>
+    /// <summary>CLG-05: a mechanical-draft cell on its basin with six fan stacks on top.</summary>
     private void CondenserBank()
     {
-        const UnitId u = UnitId.Cnd;
+        const UnitId u = UnitId.Clg;
         var (cx, cz) = (Centres[u].X, Centres[u].Z);
-        Slab(u, "cnd.basin", new(cx - 30, cz - 24, 60, 48, 2), PadHeight, 4);
+        Slab(u, "clg.basin", new(cx - 30, cz - 24, 60, 48, 2), PadHeight, 4);
         var cell = new Plan(cx - 28, cz - 22, 56, 44, 2);
-        Slab(u, "cnd.cell", cell, PadHeight + 4, 25, bevel: 0.6f, lit: true);
+        Slab(u, "clg.cell", cell, PadHeight + 4, 25, bevel: 0.6f, lit: true);
         // Louvred air inlets low on the cell, and a faint band below the fan deck.
         With((p, _) => [
             .. new[] { 8f, 10f, 12f, 14f, 16f }.SelectMany(dy => Details.SideSeam(EdgeTone.Lo, cell, PadHeight + dy, p)),
@@ -469,7 +499,7 @@ public sealed partial class PlantSolids
         {
             foreach (var z in new[] { cz - 11, cz + 11 })
             {
-                Post(u, "cnd.stack", x, z, 7.5f, FanTop - 6, 6, steps: 40, bevel: 0.5f, lit: true);
+                Post(u, "clg.stack", x, z, 7.5f, FanTop - 6, 6, steps: 40, bevel: 0.5f, lit: true);
                 // Guard ring, hub and five blades; the blades turn with time, each fan a little out of phase.
                 var phase = (x + z) * 0.37f;
                 With((p, t) => [
@@ -550,7 +580,7 @@ public sealed partial class PlantSolids
 
         Pier(new(37, 42, 5, 12, 0.6f), 12);
         Pier(new(53, 42, 5, 12, 0.6f), 12);
-        Pipe("steam", new(42, 6.5f, 48), new(53, 6.5f, 48), 2.6f, Circuit.Steam);
+        Pipe("steam", new(42, 6.5f, 48), new(53, 6.5f, 48), 2.6f, Circuit.Cooling);
         Pier(new(37, -35, 5, 10, 0.6f), 9);
         Pier(new(53, -35, 5, 10, 0.6f), 9);
         Pipe("fuel", new(42, 4.8f, -30), new(53, 4.8f, -30), 1.6f, Circuit.Fuel);

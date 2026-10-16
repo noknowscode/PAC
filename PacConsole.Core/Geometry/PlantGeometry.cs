@@ -99,7 +99,7 @@ public sealed class PlantGeometry
         {
             cnd.AddRange(Cyl(fx, 36, 3.6f, 12, 3, n: 12, verts: 4));
         }
-        units[UnitId.Cnd] = [.. cnd];
+        units[UnitId.Clg] = [.. cnd];
 
         var sil = new List<Segment3>(Cyl(76, -26, 12, 0, 42, n: 22, rings: 4, verts: 10, dome: 8));
         sil.AddRange(Box(76, -4, 18, 10, 0, 8, bays: 1));
@@ -112,6 +112,7 @@ public sealed class PlantGeometry
             sil.Add(new(p, p with { Z = p.Z + 3 }));
         }
         units[UnitId.Sil] = [.. sil];
+        units[UnitId.Cnd] = [.. Box(-76, 34, 20, 10, 0, 14, bays: 2)];
 
         const float x0 = -PlatformHalfX, x1 = PlatformHalfX, z0 = -PlatformHalfZ, z1 = PlatformHalfZ;
         var grid = new List<Segment3>();
@@ -138,8 +139,9 @@ public sealed class PlantGeometry
             [UnitId.Tka] = new(-78, 40, -46),
             [UnitId.Gen] = new(-24, 44, -14),
             [UnitId.Trb] = new(24, 42, -20),
-            [UnitId.Cnd] = new(36, 18, 36),
+            [UnitId.Clg] = new(36, 18, 36),
             [UnitId.Sil] = new(76, 54, -26),
+            [UnitId.Cnd] = new(-76, 14, 34),
         }.ToImmutableDictionary();
 
         return new PlantGeometry(units.ToImmutable(), [.. grid], [.. structure], anchors);

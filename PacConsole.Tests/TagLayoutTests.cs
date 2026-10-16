@@ -24,7 +24,7 @@ public class TagLayoutTests
     [TestCaseSource(nameof(OrbitPoses))]
     public void Tags_never_collide_with_each_other_or_the_top_band(CameraPose pose)
     {
-        var placements = Place(pose, alerting: UnitId.Cnd, width: OrbitProjection.ReferenceWidth, height: OrbitProjection.ReferenceHeight);
+        var placements = Place(pose, alerting: UnitId.Clg, width: OrbitProjection.ReferenceWidth, height: OrbitProjection.ReferenceHeight);
 
         foreach (var a in placements)
         {

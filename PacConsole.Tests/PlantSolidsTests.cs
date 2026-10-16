@@ -25,8 +25,8 @@ public class PlantSolidsTests
         foreach (var (id, anchor) in Plant.Anchors)
         {
             var c = PlantSolids.Centres[id];
-            MathF.Abs(anchor.X - c.X).Should().BeLessThan(PlantSolids.PadHalf, id.ToString());
-            MathF.Abs(anchor.Z - c.Z).Should().BeLessThan(PlantSolids.PadHalf, id.ToString());
+            MathF.Abs(anchor.X - c.X).Should().BeLessThan(PlantSolids.PadHalfOf(id), id.ToString());
+            MathF.Abs(anchor.Z - c.Z).Should().BeLessThan(PlantSolids.PadHalfOf(id), id.ToString());
             anchor.Y.Should().Be(Plant.All.Where(p => p.Unit == id).Max(p => p.Volume.Y1), id.ToString());
         }
     }
@@ -87,16 +87,16 @@ public class PlantSolidsTests
     [Test]
     public void Part_count_matches_the_figure_plus_the_thermal_cycle()
     {
-        // The figure: stand 17, STK 12, TKA 19, GEN 16, TRB 27, CND 8, SIL 14, pipework 26 = 139.
-        Plant.All.Count(p => !IsCycle(p)).Should().Be(139);
+        // The figure: stand 18 (the condenser pad is the 18th), STK 12, TKA 19, GEN 16, TRB 27, CLG 8, SIL 14, pipework 26 = 140.
+        Plant.All.Count(p => !IsCycle(p)).Should().Be(140);
         Plant.All.Count(p => p.Name is "rack.north" or "rack.south" or "steam" or "fuel").Should().Be(4);
-        // The cycle added round it: boiler bay, runs, pumps, transformer and cabinets.
-        Plant.All.Should().HaveCount(266);
+        // The cycle added round it: boiler bay, runs, pumps, transformer, cabinets and the condenser (30).
+        Plant.All.Should().HaveCount(296);
         Plant.All.Where(p => p.Circuit != Circuit.None).Should().NotBeEmpty();
     }
 
     private static readonly string[] CyclePrefixes =
-        ["boiler.", "stand.boilerpad", "flue.", "fuel.", "steam.", "ash", "fw.", "xfmr.", "stand.yard", "cab.", "pipe.support"];
+        ["boiler.", "stand.boilerpad", "flue.", "fuel.", "steam.", "ash", "fw.", "xfmr.", "stand.yard", "cab.", "pipe.support", "cnd."];
 
     private static bool IsCycle(SolidPart p) =>
         p.Name is not ("steam" or "fuel" or "steam.flange" or "fuel.flange") && CyclePrefixes.Any(p.Name.StartsWith);
@@ -108,7 +108,7 @@ public class PlantSolidsTests
         {
             var c = PlantSolids.Centres[part.Unit!.Value];
             part.Volume.Footprint.Should().OnlyContain(
-                q => MathF.Abs(q.X - c.X) <= PlantSolids.PadHalf + 0.01f && MathF.Abs(q.Z - c.Z) <= PlantSolids.PadHalf + 0.01f,
+                q => MathF.Abs(q.X - c.X) <= PlantSolids.PadHalfOf(part.Unit!.Value) + 0.01f && MathF.Abs(q.Z - c.Z) <= PlantSolids.PadHalfOf(part.Unit!.Value) + 0.01f,
                 $"{part.Name} must lift with its unit without leaving the pad");
         }
     }
@@ -162,7 +162,7 @@ public class PlantSolidsTests
         CheckZBuffer(elevation, lifted: null);
 
     [Test]
-    public void Painter_order_holds_with_the_alerting_unit_lifted() => CheckZBuffer(0.6f, lifted: UnitId.Cnd);
+    public void Painter_order_holds_with_the_alerting_unit_lifted() => CheckZBuffer(0.6f, lifted: UnitId.Clg);
 
     private static void CheckZBuffer(float elevation, UnitId? lifted)
     {

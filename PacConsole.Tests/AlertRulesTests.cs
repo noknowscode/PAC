@@ -6,22 +6,23 @@ namespace PacConsole.Tests;
 public class AlertRulesTests
 {
     [Test]
-    public void Condenser_is_always_alerting_on_vibration()
+    public void Cooling_bank_drifts_in_and_out_of_vibration_alarm()
     {
-        for (long t = 0; t < 1000; t++)
-        {
-            var alerts = AlertRules.Evaluate(Simulation.Readings(t), Setpoints.Default);
-            alerts.Should().Contain(a => a.Unit == UnitId.Cnd && a.Metric == Metric.Vib);
-        }
+        bool Alerting(long t) => AlertRules.Evaluate(Simulation.Readings(t), Setpoints.Default)
+            .Any(a => a.Unit == UnitId.Clg && a.Metric == Metric.Vib);
+
+        Alerting(120).Should().BeTrue("the console opens on the cooling bank in alarm");
+        var states = Enumerable.Range(0, 1000).Select(t => Alerting(t)).ToList();
+        states.Should().Contain(true).And.Contain(false, "trends need alert onsets to mark");
     }
 
     [Test]
-    public void Only_the_condenser_alerts_at_default_setpoints()
+    public void Only_the_cooling_bank_alerts_at_default_setpoints()
     {
         for (long t = 0; t < 1000; t++)
         {
             var alerts = AlertRules.Evaluate(Simulation.Readings(t), Setpoints.Default);
-            AlertRules.AlertingUnits(alerts).Should().Equal(UnitId.Cnd);
+            AlertRules.AlertingUnits(alerts).Should().BeSubsetOf([UnitId.Clg]);
         }
     }
 

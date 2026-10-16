@@ -29,6 +29,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
     private IReadOnlyDictionary<UnitId, float>? _lift;
     private double _seconds;
     private UnitId? _hovered;
+    private PlantSystem _system;
 
     public PlantCanvas()
     {
@@ -49,8 +50,9 @@ public sealed partial class PlantCanvas : SKCanvasElement
     }
 
     /// <summary>Snapshots the frame on the UI thread, then asks for a redraw.</summary>
-    public void Show(CameraPose pose, UnitId? selected, IReadOnlyCollection<UnitId> alerting, IReadOnlyList<TagPlacement> tags, IReadOnlyDictionary<UnitId, float> lift, double seconds, UnitId? hovered)
+    public void Show(CameraPose pose, UnitId? selected, IReadOnlyCollection<UnitId> alerting, IReadOnlyList<TagPlacement> tags, IReadOnlyDictionary<UnitId, float> lift, double seconds, UnitId? hovered, PlantSystem system)
     {
+        _system = system;
         _pose = pose;
         _selected = selected;
         _alerting = alerting;
@@ -75,7 +77,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
     {
         if (_renderer is null) return;
         var projection = PlantSolids.ViewProjection(_pose, (float)area.Width, (float)area.Height);
-        _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered));
+        _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered, System: _system));
 
         _leaders.Rewind();
         foreach (var t in _tags)

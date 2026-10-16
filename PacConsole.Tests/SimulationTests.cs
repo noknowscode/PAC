@@ -48,7 +48,7 @@ public class SimulationTests
     {
         Simulation.OutputHistory(200).Should().HaveCount(48).And.EndWith(Simulation.OutputMw(200));
         Simulation.HourlyGeneration(200).Should().HaveCount(24);
-        Simulation.VibrationHistory(UnitId.Cnd, 200).Should().HaveCount(30).And.EndWith(Simulation.Vibration(UnitId.Cnd, 200));
+        Simulation.VibrationHistory(UnitId.Clg, 200).Should().HaveCount(30).And.EndWith(Simulation.Vibration(UnitId.Clg, 200));
     }
 
     [Test]

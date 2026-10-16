@@ -127,6 +127,16 @@ public sealed partial class PlantViewport : UserControl
     public static readonly DependencyProperty SelectedUnitProperty =
         DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => { if (!SameValue(e.OldValue, e.NewValue)) ((PlantViewport)d).Refresh(); }));
 
+    /// <summary>The process system in view (a <see cref="PlantSystem"/>); equipment outside it is drawn faded.</summary>
+    public object? ShownSystem
+    {
+        get => GetValue(ShownSystemProperty);
+        set => SetValue(ShownSystemProperty, value);
+    }
+
+    public static readonly DependencyProperty ShownSystemProperty =
+        DependencyProperty.Register(nameof(ShownSystem), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => { if (!SameValue(e.OldValue, e.NewValue)) ((PlantViewport)d).Draw(); }));
+
     /// <summary>Units in alert (an <see cref="ImmutableArray{UnitId}"/>), drawn coral and dashed.</summary>
     public object? AlertingUnits
     {
@@ -280,6 +290,7 @@ public sealed partial class PlantViewport : UserControl
         if (width <= 0 || height <= 0) return;
 
         var selected = SelectedUnit as UnitId?;
+        var system = ShownSystem is PlantSystem shown ? shown : PlantSystem.All;
         var alerting = AlertingUnits is ImmutableArray<UnitId> a ? a : ImmutableArray<UnitId>.Empty;
         // One projection for the drawing and the tags, so leaders land on their units at any pose.
         var projection = PlantSolids.ViewProjection(_pose, width, height);
@@ -305,9 +316,12 @@ public sealed partial class PlantViewport : UserControl
             Canvas.SetLeft(tag, p.Left);
             Canvas.SetTop(tag, p.Top);
             ApplyTagState(tag, isSelected, isAlert);
+            // Tags of equipment outside the system recede with their drawing.
+            var opacity = isSelected || PlantSystems.Contains(system, p.Unit) ? 1.0 : 0.4;
+            if (tag.Opacity != opacity) tag.Opacity = opacity;
         }
 
-        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered);
+        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered, system);
         Pose = _pose;
 
         var caption = $"{PresetName()}, yaw {_pose.YawDegrees:000}°, elevation {_pose.ElevationDegrees:00}°";

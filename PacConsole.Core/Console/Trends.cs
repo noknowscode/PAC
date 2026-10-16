@@ -1,0 +1,110 @@
+using System.Globalization;
+using PacConsole.Core.Plant;
+using PacConsole.Core.Telemetry;
+
+namespace PacConsole.Core.Console;
+
+/// <summary>How far back the synchronized trends reach.</summary>
+public enum TrendRange
+{
+    Minutes15,
+    Hour1,
+    Hours8,
+}
+
+/// <summary>
+/// One trend row: a reading's samples over the range, its value range, and its reference lines.
+/// A class, not a record: a chart takes it whole through one dependency property, and MVUX would
+/// update a nested record in place (the property would never see a new value).
+/// </summary>
+public sealed class TrendSeries(string key, string label, string code, string unit, string format, ImmutableArray<double> values, double min, double max, double? target, double? limit)
+{
+    public string Key { get; } = key;
+    public string Label { get; } = label;
+    public string Code { get; } = code;
+    public string Unit { get; } = unit;
+    public string Format { get; } = format;
+    public ImmutableArray<double> Values { get; } = values;
+    public double Min { get; } = min;
+    public double Max { get; } = max;
+    public double? Target { get; } = target;
+    public double? Limit { get; } = limit;
+
+    public string Format1(double v) => v.ToString(Format, CultureInfo.InvariantCulture);
+}
+
+/// <summary>An alert onset inside the range: the sample index, the clock time and what happened.</summary>
+public sealed record TrendEvent(int Index, string Time, string Text);
+
+/// <summary>The trends for one moment: rows, sample times, events and the shared cursor.</summary>
+public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<DateTimeOffset> times, ImmutableArray<TrendEvent> events, int cursor)
+{
+    public ImmutableArray<TrendSeries> Series { get; } = series;
+    public ImmutableArray<DateTimeOffset> Times { get; } = times;
+    public ImmutableArray<TrendEvent> Events { get; } = events;
+
+    /// <summary>The shared cursor's sample index (the newest when the operator has not moved it).</summary>
+    public int Cursor { get; } = cursor;
+
+    public const int Samples = 90;
+
+    /// <summary>Ticks per range (one tick is 2 s): 15 min, 1 h, 8 h.</summary>
+    public static int TicksIn(TrendRange r) => r switch { TrendRange.Hour1 => 1800, TrendRange.Hours8 => 14400, _ => 450 };
+
+    /// <summary>
+    /// Samples the net output and each compared reading over the range, evenly, ending at
+    /// <paramref name="tick"/>; finds alert onsets; places the cursor (-1 = newest).
+    /// </summary>
+    public static TrendSet Compose(long tick, DateTimeOffset now, Setpoints setpoints, int openValves, TrendRange range, IEnumerable<string> compared, int cursor)
+    {
+        var step = TicksIn(range) / (double)(Samples - 1);
+        var ticks = Enumerable.Range(0, Samples).Select(k => tick - (long)Math.Round((Samples - 1 - k) * step)).ToArray();
+        var times = ticks.Select(t => now - TimeSpan.FromSeconds((tick - t) * 2)).ToImmutableArray();
+        var readings = ticks.Select(t => Simulation.Readings(t, setpoints.DamperPct)).ToArray();
+        var net = ticks.Select(t => Simulation.OutputMw(t, openValves)).ToArray();
+
+        var rows = ImmutableArray.CreateBuilder<TrendSeries>();
+        rows.Add(Row("net", "Net generation", "", "MW", "0", net, setpoints.TargetMw, null));
+        foreach (var key in compared)
+        {
+            if (EquipmentCatalog.Find(key) is not { } spec) continue;
+            var unit = EquipmentCatalog.UnitOf(key);
+            var values = new double[Samples];
+            for (var k = 0; k < Samples; k++)
+            {
+                values[k] = spec.Value(new ReadingContext(readings[k].First(r => r.Id == unit), ticks[k], net[k], setpoints));
+            }
+            rows.Add(Row(key, spec.Label, UnitCatalog.Get(unit).Code, spec.Unit, spec.Format, values, spec.Target?.Invoke(setpoints), spec.Limit?.Invoke(setpoints)));
+        }
+
+        // An event is an alert that starts inside the range (absent at the previous sample).
+        var events = ImmutableArray.CreateBuilder<TrendEvent>();
+        var before = AlertRules.Evaluate(readings[0], setpoints).Select(a => (a.Unit, a.Metric)).ToHashSet();
+        for (var k = 1; k < Samples; k++)
+        {
+            var alerts = AlertRules.Evaluate(readings[k], setpoints);
+            foreach (var a in alerts.Where(a => !before.Contains((a.Unit, a.Metric))))
+            {
+                var spec = EquipmentCatalog.Find(EquipmentCatalog.KeyFor(a))!;
+                events.Add(new(k, times[k].ToString("HH:mm", CultureInfo.InvariantCulture),
+                    $"{UnitCatalog.Get(a.Unit).Code} {spec.Label.ToLowerInvariant()} above {a.Limit.ToString(spec.Format, CultureInfo.InvariantCulture)} {spec.Unit}"));
+            }
+            before = alerts.Select(a => (a.Unit, a.Metric)).ToHashSet();
+        }
+
+        var at = cursor < 0 || cursor >= Samples ? Samples - 1 : cursor;
+        return new TrendSet(rows.ToImmutable(), times, events.ToImmutable(), at);
+    }
+
+    private static TrendSeries Row(string key, string label, string code, string unit, string format, double[] values, double? target, double? limit)
+    {
+        var lo = values.Min();
+        var hi = values.Max();
+        foreach (var r in new[] { target, limit })
+        {
+            if (r is { } v) { lo = Math.Min(lo, v); hi = Math.Max(hi, v); }
+        }
+        var pad = Math.Max((hi - lo) * 0.15, Math.Max(Math.Abs(hi) * 1e-4, 1e-3));
+        return new TrendSeries(key, label, code, unit, format, [.. values], lo - pad, hi + pad, target, limit);
+    }
+}

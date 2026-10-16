@@ -55,7 +55,11 @@ public static class Simulation
     public static double Vibration(UnitId id, long tick)
     {
         var i = (int)id;
-        return UnitCatalog.Get(id).BaseVib + 0.16 * Math.Sin(tick * 0.9 + i * 1.7) + (Noise(tick, i + 3) - 0.5) * 0.14;
+        var v = UnitCatalog.Get(id).BaseVib + 0.16 * Math.Sin(tick * 0.9 + i * 1.7) + (Noise(tick, i + 3) - 0.5) * 0.14;
+        // The cooling bank's fans drift in and out of alarm with a ten-minute period (tick = 2 s), in
+        // alarm at the start tick, so trends over 15 min to 8 h carry real alert onsets.
+        if (id == UnitId.Clg) v += 0.4 * Math.Sin(tick * Math.Tau / 300 - 1.0);
+        return v;
     }
 
     public static ImmutableArray<double> VibrationHistory(UnitId id, long tick) =>

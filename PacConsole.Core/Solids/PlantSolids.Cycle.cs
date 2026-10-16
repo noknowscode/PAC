@@ -1,4 +1,5 @@
 using PacConsole.Core.Geometry;
+using PacConsole.Core.Plant;
 
 namespace PacConsole.Core.Solids;
 
@@ -38,6 +39,7 @@ public sealed partial class PlantSolids
     {
         Boiler();
         BoilerRuns();
+        Condenser();
         FeedwaterPumps();
         Transformer();
         Cabinet("cab.boiler", new(-152, 32, 10, 5, 0.6f), 14);
@@ -133,6 +135,46 @@ public sealed partial class PlantSolids
         // Ash from the furnace floor to the silo's pad.
         Run("ash", Circuit.None, 1.8f, [new(-200, 6, 14), new(-200, 6, 30), new(-133, 6, 30)]);
         Support(new(-161.2f, 28.8f, 2.4f, 2.4f, 0.2f), 4.2f);
+    }
+
+    /// <summary>
+    /// CND-07: a horizontal shell on two saddles with water boxes at both ends, the exhaust neck on top,
+    /// a hotwell drum and a condensate pump on its pad. Exhaust steam arrives from the turbine along the
+    /// south margin; two cooling-water stubs point to the headers.
+    /// </summary>
+    private void Condenser()
+    {
+        const UnitId u = UnitId.Cnd;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        foreach (var dx in new[] { -16f, 12f })
+        {
+            Slab(u, "cnd.saddle", new(cx + dx, cz - 7, 4, 14, 0.4f), PadHeight, 3, steps: 2, bevel: 0.2f);
+        }
+        const float y = PadHeight + 3 + 9;
+        var shell = new Frame(new(0, y, cz), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
+        _parts.Add(new("cnd.shell", u, BoxAlong(shell, cx - 18, cx + 18, 9), p => SolidBuilder.Disc(cx - 18, cx + 18, 9, shell, p), Lit: true));
+        _parts.Add(new("cnd.waterbox", u, BoxAlong(shell, cx - 21, cx - 18, 7.5f), p => SolidBuilder.Disc(cx - 21, cx - 18, 7.5f, shell, p), Lit: true));
+        _parts.Add(new("cnd.waterbox", u, BoxAlong(shell, cx + 18, cx + 21, 7.5f), p => SolidBuilder.Disc(cx + 18, cx + 21, 7.5f, shell, p), Lit: true));
+        Slab(u, "cnd.neck", new(cx - 7, cz - 6, 14, 12, 1), y + 9, 7, bevel: 0.4f, lit: true);
+        With((p, _) => Details.SideSeam(EdgeTone.Lo, new(cx - 7, cz - 6, 14, 12, 1), y + 13, p));
+        Post(u, "cnd.hotwell", cx - 8, cz + 18, 4, PadHeight, 10, steps: 32, bevel: 0.3f);
+        Slab(u, "cnd.pump.plinth", new(cx + 4, cz + 14, 12, 8, 0.4f), PadHeight, 1.5f, steps: 2, bevel: 0.2f);
+        var pump = new Frame(new(0, PadHeight + 1.5f + 3, cz + 18), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
+        Disc(u, "cnd.pump.motor", pump, cx + 5, cx + 10, 2.6f);
+        Disc(u, "cnd.pump", pump, cx + 10.6f, cx + 15, 3);
+
+        // Exhaust steam from the turbine's pad, west along the south margin, landing on the condenser's
+        // pad clear of the pump (the last leg must outlast a knuckle plus a flange).
+        Run("cnd.exhaust", Circuit.Steam, 3, [new(-20, 8, 86.5f), new(-20, 8, 93), new(-176, 8, 93), new(-176, 8, 84)]);
+        foreach (var x in new[] { -60f, -100f, -140f })
+        {
+            Support(new(x - 1.2f, 91.8f, 2.4f, 2.4f, 0.2f), 5);
+        }
+        // Cooling water in and out, toward the headers.
+        foreach (var x in new[] { -215f, -209f })
+        {
+            Run("cnd.cw", Circuit.Cooling, 1.8f, [new(x, 6, 38.5f), new(x, 6, 33.5f)]);
+        }
     }
 
     /// <summary>Two feedwater pumps in the east corridor; their discharge joins one main back to the boiler.</summary>

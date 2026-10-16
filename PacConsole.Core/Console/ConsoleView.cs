@@ -34,7 +34,7 @@ public sealed record ValveView(int Id, string Number, bool Open, string State, s
 /// function from the snapshot and the operator's inputs, so the page only binds and the rules
 /// (which unit is selected, what is an alert, what "held" looks like) are unit-testable.
 /// </summary>
-public sealed record ConsoleView
+public sealed partial record ConsoleView
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -136,7 +136,8 @@ public sealed record ConsoleView
         ControlMode mode,
         UnitId? requestedUnit,
         DateTimeOffset now,
-        Metric focus = Metric.Vib)
+        Metric focus = Metric.Vib,
+        ViewInputs? inputs = null)
     {
         var readings = Simulation.Readings(snapshot.Tick, setpoints.DamperPct);
         var alerts = AlertRules.Evaluate(readings, setpoints);
@@ -162,7 +163,7 @@ public sealed record ConsoleView
             ? "All units nominal"
             : $"{alerting.Length} alert{(alerting.Length > 1 ? "s" : "")} · {string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code))}";
 
-        return new ConsoleView
+        var view = new ConsoleView
         {
             Selected = selected,
             AlertingUnits = alerting,
@@ -231,6 +232,7 @@ public sealed record ConsoleView
                 $"Valve {v.Code} {(v.Open ? "open" : "shut")}"))],
             OpenValvesText = $"{openValves} of {valves.Length} open",
         };
+        return WithV3(view, snapshot, setpoints, valves, mode, readings, alerts, outputNow, now, inputs ?? ViewInputs.Default);
     }
 
     public static string FormatMetric(Metric metric, double value) => metric switch

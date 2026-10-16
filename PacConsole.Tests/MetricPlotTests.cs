@@ -8,7 +8,7 @@ public class MetricPlotTests
 {
     private const long Tick = Simulation.StartTick;
 
-    [TestCase(UnitId.Cnd, Metric.Vib, PlotKind.Zones)]
+    [TestCase(UnitId.Clg, Metric.Vib, PlotKind.Zones)]
     [TestCase(UnitId.Trb, Metric.Press, PlotKind.Limit)]
     [TestCase(UnitId.Gen, Metric.Press, PlotKind.Band)]
     [TestCase(UnitId.Gen, Metric.Load, PlotKind.Share)]

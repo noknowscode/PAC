@@ -22,9 +22,10 @@ public class GeometryTests
     public void Segment_count_matches_the_prototype_budget()
     {
         // The faithful port of the prototype's geo() draws 1,484 segments per frame
-        // (46 grid + 1,438 solid). This guards against accidental blow-ups.
+        // (46 grid + 1,438 solid), plus 18 for the condenser box added in console v3.
+        // This guards against accidental blow-ups.
         var total = Plant.Grid.Length + Plant.AllSolid.Count();
-        total.Should().Be(1484);
+        total.Should().Be(1502);
     }
 
     [TestCase(0.61f, 0.49f)]

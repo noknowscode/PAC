@@ -77,7 +77,8 @@ public readonly record struct SolidFrame(
     IReadOnlyDictionary<UnitId, float>? Lift = null,
     double Seconds = 0,
     bool Details = true,
-    UnitId? Hovered = null);
+    UnitId? Hovered = null,
+    PlantSystem System = PlantSystem.All);
 
 /// <summary>
 /// Paints solids back to front, the way a technical isometric is inked: the stand first, then one
@@ -166,7 +167,7 @@ public sealed class SolidRenderer : IDisposable
         // A moving camera or lift draws directly: recording would only add cost to a frame that is
         // thrown away. Once the view holds, static runs are recorded once and replayed, so a still
         // plant costs a few picture replays plus its live parts (trace: ~2,500 paths a frame otherwise).
-        var key = new StillKey(camera, frame.Selected, frame.Hovered, AlertMask(frame.Alerting), frame.Details, Palette);
+        var key = new StillKey(camera, frame.Selected, frame.Hovered, AlertMask(frame.Alerting), frame.Details, frame.System, Palette);
         var moving = cameraChanged || !lifts.AsSpan().SequenceEqual(_stillLift);
         _stillLift = lifts;
         if (moving)
@@ -226,6 +227,7 @@ public sealed class SolidRenderer : IDisposable
         UnitId? Hovered,
         int Alerts,
         bool Details,
+        PlantSystem System,
         SolidPalette? Palette);
 
     private static int AlertMask(IReadOnlyCollection<UnitId> alerting)
@@ -316,6 +318,8 @@ public sealed class SolidRenderer : IDisposable
         var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
         var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
         var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
+        // Outside the chosen system a part fades toward the paper; the selected unit always stays inked.
+        _fade = part.Unit is { } s && s == frame.Selected || PlantSolids.InSystem(part, frame.System) ? 0 : SystemFade;
 
         if (lift > 0)
         {
@@ -328,7 +332,16 @@ public sealed class SolidRenderer : IDisposable
             DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds);
         }
         if (lift > 0) canvas.Restore();
+        _fade = 0;
     }
+
+    /// <summary>How far a part outside the chosen system fades toward the paper (0 = none, 1 = gone).</summary>
+    private const float SystemFade = 0.78f;
+
+    private float _fade;
+
+    /// <summary>A colour as the current part draws it: faded toward the paper when it is outside the system.</summary>
+    private SKColor Ink(SKColor c) => _fade == 0 ? c : Lerp(c, Palette.Paper, _fade);
 
     private void DrawDetails(SKCanvas canvas, IEnumerable<DetailLine> details, double seconds)
     {
@@ -337,7 +350,7 @@ public sealed class SolidRenderer : IDisposable
             switch (d.Kind)
             {
                 case DetailKind.Dot:
-                    _fill.Color = ToneColor(d.Tone);
+                    _fill.Color = Ink(ToneColor(d.Tone));
                     canvas.DrawCircle(d.Points[0].X, d.Points[0].Y, 0.9f, _fill);
                     break;
                 case DetailKind.Flow:
@@ -382,7 +395,7 @@ public sealed class SolidRenderer : IDisposable
         _path.Rewind();
         _path.MoveTo(points[0].X, points[0].Y);
         for (var i = 1; i < points.Length; i++) _path.LineTo(points[i].X, points[i].Y);
-        _line.Color = color;
+        _line.Color = Ink(color);
         _line.StrokeWidth = width;
         canvas.DrawPath(_path, _line);
     }
@@ -437,7 +450,7 @@ public sealed class SolidRenderer : IDisposable
         if (polygon.Length < 3) return;
         _path.Rewind();
         AddPolygon(polygon);
-        _fill.Color = color;
+        _fill.Color = Ink(color);
         canvas.DrawPath(_path, _fill);
     }
 
@@ -446,7 +459,7 @@ public sealed class SolidRenderer : IDisposable
         if (polygons.Count == 0) return;
         _path.Rewind();
         foreach (var polygon in polygons) AddPolygon(polygon);
-        _fill.Color = color;
+        _fill.Color = Ink(color);
         canvas.DrawPath(_path, _fill);
     }
 
@@ -460,7 +473,7 @@ public sealed class SolidRenderer : IDisposable
             _path.MoveTo(line[0].X, line[0].Y);
             for (var i = 1; i < line.Length; i++) _path.LineTo(line[i].X, line[i].Y);
         }
-        _line.Color = color;
+        _line.Color = Ink(color);
         _line.StrokeWidth = width ?? Palette.Hairline;
         canvas.DrawPath(_path, _line);
     }

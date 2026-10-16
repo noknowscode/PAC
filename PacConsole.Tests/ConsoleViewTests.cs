@@ -25,9 +25,9 @@ public class ConsoleViewTests
     public void Opens_on_the_alerting_condenser()
     {
         var view = Compose();
-        view.Selected.Should().Be(UnitId.Cnd);
+        view.Selected.Should().Be(UnitId.Clg);
         view.SelectedIsAlert.Should().BeTrue();
-        view.AlertText.Should().Be("1 alert · CND-05");
+        view.AlertText.Should().Be("1 alert · CLG-05");
     }
 
     [Test]
@@ -58,7 +58,7 @@ public class ConsoleViewTests
     public void Low_turbine_limit_raises_a_second_alert()
     {
         var view = Compose(setpoints: Setpoints.Default with { TurbineLimitBar = 150 }, selected: UnitId.Trb);
-        view.AlertText.Should().Be("2 alerts · TRB-04, CND-05");
+        view.AlertText.Should().Be("2 alerts · TRB-04, CLG-05");
         view.Tiles.Single(t => t.Label == "Pressure").IsHigh.Should().BeTrue();
     }
 
@@ -66,9 +66,9 @@ public class ConsoleViewTests
     public void Unit_tiles_mark_selection_and_alerts()
     {
         var units = Compose().Units;
-        units.Should().HaveCount(6);
-        units.Single(u => u.IsSelected).Id.Should().Be(UnitId.Cnd);
-        units.Single(u => u.Id == UnitId.Cnd).Subtitle.Should().Be("05 · alert");
+        units.Should().HaveCount(7);
+        units.Single(u => u.IsSelected).Id.Should().Be(UnitId.Clg);
+        units.Single(u => u.Id == UnitId.Clg).Subtitle.Should().Be("05 · alert");
         units.Single(u => u.Id == UnitId.Stk).Subtitle.Should().Be("01");
     }
 
