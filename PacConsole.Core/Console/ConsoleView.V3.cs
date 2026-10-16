@@ -56,8 +56,12 @@ public sealed partial record ConsoleView
 
     // Equipment picker. The choices are one shared array, so the picker's ItemsSource keeps the same
     // instance across recompositions and never resets (and closes) while it is open.
-    private static readonly ConnectionView[] Choices = [.. EquipmentCatalog.All.Select(e => new ConnectionView(e.Id, e.Title))];
-    public IReadOnlyList<ConnectionView> EquipmentChoices => Choices;
+    private static readonly Dictionary<PlantSystem, ConnectionView[]> Choices = Enum.GetValues<PlantSystem>().ToDictionary(
+        s => s,
+        s => EquipmentCatalog.All.Where(e => PlantSystems.Contains(s, e.Id)).Select(e => new ConnectionView(e.Id, e.Title)).ToArray());
+
+    /// <summary>The picker's choices: the equipment of the system in view.</summary>
+    public IReadOnlyList<ConnectionView> EquipmentChoices => Choices[System];
     public int SelectedIndex { get; init; }
 
     // Inspector
@@ -179,7 +183,7 @@ public sealed partial record ConsoleView
             System = inputs.System,
             SystemTitle = PlantSystems.Title(inputs.System),
 
-            SelectedIndex = EquipmentCatalog.All.IndexOf(equipment),
+            SelectedIndex = Array.FindIndex(Choices[inputs.System], c => c.Id == selected),
 
             InspectorCode = info.Code,
             InspectorName = info.Name,

@@ -63,19 +63,35 @@ public partial record ConsoleModel
     public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Valves, Mode, Selection, Clock, Inputs)
         .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, t.Item6, t.Item7));
 
-    public async ValueTask SelectUnit(UnitId unit, CancellationToken ct) =>
-        await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
+    /// <summary>Selects a unit from a callout or a connection chip.</summary>
+    public async ValueTask SelectUnit(UnitId unit, PlantSystem system, CancellationToken ct) =>
+        await Select(unit, system, ct);
 
     /// <summary>The equipment picker's choice (the ComboBox passes its selected item).</summary>
-    public async ValueTask PickEquipment(ConnectionView? item, CancellationToken ct)
+    public async ValueTask PickEquipment(ConnectionView? item, PlantSystem system, CancellationToken ct)
     {
-        if (item is not null) await Selection.UpdateAsync(_ => new UnitSelection(item.Id), ct);
+        if (item is not null) await Select(item.Id, system, ct);
     }
 
-    /// <summary>Isolates a system in the plant view (the systems bar passes the enum name).</summary>
-    public async ValueTask SelectSystem(string system, CancellationToken ct)
+    /// <summary>
+    /// Isolates a system in the plant view (the systems bar passes the enum name). A selection outside
+    /// the system moves to its first unit, so the inspector and trends follow the drawing.
+    /// </summary>
+    public async ValueTask SelectSystem(string system, UnitSelection selection, CancellationToken ct)
     {
-        if (Enum.TryParse<PlantSystem>(system, out var value)) await System.SetAsync(value, ct);
+        if (!Enum.TryParse<PlantSystem>(system, out var value)) return;
+        var unit = PlantSystems.SelectionFor(value, selection.Unit);
+        // Selection first: the picker's list then swaps to the new system with its item already chosen.
+        if (unit != selection.Unit) await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
+        await System.SetAsync(value, ct);
+    }
+
+    /// <summary>Selects a unit and widens the view to all systems when the unit is outside the one shown.</summary>
+    private async ValueTask Select(UnitId unit, PlantSystem system, CancellationToken ct)
+    {
+        await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
+        var shown = PlantSystems.SystemFor(system, unit);
+        if (shown != system) await System.SetAsync(shown, ct);
     }
 
     public async ValueTask SelectRange(string range, CancellationToken ct)
@@ -103,13 +119,10 @@ public partial record ConsoleModel
     public async ValueTask SetCursorLatest(CancellationToken ct) =>
         await Cursor.SetAsync(TrendSet.Samples - 1, ct);
 
-    public async ValueTask SelectFirstAlert(CancellationToken ct)
+    /// <summary>The alert pill: selects the first unit in alert (the view arrives as a feed parameter).</summary>
+    public async ValueTask SelectFirstAlert(ConsoleView view, PlantSystem system, CancellationToken ct)
     {
-        var view = await View;
-        if (view is { AlertingUnits.IsEmpty: false })
-        {
-            await Selection.UpdateAsync(_ => new UnitSelection(view.AlertingUnits[0]), ct);
-        }
+        if (view is { AlertingUnits.IsEmpty: false }) await Select(view.AlertingUnits[0], system, ct);
     }
 
     public async ValueTask ToggleValve(int id, CancellationToken ct) =>

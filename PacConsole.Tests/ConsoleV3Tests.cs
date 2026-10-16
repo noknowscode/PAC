@@ -75,6 +75,36 @@ public class ConsoleV3Tests
         parts.Where(p => p.Name.StartsWith("xfmr.", StringComparison.Ordinal)).Should().OnlyContain(p => !PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Cooling));
     }
 
+    [TestCase(PlantSystem.Cooling, UnitId.Gen, UnitId.Clg)]
+    [TestCase(PlantSystem.Cooling, UnitId.Cnd, UnitId.Cnd)]
+    [TestCase(PlantSystem.Electrical, UnitId.Clg, UnitId.Gen)]
+    [TestCase(PlantSystem.FuelFlue, null, UnitId.Stk)]
+    [TestCase(PlantSystem.All, UnitId.Sil, UnitId.Sil)]
+    public void Isolating_a_system_keeps_or_moves_the_selection(PlantSystem system, UnitId? current, UnitId expected)
+    {
+        PlantSystems.SelectionFor(system, current).Should().Be(expected);
+    }
+
+    [TestCase(PlantSystem.Cooling, UnitId.Cnd, PlantSystem.Cooling)]
+    [TestCase(PlantSystem.Cooling, UnitId.Gen, PlantSystem.All)]
+    [TestCase(PlantSystem.All, UnitId.Gen, PlantSystem.All)]
+    public void Selecting_outside_the_system_widens_the_view(PlantSystem current, UnitId unit, PlantSystem expected)
+    {
+        PlantSystems.SystemFor(current, unit).Should().Be(expected);
+    }
+
+    [Test]
+    public void The_picker_lists_the_shown_system_only()
+    {
+        var cooling = Compose(UnitId.Cnd, ViewInputs.Default with { System = PlantSystem.Cooling });
+        cooling.EquipmentChoices.Select(c => c.Id).Should().Equal(UnitId.Clg, UnitId.Cnd);
+        cooling.SelectedIndex.Should().Be(1);
+        Compose(UnitId.Cnd).EquipmentChoices.Should().HaveCount(7);
+        // One shared list per system, so the picker's ItemsSource never resets between refreshes.
+        Compose(UnitId.Clg, ViewInputs.Default with { System = PlantSystem.Cooling }).EquipmentChoices
+            .Should().BeSameAs(cooling.EquipmentChoices);
+    }
+
     [Test]
     public void Status_strip_reads_like_the_mock()
     {

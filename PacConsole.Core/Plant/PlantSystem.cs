@@ -31,6 +31,24 @@ public static class PlantSystems
         _ => "Plant overview",
     };
 
+    /// <summary>
+    /// The unit to select when the operator isolates <paramref name="system"/>: the current one if it
+    /// belongs to the system, else the system's first unit in plant order, so the inspector and the
+    /// trends follow the drawing.
+    /// </summary>
+    public static UnitId SelectionFor(PlantSystem system, UnitId? current) =>
+        current is { } unit && Contains(system, unit)
+            ? unit
+            : Enum.GetValues<UnitId>().First(u => Contains(system, u));
+
+    /// <summary>
+    /// The system to show once <paramref name="unit"/> is selected some other way (a callout, the alert
+    /// pill, a connection chip): the current one if it holds the unit, else all systems, so the
+    /// selection is never a unit the view has faded out.
+    /// </summary>
+    public static PlantSystem SystemFor(PlantSystem current, UnitId unit) =>
+        Contains(current, unit) ? current : PlantSystem.All;
+
     /// <summary>The equipment in a system (all of it for <see cref="PlantSystem.All"/>).</summary>
     public static bool Contains(PlantSystem s, UnitId unit) => s switch
     {
