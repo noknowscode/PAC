@@ -32,9 +32,6 @@
     <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="FillStrongBrush" />
     <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="FillStrongBrush" />
 
-    <!-- Below 960 px the inspector stacks under the plant; from 1600 px it widens to 400. -->
-    <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" Widest="1600" />
-
     <!-- A reading tile: label, value and unit; the word "Above limit" in alert; ↗ when it is in the trends.
          One fixed button per slot, bound to a record MVUX updates in place. -->
     <Style x:Key="TileButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
@@ -91,28 +88,28 @@
       <Setter Property="FontSize" Value="11" />
     </Style>
 
-    <Style x:Key="AlarmRow" TargetType="Grid">
-      <Setter Property="MinHeight" Value="32" />
-      <Setter Property="Margin" Value="0,4,0,0" />
+    <Style x:Key="AlarmItem" TargetType="Grid">
+      <Setter Property="Margin" Value="0,12,0,0" />
     </Style>
-    <DataTemplate x:Key="AlarmRowTemplate">
-      <Grid ColumnDefinitions="64,100,*,Auto,Auto,Auto,Auto" ColumnSpacing="12" AutomationProperties.Name="{Binding AutomationName}">
-        <TextBlock Text="{Binding Priority}" Style="{StaticResource TypeSection}" VerticalAlignment="Center"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush}" />
-        <TextBlock Grid.Column="1" Text="{Binding Time}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-        <Button Grid.Column="2" Content="{Binding Title}" Style="{StaticResource LinkButton}"
+    <DataTemplate x:Key="AlarmItemTemplate">
+      <StackPanel Spacing="2" AutomationProperties.Name="{Binding AutomationName}">
+        <TextBlock Style="{StaticResource TypeMicro}"
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush}">
+          <Run Text="{Binding Priority}" /><Run Text=" · " /><Run Text="{Binding Time}" /><Run Text=" · " /><Run Text="{Binding State}" />
+        </TextBlock>
+        <Button Content="{Binding Title}" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Unit}"
                 ToolTipService.ToolTip="Select this equipment" />
-        <TextBlock Grid.Column="3" Text="{Binding Detail}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="4" Text="{Binding State}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush}" />
-        <Button Grid.Column="5" Content="Acknowledge" Style="{StaticResource ToolbarButton}"
-                Visibility="{Binding CanAck, Converter={StaticResource Visible}}"
-                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}" />
-        <Button Grid.Column="6" Content="Shelve 1 h" Style="{StaticResource ToolbarButton}"
-                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Shelve}" CommandParameter="{Binding Key}"
-                ToolTipService.ToolTip="Hide this alarm for an hour; it is logged" />
-      </Grid>
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
+          <TextBlock Text="{Binding Detail}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="Acknowledge" Style="{StaticResource ToolbarButton}"
+                  Visibility="{Binding CanAck, Converter={StaticResource Visible}}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}" />
+          <Button Grid.Column="2" Content="Shelve 1 h" Style="{StaticResource ToolbarButton}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Shelve}" CommandParameter="{Binding Key}"
+                  ToolTipService.ToolTip="Hide this alarm for an hour; it is logged" />
+        </Grid>
+      </StackPanel>
     </DataTemplate>
 
     <DataTemplate x:Key="DeviceRowTemplate">
@@ -201,65 +198,38 @@
         <Border Background="{StaticResource CardBrush}">
           <StackPanel>
 
-            <!-- ============ HEADER ============ -->
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="12" Padding="24,14,16,14">
-              <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <FontIcon Glyph="&#xE81E;" FontSize="16" Foreground="{StaticResource AlertBrush}" VerticalAlignment="Center" />
-                  <TextBlock Text="PAC" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
+            <!-- ============ HEADER ============
+                 One band for the whole station: where (the plant), what it makes (net output against its
+                 target), how it runs (mode and data age), and who is at the desk. The systems filter, with
+                 its Active alarms view, sits with the drawing it filters. -->
+            <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="20" Padding="24,12,16,12">
+                <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE81E;" FontSize="16" Foreground="{StaticResource AlertBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="PAC" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <Border Width="1" Height="20" Background="{StaticResource HairlineBrush}" VerticalAlignment="Center" />
+                  <StackPanel Spacing="0" VerticalAlignment="Center">
+                    <TextBlock Text="Plant 02" Style="{StaticResource TypeTitle}" />
+                    <TextBlock Text="Steam-cycle station" Style="{StaticResource TypeMicro}"
+                               Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=Collapsed, Wide=Visible}" />
+                  </StackPanel>
                 </StackPanel>
-                <Border Width="1" Height="20" Background="{StaticResource HairlineBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="Plant 02" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
-                <TextBlock Text="Steam-cycle station" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-              </StackPanel>
 
-              <Button Grid.Column="2"
-                      Command="{Binding Parent.SelectFirstAlert}"
-                      Style="{StaticResource ConsoleButton}"
-                      Height="36" Padding="14,0"
-                      Background="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTintBrush|False=FillBrush}"
-                      Foreground="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=InkSoftBrush}"
-                      AutomationProperties.Name="{Binding Data.ActiveAlertText}"
-                      ToolTipService.ToolTip="Select the first unit in alert">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <FontIcon Glyph="&#xE7BA;" FontSize="14" VerticalAlignment="Center"
-                            Visibility="{Binding Data.HasAlert, Converter={StaticResource Visible}}" />
-                  <TextBlock Text="{Binding Data.ActiveAlertText}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-                </StackPanel>
-              </Button>
+                <Border Grid.Column="1" Width="1" Background="{StaticResource HairlineBrush}" Margin="0,6" />
 
-              <TextBlock Grid.Column="3" Text="Operator 04" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" Margin="8,0" />
-
-              <Button Grid.Column="4" Style="{StaticResource IconButton}" AutomationProperties.Name="More" ToolTipService.ToolTip="More">
-                <FontIcon Glyph="&#xE712;" FontSize="16" />
-                <Button.Flyout>
-                  <MenuFlyout Placement="BottomEdgeAlignedRight">
-                    <ToggleMenuFlyoutItem Text="Graphite theme" Click="OnThemeClick" />
-                    <MenuFlyoutItem Text="Reset plant view" Click="OnResetViewClick" />
-                  </MenuFlyout>
-                </Button.Flyout>
-              </Button>
-
-              <Button Grid.Column="5" Style="{StaticResource IconButton}" Click="OnFullScreenClick"
-                      AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
-                <FontIcon Glyph="&#xE740;" FontSize="14" />
-              </Button>
-            </Grid>
-
-            <!-- ============ STATUS STRIP ============ -->
-            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1">
-              <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="20" Padding="24,14">
-                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                   <TextBlock Text="Net output" Style="{StaticResource TypeBody}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
                   <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeDisplay}" />
                   <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
                 </StackPanel>
-                <Border Grid.Column="1" Width="1" Background="{StaticResource HairlineBrush}" Margin="0,4" />
-                <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Center">
+                <StackPanel Grid.Column="3" Spacing="0" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.TargetGapText}" Style="{StaticResource TypeBody}" />
                   <TextBlock Text="{Binding Data.TargetText}" Style="{StaticResource TypeMicro}" />
                 </StackPanel>
-                <StackPanel Grid.Column="4" Spacing="0" VerticalAlignment="Center">
+
+                <StackPanel Grid.Column="5" Spacing="0" VerticalAlignment="Center">
                   <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                     <Ellipse Width="6" Height="6" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
                              Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=FaintBrush}" />
@@ -267,76 +237,26 @@
                   </StackPanel>
                   <TextBlock Text="{Binding Data.SnapshotText}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right" />
                 </StackPanel>
+
+                <TextBlock Grid.Column="6" Text="Operator 04" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" Margin="4,0"
+                           Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=Collapsed, Wide=Visible}" />
+
+                <Button Grid.Column="7" Style="{StaticResource IconButton}" AutomationProperties.Name="More" ToolTipService.ToolTip="More">
+                  <FontIcon Glyph="&#xE712;" FontSize="16" />
+                  <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                      <ToggleMenuFlyoutItem Text="Graphite theme" Click="OnThemeClick" />
+                      <MenuFlyoutItem Text="Reset plant view" Click="OnResetViewClick" />
+                    </MenuFlyout>
+                  </Button.Flyout>
+                </Button>
+
+                <Button Grid.Column="8" Style="{StaticResource IconButton}" Click="OnFullScreenClick"
+                        AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
+                  <FontIcon Glyph="&#xE740;" FontSize="14" />
+                </Button>
               </Grid>
             </Border>
-
-            <!-- ============ ALARMS ============
-                 The alarm summary (ISA-18.2, reduced): priority and state in words, newest unacknowledged
-                 first; four fixed rows, so a row never takes a press meant for its neighbour. -->
-            <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="24,10">
-              <!-- No Spacing: Uno charges StackPanel spacing for collapsed children (uno-runtime-gotchas,
-                   Layout), so the hidden rows would leave a gap; each row carries its own margin. -->
-              <StackPanel AutomationProperties.Name="Alarm summary">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                  <TextBlock Text="ALARMS" Style="{StaticResource TypeCaps}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Text="{Binding Data.AlarmSummaryText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-                  <Button Grid.Column="2" Content="Acknowledge all" Command="{Binding Parent.AcknowledgeAll}" Style="{StaticResource ToolbarButton}"
-                          Visibility="{Binding Data.CanAckAll, Converter={StaticResource Visible}}" />
-                </Grid>
-                <Grid DataContext="{Binding Data.Alarm0}" Style="{StaticResource AlarmRow}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
-                  <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmRowTemplate}" HorizontalContentAlignment="Stretch" />
-                </Grid>
-                <Grid DataContext="{Binding Data.Alarm1}" Style="{StaticResource AlarmRow}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
-                  <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmRowTemplate}" HorizontalContentAlignment="Stretch" />
-                </Grid>
-                <Grid DataContext="{Binding Data.Alarm2}" Style="{StaticResource AlarmRow}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
-                  <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmRowTemplate}" HorizontalContentAlignment="Stretch" />
-                </Grid>
-                <Grid DataContext="{Binding Data.Alarm3}" Style="{StaticResource AlarmRow}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
-                  <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmRowTemplate}" HorizontalContentAlignment="Stretch" />
-                </Grid>
-                <TextBlock Text="{Binding Data.AlarmMoreText}" Style="{StaticResource TypeMicro}" Margin="0,4,0,0"
-                           Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}}" />
-              </StackPanel>
-            </Border>
-
-            <!-- ============ SYSTEMS ============ -->
-            <ScrollViewer HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled"
-                          BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
-              <StackPanel Orientation="Horizontal" Spacing="4" Padding="24,10" AutomationProperties.Name="Systems">
-                <TextBlock Text="SYSTEMS" Style="{StaticResource TypeCaps}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" Content="All systems"
-                             IsChecked="{Binding Data.IsAllSystems, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="All" />
-                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Steam and water"
-                             IsChecked="{Binding Data.IsSteamWater, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="SteamWater">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemSteamWaterBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="Steam &amp; water" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </RadioButton>
-                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Cooling"
-                             IsChecked="{Binding Data.IsCooling, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Cooling">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemCoolingBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="Cooling" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </RadioButton>
-                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Fuel and flue gas"
-                             IsChecked="{Binding Data.IsFuelFlue, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="FuelFlue">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemFuelFlueBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="Fuel &amp; flue gas" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </RadioButton>
-                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Electrical"
-                             IsChecked="{Binding Data.IsElectrical, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Electrical">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemElectricalBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="Electrical" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </RadioButton>
-              </StackPanel>
-            </ScrollViewer>
 
             <!-- ============ PLANT + INSPECTOR ============ -->
             <!-- The inspector column is Auto and the inspector sets its own width: a responsive
@@ -356,6 +276,57 @@
                                         AlertingUnits="{Binding Data.AlertingUnits}"
                                         SelectCommand="{Binding Parent.SelectUnit}"
                                         Loaded="OnViewportLoaded">
+                  <controls:PlantViewport.HeaderContent>
+                    <!-- The systems filter, with the drawing it filters: a chip isolates its circuit's ink and motion. -->
+                    <ScrollViewer HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled">
+                      <StackPanel Orientation="Horizontal" Spacing="4" AutomationProperties.Name="Systems">
+                        <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" Content="All systems"
+                                     IsChecked="{Binding Data.IsAllSystems, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="All" />
+                        <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Steam and water"
+                                     IsChecked="{Binding Data.IsSteamWater, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="SteamWater">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemSteamWaterBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Steam &amp; water" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Cooling"
+                                     IsChecked="{Binding Data.IsCooling, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Cooling">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemCoolingBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Cooling" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Fuel and flue gas"
+                                     IsChecked="{Binding Data.IsFuelFlue, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="FuelFlue">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemFuelFlueBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Fuel &amp; flue gas" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Electrical"
+                                     IsChecked="{Binding Data.IsElectrical, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Electrical">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemElectricalBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Electrical" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </RadioButton>
+                        <!-- Active alarms: isolates the equipment in alarm, which breathes red in the drawing, and
+                             opens the alarm list at the top of the inspector. -->
+                        <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Active alarms"
+                                     ToolTipService.ToolTip="{Binding Data.ActiveAlertText}"
+                                     IsChecked="{Binding Data.IsAlarms, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Alarms">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource AlertBrush}" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
+                                     Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}}" />
+                            <TextBlock Text="Active alarms" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Data.ActiveAlarmCount}" Style="{StaticResource ControlLabel}" FontFamily="{StaticResource SansMediumFont}"
+                                       Foreground="{StaticResource AlertTextBrush}" VerticalAlignment="Center"
+                                       Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}}" />
+                          </StackPanel>
+                        </RadioButton>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </controls:PlantViewport.HeaderContent>
                   <controls:PlantViewport.FooterContent>
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <TextBlock Text="Equipment" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -379,6 +350,39 @@
                       Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=NaN, Wide=620}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
                   <StackPanel Spacing="16" Margin="24,20" AutomationProperties.Name="Equipment inspector">
+                  <!-- ============ ACTIVE ALARMS ============
+                       The alarm summary (ISA-18.2, reduced) while Active alarms is chosen: newest unacknowledged
+                       first, each with its priority, time and state in words and its own Acknowledge and Shelve.
+                       Four fixed rows, so a row never takes a press meant for its neighbour. -->
+                  <StackPanel Spacing="0" AutomationProperties.Name="Active alarms"
+                              Visibility="{Binding Data.IsAlarms, Converter={StaticResource Visible}}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" MinHeight="32">
+                      <StackPanel Spacing="0" VerticalAlignment="Center">
+                        <TextBlock Text="ACTIVE ALARMS" Style="{StaticResource TypeCaps}" />
+                        <TextBlock Text="{Binding Data.AlarmSummaryText}" Style="{StaticResource TypeMicro}" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Acknowledge all" Command="{Binding Parent.AcknowledgeAll}" Style="{StaticResource ToolbarButton}"
+                              Visibility="{Binding Data.CanAckAll, Converter={StaticResource Visible}}" />
+                    </Grid>
+                    <!-- No Spacing: Uno charges StackPanel spacing for collapsed children (uno-runtime-gotchas,
+                         Layout), so the hidden rows would leave a gap; each row carries its own margin. -->
+                    <Grid DataContext="{Binding Data.Alarm0}" Style="{StaticResource AlarmItem}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
+                      <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmItemTemplate}" HorizontalContentAlignment="Stretch" />
+                    </Grid>
+                    <Grid DataContext="{Binding Data.Alarm1}" Style="{StaticResource AlarmItem}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
+                      <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmItemTemplate}" HorizontalContentAlignment="Stretch" />
+                    </Grid>
+                    <Grid DataContext="{Binding Data.Alarm2}" Style="{StaticResource AlarmItem}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
+                      <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmItemTemplate}" HorizontalContentAlignment="Stretch" />
+                    </Grid>
+                    <Grid DataContext="{Binding Data.Alarm3}" Style="{StaticResource AlarmItem}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
+                      <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmItemTemplate}" HorizontalContentAlignment="Stretch" />
+                    </Grid>
+                    <TextBlock Text="{Binding Data.AlarmMoreText}" Style="{StaticResource TypeMicro}" Margin="0,8,0,0"
+                               Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}}" />
+                    <Border Style="{StaticResource Rule}" Margin="0,16,0,0" />
+                  </StackPanel>
+
                     <StackPanel Spacing="4">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="{Binding Data.InspectorCode}" Style="{StaticResource TypeCaps}" />

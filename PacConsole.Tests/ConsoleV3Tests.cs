@@ -112,10 +112,31 @@ public class ConsoleV3Tests
     }
 
     [Test]
+    public void Active_alarms_holds_exactly_the_units_in_alarm()
+    {
+        var parts = PacConsole.Core.Solids.PlantSolids.Default.All;
+        UnitId[] alerting = [UnitId.Clg, UnitId.Gen];
+        parts.Where(p => p.Unit is { } u && alerting.Contains(u))
+            .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+        parts.Where(p => p.Unit is { } u && !alerting.Contains(u))
+            .Should().NotContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+        parts.Where(p => p.Name.StartsWith("stand.", StringComparison.Ordinal))
+            .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+
+        // Choosing it moves the selection to the first unit in alarm; with nothing in alarm it stays put.
+        PlantSystems.SelectionFor(PlantSystem.Alarms, UnitId.Trb, alerting).Should().Be(UnitId.Gen);
+        PlantSystems.SelectionFor(PlantSystem.Alarms, UnitId.Trb, []).Should().Be(UnitId.Trb);
+        // Selecting a unit not in alarm widens the view to all systems.
+        PlantSystems.SystemFor(PlantSystem.Alarms, UnitId.Trb, alerting).Should().Be(PlantSystem.All);
+        PlantSystems.SystemFor(PlantSystem.Alarms, UnitId.Clg, alerting).Should().Be(PlantSystem.Alarms);
+    }
+
+    [Test]
     public void Every_system_keeps_the_stand_and_owns_some_of_the_drawing()
     {
         var parts = PacConsole.Core.Solids.PlantSolids.Default.All;
-        foreach (var system in Enum.GetValues<PlantSystem>())
+        // Active alarms owns only what is in alarm; it has its own test below.
+        foreach (var system in Enum.GetValues<PlantSystem>().Where(s => s != PlantSystem.Alarms))
         {
             parts.Where(p => p.Name.StartsWith("stand.", StringComparison.Ordinal))
                 .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, system), system.ToString());

@@ -400,6 +400,73 @@
     <Setter Property="Padding" Value="10,0" />
   </Style>
 
+  <!--
+    A view thumbnail beside the plant: the plant from one standard camera over its name. The view the
+    camera rests in takes the accent outline and ink label; the others keep a hairline.
+  -->
+  <Style x:Key="ThumbRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    <Setter Property="Background" Value="{StaticResource CardBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <!-- xaml-lint: allow card - a selectable tile's frame (hairline, accent when chosen), not a content surface. -->
+          <Border x:Name="Frame"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{TemplateBinding CornerRadius}">
+            <Grid>
+              <Border x:Name="StateLayer" Background="{StaticResource TextPrimaryBrush}" CornerRadius="{TemplateBinding CornerRadius}" Opacity="0" />
+              <ContentPresenter x:Name="Presenter"
+                                Padding="{TemplateBinding Padding}"
+                                Content="{TemplateBinding Content}"
+                                Foreground="{TemplateBinding Foreground}"
+                                FontFamily="{TemplateBinding FontFamily}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            </Grid>
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="StateLayer.Opacity" Value="0.04" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="StateLayer.Opacity" Value="0.08" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled" />
+              </VisualStateGroup>
+              <VisualStateGroup x:Name="CheckStates">
+                <VisualState x:Name="Checked">
+                  <VisualState.Setters>
+                    <Setter Target="Frame.BorderBrush" Value="{StaticResource AccentBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Unchecked" />
+                <VisualState x:Name="Indeterminate" />
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Inspector tabs: text with a 2 px slate-teal underline on the open tab. -->
   <Style x:Key="TabRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
     <Setter Property="MinWidth" Value="0" />

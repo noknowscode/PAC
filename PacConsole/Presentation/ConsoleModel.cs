@@ -80,13 +80,13 @@ public partial record ConsoleModel
     private static DateTimeOffset Later(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 
     /// <summary>Selects a unit from a callout or a connection chip.</summary>
-    public async ValueTask SelectUnit(UnitId unit, PlantSystem system, CancellationToken ct) =>
-        await Select(unit, system, ct);
+    public async ValueTask SelectUnit(UnitId unit, PlantSystem system, ConsoleView view, CancellationToken ct) =>
+        await Select(unit, system, view.AlertingUnits, ct);
 
     /// <summary>The equipment picker's choice (the ComboBox passes its selected item).</summary>
-    public async ValueTask PickEquipment(ConnectionView? item, PlantSystem system, CancellationToken ct)
+    public async ValueTask PickEquipment(ConnectionView? item, PlantSystem system, ConsoleView view, CancellationToken ct)
     {
-        if (item is not null) await Select(item.Id, system, ct);
+        if (item is not null) await Select(item.Id, system, view.AlertingUnits, ct);
     }
 
     /// <summary>
@@ -104,10 +104,10 @@ public partial record ConsoleModel
     }
 
     /// <summary>Selects a unit and widens the view to all systems when the unit is outside the one shown.</summary>
-    private async ValueTask Select(UnitId unit, PlantSystem system, CancellationToken ct)
+    private async ValueTask Select(UnitId unit, PlantSystem system, IReadOnlyCollection<UnitId> alerting, CancellationToken ct)
     {
         await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
-        var shown = PlantSystems.SystemFor(system, unit);
+        var shown = PlantSystems.SystemFor(system, unit, alerting);
         if (shown != system) await System.SetAsync(shown, ct);
     }
 
@@ -135,12 +135,6 @@ public partial record ConsoleModel
 
     public async ValueTask SetCursorLatest(CancellationToken ct) =>
         await Cursor.SetAsync(TrendSet.Samples - 1, ct);
-
-    /// <summary>The alert pill: selects the first unit in alert (the view arrives as a feed parameter).</summary>
-    public async ValueTask SelectFirstAlert(ConsoleView view, PlantSystem system, CancellationToken ct)
-    {
-        if (view is { AlertingUnits.IsEmpty: false }) await Select(view.AlertingUnits[0], system, ct);
-    }
 
     // ---------------------------------------------------------------- operations (SPEC-OPERATIONS.md)
 

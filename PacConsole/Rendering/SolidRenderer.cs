@@ -75,6 +75,7 @@ public sealed record SolidPalette(
                 [PlantSystem.Cooling] = C("SystemCoolingBrush"),
                 [PlantSystem.FuelFlue] = C("SystemFuelFlueBrush"),
                 [PlantSystem.Electrical] = C("SystemElectricalBrush"),
+                [PlantSystem.Alarms] = C("AlertBrush"),
             },
         };
     }
@@ -116,6 +117,11 @@ public sealed class SolidRenderer : IDisposable
     private readonly SKMaskFilter _puffBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 2.5f);
     private readonly SKPaint _puff = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
     private readonly SKPaint _ring = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.6f };
+
+    // Active alarms: the halo round the equipment in alarm, and its breath.
+    private readonly SKMaskFilter _alarmBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 4);
+    private readonly SKPath _alarmHalo = new();
+    private const double AlarmBreathSeconds = 1.6;
 
     /// <summary>The isolated system's ink for the part being drawn, or null when it is not highlighted.</summary>
     private SKColor? _systemInk;
@@ -205,7 +211,35 @@ public sealed class SolidRenderer : IDisposable
         if (moving)
         {
             ClearPictures();
-            foreach (var index in sequence) Op(canvas, index);
+            if (cameraChanged)
+            {
+                foreach (var index in sequence) Op(canvas, index);
+            }
+            else
+            {
+                // A lift at a still camera: each part is its cached image, raised by its lift; a part
+                // whose look has no image yet (the unit just selected or let go) draws as vector until
+                // a worker has one.
+                TakePartImages(parts, projection);
+                foreach (var index in sequence)
+                {
+                    if (index >= 0 && _partImages[index] is { } cached && _partLooks[index] == LookOf(parts[index], index, frame))
+                    {
+                        var dest = cached.Dest;
+                        dest.Offset(0, projection.Rise(lifts[index]));
+                        canvas.DrawImage(cached.Image, dest, Nearest);
+                        if (!_live[index]) continue;
+                        _pass = PartPass.Motion;
+                        Op(canvas, index);
+                        _pass = PartPass.All;
+                    }
+                    else
+                    {
+                        Op(canvas, index);
+                    }
+                }
+                StartPartImages(canvas.LocalClipBounds, parts, projection, frame);
+            }
             DrawMotion(canvas, parts, projection, frame, LiftOf);
             return;
         }
@@ -251,7 +285,13 @@ public sealed class SolidRenderer : IDisposable
         else
         {
             TakeStillLayers();
-            if (++_stillFrames >= StillFramesBeforeLayers && _layeredGeneration != _generation) StartStillLayers();
+            if (++_stillFrames >= StillFramesBeforeLayers && _layeredGeneration != _generation)
+            {
+                StartStillLayers();
+                // Ready ahead of the next selection, whose lift draws from these.
+                TakePartImages(parts, projection);
+                StartPartImages(canvas.LocalClipBounds, parts, projection, frame);
+            }
         }
         foreach (var (picture, image, dest, index) in _segments)
         {
@@ -320,6 +360,30 @@ public sealed class SolidRenderer : IDisposable
 
         switch (frame.System)
         {
+            case PlantSystem.Alarms:
+                // The equipment in alarm breathes in the alert ink: one blurred halo round all of its
+                // parts, 1.6 s a breath (the status dots' rhythm), drawn live over the cached plant.
+                var breath = (float)(0.5 + 0.5 * Math.Cos(t / AlarmBreathSeconds * 2 * Math.PI));
+                _alarmHalo.Rewind();
+                for (var i = 0; i < parts.Count; i++)
+                {
+                    if (parts[i].Unit is not { } unit || !frame.Alerting.Contains(unit) || IsStand(parts[i])) continue;
+                    var dy = projection.Rise(liftOf(unit));
+                    foreach (var line in _shapes[i].Outline)
+                    {
+                        if (line.Length < 2) continue;
+                        _alarmHalo.MoveTo(line[0].X, line[0].Y + dy);
+                        for (var k = 1; k < line.Length; k++) _alarmHalo.LineTo(line[k].X, line[k].Y + dy);
+                    }
+                }
+                if (_alarmHalo.IsEmpty) break;
+                _glow.Color = ink.WithAlpha((byte)(0x28 + 0xA8 * breath));
+                _glow.StrokeWidth = 3 + 4 * breath;
+                _glow.MaskFilter = _alarmBlur;
+                canvas.DrawPath(_alarmHalo, _glow);
+                _glow.MaskFilter = null;
+                _glow.StrokeWidth = 3;
+                break;
             case PlantSystem.FuelFlue:
                 Puffs(_smoke, 6, 3.2, 30, 6, 3, 9, Lerp(ink, Palette.Lo, 0.4f), 0x90);
                 break;
@@ -477,20 +541,7 @@ public sealed class SolidRenderer : IDisposable
             var dests = new SKRect[pictures.Length];
             for (var i = 0; i < pictures.Length; i++)
             {
-                if (pictures[i] is not { } picture || picture.CullRect.IsEmpty) continue;
-                var cull = picture.CullRect;
-                var left = MathF.Floor(cull.Left * scale);
-                var top = MathF.Floor(cull.Top * scale);
-                var right = MathF.Ceiling(cull.Right * scale);
-                var bottom = MathF.Ceiling(cull.Bottom * scale);
-                using var surface = SKSurface.Create(new SKImageInfo((int)(right - left), (int)(bottom - top), SKColorType.Rgba8888, SKAlphaType.Premul));
-                if (surface is null) continue;
-                surface.Canvas.Clear(SKColors.Transparent);
-                surface.Canvas.Translate(-left, -top);
-                surface.Canvas.Scale(scale);
-                surface.Canvas.DrawPicture(picture);
-                images[i] = surface.Snapshot();
-                dests[i] = new SKRect(left / scale, top / scale, right / scale, bottom / scale);
+                if (pictures[i] is { } picture) (images[i], dests[i]) = Rasterize(picture, scale);
             }
             lock (_layerGate)
             {
@@ -609,22 +660,16 @@ public sealed class SolidRenderer : IDisposable
 
     private void DrawPart(SKCanvas canvas, SolidPart part, int index, OrbitProjection projection, SolidFrame frame, float lift)
     {
-        var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
-        var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
-        var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
-        var inSystem = InSystem(index, frame.System);
-        // Outside the chosen system a part fades toward the paper; the selected unit always stays inked.
-        _fade = part.Unit is { } s && s == frame.Selected || inSystem ? 0 : SystemFade;
-        // Inside an isolated system (not the ground, the selection or an alert), a part takes the system's ink.
-        _systemInk = frame.System != PlantSystem.All && inSystem && !lit && !alert && !IsStand(part)
-            && Palette.Systems.TryGetValue(frame.System, out var ink) ? ink : null;
+        var look = LookOf(part, index, frame);
+        _fade = look.Faded ? SystemFade : 0;
+        _systemInk = look.Ink is { } system ? Palette.Systems[system] : null;
 
         if (lift > 0)
         {
             canvas.Save();
             canvas.Translate(0, projection.Rise(lift));
         }
-        if (_pass != PartPass.Motion) DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered, part.Circuit);
+        if (_pass != PartPass.Motion) DrawShape(canvas, _shapes[index], part.Edge, part.Crease, look.Lit, look.Alert, look.Hovered, part.Circuit);
         if (frame.Details && part.Details is { } details)
         {
             DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds, part.AnimatedDetails);
@@ -634,20 +679,154 @@ public sealed class SolidRenderer : IDisposable
         _systemInk = null;
     }
 
+    /// <summary>Everything a part's drawing depends on besides the camera, palette and scale.</summary>
+    private readonly record struct PartLook(bool Lit, bool Alert, bool Hovered, bool Faded, PlantSystem? Ink, bool Details);
+
+    private PartLook LookOf(SolidPart part, int index, SolidFrame frame)
+    {
+        var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
+        var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
+        var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
+        var inSystem = InSystem(index, frame.System, frame.Alerting);
+        // Outside the chosen system a part fades toward the paper; the selected unit always stays inked.
+        var faded = !(part.Unit is { } s && s == frame.Selected || inSystem);
+        // Inside an isolated system (not the ground, the selection or an alert), a part takes the system's ink.
+        var ink = frame.System != PlantSystem.All && inSystem && !lit && !alert && !IsStand(part) && Palette.Systems.ContainsKey(frame.System)
+            ? frame.System : (PlantSystem?)null;
+        return new(lit, alert, hovered, faded, ink, frame.Details);
+    }
+
+    // One image per part at the current camera, for lift frames: a selection changes the look of two
+    // units only, so only their parts are drawn again (trace, 2026-10-16: lift frames redrew all
+    // ~2,500 paths at display rate, 11 s of render-thread time in 14 s with eight selections).
+    private object? _partKey;
+    private (SKImage Image, SKRect Dest)?[] _partImages = [];
+    private PartLook?[] _partLooks = [];
+    private PartLook?[] _partRequested = [];
+    private Task? _partTask;
+    private (object Key, int[] Indices, PartLook[] Looks, SKImage?[] Images, SKRect[] Dests)? _readyParts;
+
+    /// <summary>Starts over when the camera, palette or scale changed; swaps in images a worker finished.</summary>
+    private void TakePartImages(IReadOnlyList<SolidPart> parts, OrbitProjection p)
+    {
+        var key = (p.SinYaw, p.CosYaw, p.SinElevation, p.Scale, p.CenterX, p.CenterY, Palette, Scale, parts.Count);
+        if (!key.Equals(_partKey))
+        {
+            ClearPartImages();
+            _partKey = key;
+            _partImages = new (SKImage, SKRect)?[parts.Count];
+            _partLooks = new PartLook?[parts.Count];
+            _partRequested = new PartLook?[parts.Count];
+        }
+        (object Key, int[] Indices, PartLook[] Looks, SKImage?[] Images, SKRect[] Dests)? ready;
+        lock (_layerGate)
+        {
+            ready = _readyParts;
+            _readyParts = null;
+        }
+        if (ready is not { } r) return;
+        for (var k = 0; k < r.Indices.Length; k++)
+        {
+            if (r.Images[k] is not { } image) continue;
+            var i = r.Indices[k];
+            if (!r.Key.Equals(_partKey))
+            {
+                image.Dispose();
+                continue;
+            }
+            _partImages[i]?.Image.Dispose();
+            _partImages[i] = (image, r.Dests[k]);
+            _partLooks[i] = r.Looks[k];
+        }
+    }
+
+    /// <summary>Records each part whose look has no image yet, at no lift, and rasterizes them on a worker.</summary>
+    private void StartPartImages(SKRect bounds, IReadOnlyList<SolidPart> parts, OrbitProjection projection, SolidFrame frame)
+    {
+        if (_partTask is { IsCompleted: false } || _partKey is not { } key) return;
+        var indices = new List<int>();
+        var looks = new List<PartLook>();
+        var pictures = new List<SKPicture>();
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var look = LookOf(parts[i], i, frame);
+            if (_partLooks[i] == look || _partRequested[i] == look) continue;
+            _partRequested[i] = look;
+            using var recorder = new SKPictureRecorder();
+            var recording = recorder.BeginRecording(bounds, useRTree: true);
+            _pass = _live[i] ? PartPass.Body : PartPass.All;
+            DrawPart(recording, parts[i], i, projection, frame, 0);
+            _pass = PartPass.All;
+            indices.Add(i);
+            looks.Add(look);
+            pictures.Add(recorder.EndRecording());
+        }
+        if (indices.Count == 0) return;
+        var scale = Scale;
+        _partTask = Task.Run(() =>
+        {
+            var images = new SKImage?[pictures.Count];
+            var dests = new SKRect[pictures.Count];
+            for (var k = 0; k < pictures.Count; k++)
+            {
+                using var picture = pictures[k];
+                (images[k], dests[k]) = Rasterize(picture, scale);
+            }
+            lock (_layerGate)
+            {
+                if (_readyParts is { } stale) foreach (var image in stale.Images) image?.Dispose();
+                _readyParts = (key, [.. indices], [.. looks], images, dests);
+            }
+            StillLayersReady?.Invoke();
+        });
+    }
+
+    private void ClearPartImages()
+    {
+        foreach (var cached in _partImages) cached?.Image.Dispose();
+        _partImages = [];
+        _partLooks = [];
+        _partRequested = [];
+    }
+
+    /// <summary>A picture as an image of exactly its device pixels: its cull rect snapped outward to the pixel grid.</summary>
+    private static (SKImage? Image, SKRect Dest) Rasterize(SKPicture picture, float scale)
+    {
+        var cull = picture.CullRect;
+        if (cull.IsEmpty) return (null, default);
+        var left = MathF.Floor(cull.Left * scale);
+        var top = MathF.Floor(cull.Top * scale);
+        var right = MathF.Ceiling(cull.Right * scale);
+        var bottom = MathF.Ceiling(cull.Bottom * scale);
+        using var surface = SKSurface.Create(new SKImageInfo((int)(right - left), (int)(bottom - top), SKColorType.Rgba8888, SKAlphaType.Premul));
+        if (surface is null) return (null, default);
+        surface.Canvas.Clear(SKColors.Transparent);
+        surface.Canvas.Translate(-left, -top);
+        surface.Canvas.Scale(scale);
+        surface.Canvas.DrawPicture(picture);
+        return (surface.Snapshot(), new SKRect(left / scale, top / scale, right / scale, bottom / scale));
+    }
+
     private bool[] _membership = [];
     private PlantSystem _membershipSystem;
+    private int _membershipAlerts;
     private IReadOnlyList<SolidPart>? _membershipParts;
 
-    /// <summary>Whether part <paramref name="index"/> is in <paramref name="system"/>, worked out once per parts list and system.</summary>
-    private bool InSystem(int index, PlantSystem system)
+    /// <summary>
+    /// Whether part <paramref name="index"/> is in <paramref name="system"/>, worked out once per parts
+    /// list and system (and, for Active alarms, per set of units in alarm).
+    /// </summary>
+    private bool InSystem(int index, PlantSystem system, IReadOnlyCollection<UnitId> alerting)
     {
-        if (!ReferenceEquals(_membershipParts, _cachedParts) || _membershipSystem != system)
+        var alerts = system == PlantSystem.Alarms ? AlertMask(alerting) : 0;
+        if (!ReferenceEquals(_membershipParts, _cachedParts) || _membershipSystem != system || _membershipAlerts != alerts)
         {
             var parts = _cachedParts!;
             _membership = new bool[parts.Count];
-            for (var i = 0; i < parts.Count; i++) _membership[i] = PlantSolids.InSystem(parts[i], system);
+            for (var i = 0; i < parts.Count; i++) _membership[i] = PlantSolids.InSystem(parts[i], system, alerting);
             _membershipParts = _cachedParts;
             _membershipSystem = system;
+            _membershipAlerts = alerts;
         }
         return _membership[index];
     }
@@ -864,8 +1043,13 @@ public sealed class SolidRenderer : IDisposable
         _puffBlur.Dispose();
         _ring.Dispose();
         _arc.Dispose();
+        _alarmHalo.Dispose();
+        _alarmBlur.Dispose();
         _wire.Dispose();
         _layerTask?.Wait();
+        _partTask?.Wait();
+        ClearPartImages();
+        if (_readyParts is { } parts) foreach (var image in parts.Images) image?.Dispose();
         ClearPictures();
         DisposeRetired();
         lock (_layerGate)

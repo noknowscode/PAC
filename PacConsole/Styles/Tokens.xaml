@@ -1,5 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:utu="using:Uno.Toolkit.UI">
+
+  <!-- The console's breakpoints, shared by the page and the plant panel: below 960 px the inspector
+       stacks under the plant; from 1600 px it widens to 400. -->
+  <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" Widest="1600" />
 
   <!--
     Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Light is the base theme;

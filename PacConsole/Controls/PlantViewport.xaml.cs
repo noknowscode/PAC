@@ -85,7 +85,7 @@ public sealed partial class PlantViewport : UserControl
         RotateLeft.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
         RotateRight.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
         Reset.Click += (_, _) => GoTo(CameraPose.Iso);
-        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan })
+        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan, ThumbIso, ThumbElevation, ThumbPlan })
         {
             view.Click += (sender, _) =>
             {
@@ -153,6 +153,16 @@ public sealed partial class PlantViewport : UserControl
 
     public static readonly DependencyProperty FooterContentProperty =
         DependencyProperty.Register(nameof(FooterContent), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => ((PlantViewport)d).FooterHost.Content = e.NewValue));
+
+    /// <summary>What the page puts beside the panel title (the systems filter).</summary>
+    public object? HeaderContent
+    {
+        get => GetValue(HeaderContentProperty);
+        set => SetValue(HeaderContentProperty, value);
+    }
+
+    public static readonly DependencyProperty HeaderContentProperty =
+        DependencyProperty.Register(nameof(HeaderContent), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => ((PlantViewport)d).HeaderHost.Content = e.NewValue));
 
     /// <summary>The process system in view (a <see cref="PlantSystem"/>); equipment outside it is drawn faded.</summary>
     public object? ShownSystem
@@ -345,7 +355,7 @@ public sealed partial class PlantViewport : UserControl
             Canvas.SetTop(tag, p.Top);
             ApplyTagState(tag, isSelected, isAlert);
             // Tags of equipment outside the system recede with their drawing.
-            var opacity = isSelected || PlantSystems.Contains(system, p.Unit) ? 1.0 : 0.4;
+            var opacity = isSelected || PlantSystems.Contains(system, p.Unit, alerting) ? 1.0 : 0.4;
             if (tag.Opacity != opacity) tag.Opacity = opacity;
         }
 
@@ -354,11 +364,13 @@ public sealed partial class PlantViewport : UserControl
 
         // The view switcher shows the standard view the camera rests in, if any.
         var preset = CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Key;
-        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan })
+        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan, ThumbIso, ThumbElevation, ThumbPlan })
         {
             var on = Equals(view.Tag, preset);
             if (view.IsChecked != on) view.IsChecked = on;
         }
+        // Each thumbnail redraws only when the selection, alerts or system actually changed.
+        foreach (var thumb in new[] { ThumbIsoDrawing, ThumbElevationDrawing, ThumbPlanDrawing }) thumb.Show(selected, alerting, system);
         var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
         var help = $"{UnitCatalog.All.Length} units, {PresetName()} view. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
             $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";

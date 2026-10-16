@@ -53,10 +53,10 @@ public sealed partial class PlantSolids
     /// the steam cycle and the fuel and flue-gas path; the transformer and cabinets are electrical.
     /// The stand is the ground, so it is in every system.
     /// </summary>
-    public static bool InSystem(SolidPart part, PlantSystem system)
+    public static bool InSystem(SolidPart part, PlantSystem system, IReadOnlyCollection<UnitId>? alerting = null)
     {
         if (system == PlantSystem.All || part.Name.StartsWith("stand.", StringComparison.Ordinal)) return true;
-        if (part.Unit is { } unit) return PlantSystems.Contains(system, unit);
+        if (part.Unit is { } unit) return PlantSystems.Contains(system, unit, alerting);
         return system switch
         {
             PlantSystem.SteamWater => part.Circuit is Circuit.Steam or Circuit.Water || Named(part, SteamWaterParts),

@@ -1,6 +1,9 @@
 namespace PacConsole.Core.Plant;
 
-/// <summary>A process system the plant view can isolate. Equipment outside it is drawn faded.</summary>
+/// <summary>
+/// A process system the plant view can isolate. Equipment outside it is drawn faded. <see cref="Alarms"/>
+/// is the equipment in alarm right now, so its members come from the alarm list, not the plant's piping.
+/// </summary>
 public enum PlantSystem
 {
     All,
@@ -8,6 +11,7 @@ public enum PlantSystem
     Cooling,
     FuelFlue,
     Electrical,
+    Alarms,
 }
 
 public static class PlantSystems
@@ -18,6 +22,7 @@ public static class PlantSystems
         PlantSystem.Cooling => "Cooling",
         PlantSystem.FuelFlue => "Fuel & flue gas",
         PlantSystem.Electrical => "Electrical",
+        PlantSystem.Alarms => "Active alarms",
         _ => "All systems",
     };
 
@@ -28,6 +33,7 @@ public static class PlantSystems
         PlantSystem.Cooling => "Cooling",
         PlantSystem.FuelFlue => "Fuel and flue gas",
         PlantSystem.Electrical => "Electrical generation",
+        PlantSystem.Alarms => "Active alarms",
         _ => "Plant overview",
     };
 
@@ -39,8 +45,10 @@ public static class PlantSystems
     /// </summary>
     public static UnitId SelectionFor(PlantSystem system, UnitId? current, IReadOnlyCollection<UnitId>? alerting = null)
     {
-        if (current is { } unit && Contains(system, unit)) return unit;
-        var units = Enum.GetValues<UnitId>().Where(u => Contains(system, u)).ToList();
+        if (current is { } unit && Contains(system, unit, alerting)) return unit;
+        var units = Enum.GetValues<UnitId>().Where(u => Contains(system, u, alerting)).ToList();
+        // Active alarms with nothing in alarm holds no equipment: the selection stays where it is.
+        if (units.Count == 0) return current ?? Enum.GetValues<UnitId>()[0];
         return alerting is null ? units[0] : units.FirstOrDefault(alerting.Contains, units[0]);
     }
 
@@ -49,12 +57,16 @@ public static class PlantSystems
     /// pill, a connection chip): the current one if it holds the unit, else all systems, so the
     /// selection is never a unit the view has faded out.
     /// </summary>
-    public static PlantSystem SystemFor(PlantSystem current, UnitId unit) =>
-        Contains(current, unit) ? current : PlantSystem.All;
+    public static PlantSystem SystemFor(PlantSystem current, UnitId unit, IReadOnlyCollection<UnitId>? alerting = null) =>
+        Contains(current, unit, alerting) ? current : PlantSystem.All;
 
-    /// <summary>The equipment in a system (all of it for <see cref="PlantSystem.All"/>).</summary>
-    public static bool Contains(PlantSystem s, UnitId unit) => s switch
+    /// <summary>
+    /// The equipment in a system (all of it for <see cref="PlantSystem.All"/>; for
+    /// <see cref="PlantSystem.Alarms"/>, the units in <paramref name="alerting"/>).
+    /// </summary>
+    public static bool Contains(PlantSystem s, UnitId unit, IReadOnlyCollection<UnitId>? alerting = null) => s switch
     {
+        PlantSystem.Alarms => alerting?.Contains(unit) == true,
         PlantSystem.All => true,
         PlantSystem.SteamWater => unit is UnitId.Trb or UnitId.Cnd,
         PlantSystem.Cooling => unit is UnitId.Clg or UnitId.Cnd,

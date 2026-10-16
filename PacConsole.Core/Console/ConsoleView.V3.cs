@@ -67,6 +67,11 @@ public sealed partial record ConsoleView
     public bool IsCooling => System == PlantSystem.Cooling;
     public bool IsFuelFlue => System == PlantSystem.FuelFlue;
     public bool IsElectrical => System == PlantSystem.Electrical;
+    public bool IsAlarms => System == PlantSystem.Alarms;
+
+    /// <summary>Alarms standing now, for the Active alarms chip's count.</summary>
+    public int ActiveAlarmCount { get; init; }
+    public bool HasActiveAlarms => ActiveAlarmCount > 0;
 
     // Equipment picker. The choices are one shared array, so the picker's ItemsSource keeps the same
     // instance across recompositions and never resets (and closes) while it is open.
@@ -74,8 +79,17 @@ public sealed partial record ConsoleView
         s => s,
         s => EquipmentCatalog.All.Where(e => PlantSystems.Contains(s, e.Id)).Select(e => new ConnectionView(e.Id, e.Title)).ToArray());
 
+    // Under Active alarms the choices are the units in alarm: one array per set of units, for the same reason.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> AlarmChoices = new();
+
+    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting) =>
+        system != PlantSystem.Alarms
+            ? Choices[system]
+            : AlarmChoices.GetOrAdd(string.Join(",", alerting), _ =>
+                [.. EquipmentCatalog.All.Where(e => alerting.Contains(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+
     /// <summary>The picker's choices: the equipment of the system in view.</summary>
-    public IReadOnlyList<ConnectionView> EquipmentChoices => Choices[System];
+    public IReadOnlyList<ConnectionView> EquipmentChoices { get; init; } = [];
     public int SelectedIndex { get; init; }
 
     // Inspector
@@ -211,7 +225,9 @@ public sealed partial record ConsoleView
             System = inputs.System,
             SystemTitle = PlantSystems.Title(inputs.System),
 
-            SelectedIndex = Array.FindIndex(Choices[inputs.System], c => c.Id == selected),
+            ActiveAlarmCount = alarmCount,
+            EquipmentChoices = ChoicesFor(inputs.System, view.AlertingUnits),
+            SelectedIndex = Array.FindIndex(ChoicesFor(inputs.System, view.AlertingUnits), c => c.Id == selected),
 
             InspectorCode = info.Code,
             InspectorName = info.Name,
