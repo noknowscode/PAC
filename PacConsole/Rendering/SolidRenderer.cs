@@ -137,6 +137,10 @@ public sealed class SolidRenderer : IDisposable
     private int[] _order = [];
     private float[] _orderLift = [];
 
+    // A lift frame re-sorts only the pairs that involve the moving unit (trace, 2026-10-16: the full
+    // pairwise sort was ~8 ms of every lift frame on a selection change).
+    private readonly DepthCache _depthCache = new();
+
     /// <summary>Paints <paramref name="parts"/> back to front. Lit parts of the selected unit take the accent; of an alerting unit, a dashed alert outline.</summary>
     public void Draw(SKCanvas canvas, IReadOnlyList<SolidPart> parts, OrbitProjection projection, SolidFrame frame)
     {
@@ -166,11 +170,11 @@ public sealed class SolidRenderer : IDisposable
         {
             var volumes = new List<Volume>(parts.Count);
             for (var i = 0; i < parts.Count; i++) volumes.Add(parts[i].Volume.Raised(lifts[i]));
-            _order = DepthOrder.Sort(volumes, projection);
+            _order = DepthOrder.Sort(volumes, projection, _depthCache);
             _orderLift = lifts;
         }
         var order = _order;
-        if (cameraChanged || lifts.AsSpan().SequenceEqual(_shadowLift) is false) BuildShadows(parts, lifts, projection);
+        if (cameraChanged || lifts.AsSpan().SequenceEqual(_shadowLift) is false) BuildShadows(parts, lifts, projection, cameraChanged);
 
         // The stand (plate, pads, strip) lies under everything, so it goes first; then the shadows
         // that fall on it; then every other part in depth order. -1 stands for the shadow pass.
@@ -538,10 +542,20 @@ public sealed class SolidRenderer : IDisposable
     /// away from the light in proportion to its height above the surface it stands on (a unit's pad,
     /// or the plate). Drawn opaque in a single pass, so overlaps never darken.
     /// </summary>
-    private void BuildShadows(IReadOnlyList<SolidPart> parts, float[] lifts, OrbitProjection p)
+    // Each part's shadow on screen, kept per camera: a lift frame recomputes only the moving unit's.
+    private Vec2[]?[] _shadowPolygons = [];
+    private float[] _shadowPolygonLift = [];
+
+    private void BuildShadows(IReadOnlyList<SolidPart> parts, float[] lifts, OrbitProjection p, bool cameraChanged)
     {
         _shadowLift = lifts;
         _shadow.Rewind();
+        if (cameraChanged || _shadowPolygons.Length != parts.Count)
+        {
+            _shadowPolygons = new Vec2[]?[parts.Count];
+            _shadowPolygonLift = new float[parts.Count];
+            Array.Fill(_shadowPolygonLift, float.NaN);
+        }
         var padTop = parts.FirstOrDefault(q => q.PadOf is not null)?.Volume.Y1 ?? 0;
         // Light from the viewer's upper left: shadows fall to the right and toward the viewer at every
         // yaw, as in an inked isometric. The plan direction comes from the screen gradients of world
@@ -559,23 +573,27 @@ public sealed class SolidRenderer : IDisposable
         {
             var part = parts[i];
             if (IsGround(part)) continue;
-            var v = part.Volume;
-            var ground = part.Unit is null ? 0 : padTop;
-            var low = MathF.Max(0, v.Y0 + lifts[i] - ground);
-            var high = MathF.Max(0, v.Y1 + lifts[i] - ground);
-            if (high <= 0) continue;
-            points.Clear();
-            foreach (var q in v.Bottom) points.Add(new(q.X + dx * low, q.Z + dz * low));
-            foreach (var q in v.Top) points.Add(new(q.X + dx * high, q.Z + dz * high));
-            var hull = SolidBuilder.ConvexHull(points);
-            if (hull.Length < 3) continue;
-            var first = p.Project(new(hull[0].X, ground, hull[0].Y));
-            _shadow.MoveTo(first.X, first.Y);
-            for (var k = 1; k < hull.Length; k++)
+            if (_shadowPolygonLift[i] != lifts[i])
             {
-                var s = p.Project(new(hull[k].X, ground, hull[k].Y));
-                _shadow.LineTo(s.X, s.Y);
+                _shadowPolygonLift[i] = lifts[i];
+                _shadowPolygons[i] = null;
+                var v = part.Volume;
+                var ground = part.Unit is null ? 0 : padTop;
+                var low = MathF.Max(0, v.Y0 + lifts[i] - ground);
+                var high = MathF.Max(0, v.Y1 + lifts[i] - ground);
+                if (high <= 0) continue;
+                points.Clear();
+                foreach (var q in v.Bottom) points.Add(new(q.X + dx * low, q.Z + dz * low));
+                foreach (var q in v.Top) points.Add(new(q.X + dx * high, q.Z + dz * high));
+                var hull = SolidBuilder.ConvexHull(points);
+                if (hull.Length < 3) continue;
+                var screen = new Vec2[hull.Length];
+                for (var k = 0; k < hull.Length; k++) screen[k] = p.Project(new(hull[k].X, ground, hull[k].Y));
+                _shadowPolygons[i] = screen;
             }
+            if (_shadowPolygons[i] is not { } polygon) continue;
+            _shadow.MoveTo(polygon[0].X, polygon[0].Y);
+            for (var k = 1; k < polygon.Length; k++) _shadow.LineTo(polygon[k].X, polygon[k].Y);
             _shadow.Close();
         }
     }

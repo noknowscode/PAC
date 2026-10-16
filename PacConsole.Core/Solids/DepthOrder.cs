@@ -62,13 +62,28 @@ public static class DepthOrder
 {
     private const float Eps = 1e-3f;
 
-    /// <summary>Indices of <paramref name="volumes"/>, back to front.</summary>
-    public static int[] Sort(IReadOnlyList<Volume> volumes, OrbitProjection p)
+    /// <summary>
+    /// Indices of <paramref name="volumes"/>, back to front. With a <paramref name="cache"/>, only the
+    /// parts whose volume changed since the last sort at the same camera (a unit lifting off its pad)
+    /// have their silhouette and pairs worked out again; the order is the same as without it.
+    /// </summary>
+    public static int[] Sort(IReadOnlyList<Volume> volumes, OrbitProjection p, DepthCache? cache = null)
     {
         var n = volumes.Count;
-        var depth = new float[n];
-        for (var i = 0; i < n; i++) depth[i] = p.Depth(volumes[i].Centre);
-        var after = Constraints(volumes, p, depth);
+        float[] depth;
+        List<int>[] after;
+        if (cache is null)
+        {
+            depth = new float[n];
+            for (var i = 0; i < n; i++) depth[i] = p.Depth(volumes[i].Centre);
+            after = Constraints(volumes, p, depth);
+        }
+        else
+        {
+            cache.Update(volumes, p);
+            depth = cache.Depth;
+            after = cache.Constraints(volumes, p);
+        }
         var waiting = new int[n];
         foreach (var list in after) foreach (var j in list) waiting[j]++;
 
@@ -131,6 +146,10 @@ public static class DepthOrder
         }
         return after;
     }
+
+    /// <summary>The pair's entry in <see cref="Constraints"/>: 2 when silhouettes do not overlap, else <see cref="Compare"/>.</summary>
+    internal static sbyte Pair(Volume a, Volume b, Vec2[] hullA, Vec2[] hullB, (float L, float T, float R, float B) boxA, (float L, float T, float R, float B) boxB, OrbitProjection p, float depthA, float depthB) =>
+        !Overlap(boxA, boxB) || !Overlap(hullA, hullB) ? (sbyte)2 : (sbyte)Compare(a, b, p, depthA, depthB);
 
     /// <summary>-1 when <paramref name="a"/> paints before <paramref name="b"/>, 1 after, 0 when either works.</summary>
     public static int Compare(Volume a, Volume b, OrbitProjection p, float depthA, float depthB)
@@ -204,7 +223,7 @@ public static class DepthOrder
     }
 
     /// <summary>The hull's silhouette: the convex hull of its corners on screen.</summary>
-    private static Vec2[] ScreenHull(Volume v, OrbitProjection p)
+    internal static Vec2[] ScreenHull(Volume v, OrbitProjection p)
     {
         var corners = new Vec2[v.Bottom.Length + v.Top.Length];
         for (var i = 0; i < v.Bottom.Length; i++) corners[i] = p.Project(new(v.Bottom[i].X, v.Y0, v.Bottom[i].Z));
@@ -212,7 +231,7 @@ public static class DepthOrder
         return SolidBuilder.ConvexHull(corners);
     }
 
-    private static (float L, float T, float R, float B) Box(Vec2[] hull)
+    internal static (float L, float T, float R, float B) Box(Vec2[] hull)
     {
         float l = float.MaxValue, t = float.MaxValue, r = float.MinValue, b = float.MinValue;
         foreach (var s in hull)
@@ -246,4 +265,69 @@ public static class DepthOrder
 
     private static bool Overlap((float L, float T, float R, float B) a, (float L, float T, float R, float B) b) =>
         a.L < b.R && b.L < a.R && a.T < b.B && b.T < a.B;
+}
+
+/// <summary>
+/// What <see cref="DepthOrder.Sort"/> worked out at one camera: each part's silhouette and depth, and
+/// the order of every pair. A lift moves one unit's parts, so a lift frame redoes the pairs that
+/// involve them (a few thousand of ~44,000) instead of all of them. A new camera starts over.
+/// </summary>
+public sealed class DepthCache
+{
+    private const sbyte Unknown = sbyte.MinValue;
+
+    private (float, float, float, float, float, float, float) _camera;
+    private Volume?[] _volumes = [];
+    private Vec2[][] _hulls = [];
+    private (float L, float T, float R, float B)[] _boxes = [];
+    private sbyte[] _pairs = [];
+
+    internal float[] Depth { get; private set; } = [];
+
+    internal void Update(IReadOnlyList<Volume> volumes, OrbitProjection p)
+    {
+        var n = volumes.Count;
+        var camera = (p.SinYaw, p.CosYaw, p.SinElevation, p.CosElevation, p.Scale, p.CenterX, p.CenterY);
+        if (camera != _camera || n != _volumes.Length)
+        {
+            _camera = camera;
+            _volumes = new Volume?[n];
+            _hulls = new Vec2[n][];
+            _boxes = new (float, float, float, float)[n];
+            Depth = new float[n];
+            _pairs = new sbyte[n * n];
+        }
+        for (var i = 0; i < n; i++)
+        {
+            if (Equals(_volumes[i], volumes[i])) continue;
+            _volumes[i] = volumes[i];
+            _hulls[i] = DepthOrder.ScreenHull(volumes[i], p);
+            _boxes[i] = DepthOrder.Box(_hulls[i]);
+            Depth[i] = p.Depth(volumes[i].Centre);
+            for (var j = 0; j < n; j++)
+            {
+                _pairs[i * n + j] = Unknown;
+                _pairs[j * n + i] = Unknown;
+            }
+        }
+    }
+
+    /// <summary>The same lists as <see cref="DepthOrder.Constraints"/>, in the same order, from the cached pairs.</summary>
+    internal List<int>[] Constraints(IReadOnlyList<Volume> volumes, OrbitProjection p)
+    {
+        var n = volumes.Count;
+        var after = new List<int>[n];
+        for (var i = 0; i < n; i++) after[i] = [];
+        for (var i = 0; i < n; i++)
+        {
+            for (var j = i + 1; j < n; j++)
+            {
+                ref var c = ref _pairs[i * n + j];
+                if (c == Unknown) c = DepthOrder.Pair(volumes[i], volumes[j], _hulls[i], _hulls[j], _boxes[i], _boxes[j], p, Depth[i], Depth[j]);
+                if (c == -1) after[i].Add(j);
+                else if (c == 1) after[j].Add(i);
+            }
+        }
+        return after;
+    }
 }
