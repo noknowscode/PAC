@@ -245,10 +245,19 @@ public sealed class SolidRenderer : IDisposable
     private IReadOnlyList<SolidPart>? _emitterParts;
     private Emitter[] _smoke = [], _plumes = [], _vents = [], _bushings = [];
 
+    // Electrical: each generator bushing pairs with a transformer bushing (west to east), joined by
+    // an overhead conductor that only the electrical view draws.
+    private (Emitter From, Emitter To)[] _conductors = [];
+    private readonly SKPath _arc = new();
+    private readonly SKPaint _wire = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.2f, StrokeCap = SKStrokeCap.Round };
+
+    /// <summary>How high a conductor arches above the straight line between its bushings, in world units.</summary>
+    private const float ConductorArch = 6;
+
     /// <summary>
     /// Contextual motion for the isolated system, drawn live over the plant (never recorded): smoke
     /// from the stacks (fuel and flue gas), vapour plumes over the fan stacks (cooling), wisps from the
-    /// drum's safety valve (steam and water) and pulse rings at the bushings (electrical). Every value
+    /// drum's safety valve (steam and water) and energy beads along overhead conductors and pulse rings at the bushings (electrical). Every value
     /// follows from the clock, so a still frame and a moving one agree.
     /// </summary>
     private void DrawMotion(SKCanvas canvas, IReadOnlyList<SolidPart> parts, OrbitProjection projection, SolidFrame frame, Func<UnitId?, float> liftOf)
@@ -293,6 +302,42 @@ public sealed class SolidRenderer : IDisposable
                 Puffs(_vents, 5, 2.2, 18, 4, 1.5f, 6, Lerp(ink, Palette.Paper, 0.2f), 0xB0);
                 break;
             case PlantSystem.Electrical:
+                // Energy along the overhead conductors: two beads per conductor make the 1.1 s trip from
+                // the generator to the transformer, fading in and out at the ends, each a blurred halo
+                // round a bright core.
+                Vec2 Along((Emitter From, Emitter To) c, float u)
+                {
+                    var (a, b) = (c.From.At, c.To.At);
+                    var lift = liftOf(c.From.Unit) * (1 - u) + liftOf(c.To.Unit) * u;
+                    var y = a.Y + (b.Y - a.Y) * u + 0.5f + ConductorArch * 4 * u * (1 - u) + lift;
+                    return projection.Project(new Vec3(a.X + (b.X - a.X) * u, y, a.Z + (b.Z - a.Z) * u));
+                }
+                for (var i = 0; i < _conductors.Length; i++)
+                {
+                    var c = _conductors[i];
+                    _arc.Rewind();
+                    var start = Along(c, 0);
+                    _arc.MoveTo(start.X, start.Y);
+                    for (var j = 1; j <= 16; j++)
+                    {
+                        var q = Along(c, j / 16f);
+                        _arc.LineTo(q.X, q.Y);
+                    }
+                    _wire.Color = ink.WithAlpha(0x99);
+                    canvas.DrawPath(_arc, _wire);
+                    for (var k = 0; k < 2; k++)
+                    {
+                        var u = (float)Frac(t / 1.1 + k / 2.0 + i * 0.15);
+                        var bead = Along(c, u);
+                        var strength = MathF.Sin(MathF.PI * u);
+                        _puff.MaskFilter = _puffBlur;
+                        _puff.Color = ink.WithAlpha((byte)(0xB0 * strength));
+                        canvas.DrawCircle(bead.X, bead.Y, 2.4f * scale, _puff);
+                        _puff.MaskFilter = null;
+                        _puff.Color = ink.WithAlpha((byte)(0xFF * strength));
+                        canvas.DrawCircle(bead.X, bead.Y, 0.7f * scale, _puff);
+                    }
+                }
                 // A ring leaves each bushing every 1.4 s and widens from 2 to 12 units as it fades.
                 foreach (var e in _bushings)
                 {
@@ -316,6 +361,9 @@ public sealed class SolidRenderer : IDisposable
         _plumes = Tops(p => p.Name == "clg.stack");
         _vents = Tops(p => p.Name == "boiler.safety");
         _bushings = Tops(p => p.Name is "gen.bushing.cap" or "xfmr.bushing.cap");
+        var from = Tops(p => p.Name == "gen.bushing.cap").OrderBy(e => e.At.X).ToArray();
+        var to = Tops(p => p.Name == "xfmr.bushing.cap").OrderBy(e => e.At.X).ToArray();
+        _conductors = [.. from.Zip(to)];
     }
 
     private static Vec3 TopCentre(Volume v)
@@ -652,6 +700,8 @@ public sealed class SolidRenderer : IDisposable
         _puff.Dispose();
         _puffBlur.Dispose();
         _ring.Dispose();
+        _arc.Dispose();
+        _wire.Dispose();
         ClearPictures();
         _alertDash.Dispose();
     }
