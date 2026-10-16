@@ -117,7 +117,7 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
                 if (Has(before, a.Key)) continue;
                 onset[a.Key] = t;
                 lastOnset[a.Key] = t;
-                if (t > start) transitions.Add(new AlarmTransition(t, a.Key, a.Unit, true, $"{Title(a.Key)}: {Format(a.Key, a.Value)} (limit {Format(a.Key, a.Limit)})"));
+                if (t > start) transitions.Add(new AlarmTransition(t, a.Key, a.Unit, true, $"{Title(a.Key)}: {Onset(a.Key, a.Value)} (limit {Format(a.Key, a.Limit)})"));
             }
             foreach (var b in before)
             {
@@ -164,6 +164,17 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
         var spec = EquipmentCatalog.Find(key)!;
         var title = spec.Alarm!.Title;
         return $"{UnitCatalog.Get(EquipmentCatalog.UnitOf(key)).Code} {char.ToLowerInvariant(title[0])}{title[1..]}";
+    }
+
+    /// <summary>
+    /// A value just past its limit, one decimal finer than the reading shows, so "4.53 mm/s (limit 4.5)"
+    /// never reads as "4.5 (limit 4.5)".
+    /// </summary>
+    public static string Onset(string key, double value)
+    {
+        var spec = EquipmentCatalog.Find(key)!;
+        var format = spec.Format.Contains('.') ? spec.Format + "0" : spec.Format + ".0";
+        return $"{value.ToString(format, CultureInfo.InvariantCulture)} {spec.Unit}".TrimEnd();
     }
 
     private static string Format(string key, double value) =>

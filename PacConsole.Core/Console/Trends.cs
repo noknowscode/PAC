@@ -108,7 +108,7 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
             {
                 var spec = EquipmentCatalog.Find(a.Key)!;
                 events.Add(new(k, times[k].ToString("HH:mm", CultureInfo.InvariantCulture),
-                    $"{AlarmBook.Title(a.Key)} ({a.Value.ToString(spec.Format, CultureInfo.InvariantCulture)} {spec.Unit})"));
+                    $"{AlarmBook.Title(a.Key)} ({AlarmBook.Onset(a.Key, a.Value)})"));
             }
             before = alarms;
         }

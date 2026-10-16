@@ -39,6 +39,7 @@ public sealed partial record ConsoleView
     public AlarmRowView? Alarm2 => At(AlarmRows, 2);
     public AlarmRowView? Alarm3 => At(AlarmRows, 3);
     public string AlarmMoreText { get; init; } = "";
+    public bool HasMoreAlarms => AlarmMoreText.Length > 0;
     public bool CanAckAll { get; init; }
 
     // Response to the selected unit's alarm
@@ -140,7 +141,7 @@ public sealed partial record ConsoleView
             ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
             : $"{r.To.ToString(format, Inv)} {unit}";
 
-        var log = ops.Log.Select(e => (e.Tick, Row: new LogRowView(e.At.ToLocalTime().ToString("HH:mm:ss", Inv), KindWord(e.Kind), Prefix(e.Unit) + e.Text, e.Kind.ToString().ToLowerInvariant())))
+        var log = ops.Log.Select(e => (e.Tick, Row: new LogRowView(e.At.ToLocalTime().ToString("HH:mm:ss", Inv), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant())))
             .Concat(book.Transitions.Select(t => (t.Tick, Row: new LogRowView(TimeOf(t.Tick), t.Raised ? "Alarm" : "Normal", t.Text, t.Raised ? "alarm" : "normal"))))
             .OrderByDescending(x => x.Tick)
             .Take(8)
@@ -173,5 +174,7 @@ public sealed partial record ConsoleView
         _ => kind.ToString(),
     };
 
-    private static string Prefix(UnitId? unit) => unit is { } u ? $"{UnitCatalog.Get(u).Code} · " : "";
+    /// <summary>Leads with the unit's code unless the text already names it ("Stop Cell 3 on CLG-05").</summary>
+    private static string WithUnit(UnitId? unit, string text) =>
+        unit is { } u && !text.Contains(UnitCatalog.Get(u).Code, StringComparison.Ordinal) ? $"{UnitCatalog.Get(u).Code} · {text}" : text;
 }

@@ -93,6 +93,7 @@
 
     <Style x:Key="AlarmRow" TargetType="Grid">
       <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Margin" Value="0,4,0,0" />
     </Style>
     <DataTemplate x:Key="AlarmRowTemplate">
       <Grid ColumnDefinitions="64,100,*,Auto,Auto,Auto,Auto" ColumnSpacing="12" AutomationProperties.Name="{Binding AutomationName}">
@@ -273,7 +274,9 @@
                  The alarm summary (ISA-18.2, reduced): priority and state in words, newest unacknowledged
                  first; four fixed rows, so a row never takes a press meant for its neighbour. -->
             <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="24,10">
-              <StackPanel Spacing="4" AutomationProperties.Name="Alarm summary">
+              <!-- No Spacing: Uno charges StackPanel spacing for collapsed children (uno-runtime-gotchas,
+                   Layout), so the hidden rows would leave a gap; each row carries its own margin. -->
+              <StackPanel AutomationProperties.Name="Alarm summary">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                   <TextBlock Text="ALARMS" Style="{StaticResource TypeCaps}" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Text="{Binding Data.AlarmSummaryText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -292,7 +295,8 @@
                 <Grid DataContext="{Binding Data.Alarm3}" Style="{StaticResource AlarmRow}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}">
                   <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AlarmRowTemplate}" HorizontalContentAlignment="Stretch" />
                 </Grid>
-                <TextBlock Text="{Binding Data.AlarmMoreText}" Style="{StaticResource TypeMicro}" />
+                <TextBlock Text="{Binding Data.AlarmMoreText}" Style="{StaticResource TypeMicro}" Margin="0,4,0,0"
+                           Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}}" />
               </StackPanel>
             </Border>
 
