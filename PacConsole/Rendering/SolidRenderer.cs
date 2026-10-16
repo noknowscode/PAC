@@ -29,6 +29,9 @@ public sealed record SolidPalette(
     /// <summary>Base and deep tone per pipe circuit (steam, water, cooling, fuel).</summary>
     public IReadOnlyDictionary<Circuit, (SKColor Base, SKColor Deep)> Circuits { get; init; } = new Dictionary<Circuit, (SKColor, SKColor)>();
 
+    /// <summary>Each process system's ink: its outline, glow and motion when the plant view isolates it.</summary>
+    public IReadOnlyDictionary<PlantSystem, SKColor> Systems { get; init; } = new Dictionary<PlantSystem, SKColor>();
+
     /// <summary>The console palette from <c>Styles/Tokens.xaml</c> (the Solid* colours), so every plant drawing matches its card.</summary>
     public static SolidPalette FromResources(ResourceDictionary r)
     {
@@ -66,6 +69,13 @@ public sealed record SolidPalette(
                 [Circuit.Cooling] = (C("SolidCoolingColor"), C("CircuitCoolingBrush")),
                 [Circuit.Fuel] = (C("SolidFuelColor"), C("CircuitFuelBrush")),
             },
+            Systems = new Dictionary<PlantSystem, SKColor>
+            {
+                [PlantSystem.SteamWater] = C("SystemSteamWaterBrush"),
+                [PlantSystem.Cooling] = C("SystemCoolingBrush"),
+                [PlantSystem.FuelFlue] = C("SystemFuelFlueBrush"),
+                [PlantSystem.Electrical] = C("SystemElectricalBrush"),
+            },
         };
     }
 }
@@ -78,7 +88,8 @@ public readonly record struct SolidFrame(
     double Seconds = 0,
     bool Details = true,
     UnitId? Hovered = null,
-    PlantSystem System = PlantSystem.All);
+    PlantSystem System = PlantSystem.All,
+    bool Motion = true);
 
 /// <summary>
 /// Paints solids back to front, the way a technical isometric is inked: the stand first, then one
@@ -97,6 +108,17 @@ public sealed class SolidRenderer : IDisposable
     private readonly SKPaint _line = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
     private readonly SKPath _shadow = new() { FillType = SKPathFillType.Winding };
     private readonly SKPathEffect _alertDash = SKPathEffect.CreateDash([4, 3], 0);
+
+    // System highlight: a soft halo behind each part of the isolated system, then its outline in the
+    // system's ink. The blur is one cached mask filter; nothing here is built per frame.
+    private readonly SKMaskFilter _glowBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 3);
+    private readonly SKPaint _glow = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 3, StrokeJoin = SKStrokeJoin.Round };
+    private readonly SKMaskFilter _puffBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 2.5f);
+    private readonly SKPaint _puff = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
+    private readonly SKPaint _ring = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.6f };
+
+    /// <summary>The isolated system's ink for the part being drawn, or null when it is not highlighted.</summary>
+    private SKColor? _systemInk;
 
     public required SolidPalette Palette { get; init; }
 
@@ -174,6 +196,7 @@ public sealed class SolidRenderer : IDisposable
         {
             ClearPictures();
             foreach (var index in sequence) Op(canvas, index);
+            DrawMotion(canvas, parts, projection, frame, LiftOf);
             return;
         }
         if (_segments.Count == 0 || key != _stillKey)
@@ -213,6 +236,93 @@ public sealed class SolidRenderer : IDisposable
             if (picture is not null) canvas.DrawPicture(picture);
             else Op(canvas, index);
         }
+        DrawMotion(canvas, parts, projection, frame, LiftOf);
+    }
+
+    /// <summary>Where a system's motion starts: a point on a part, and the unit it lifts with.</summary>
+    private readonly record struct Emitter(Vec3 At, UnitId? Unit, int Index);
+
+    private IReadOnlyList<SolidPart>? _emitterParts;
+    private Emitter[] _smoke = [], _plumes = [], _vents = [], _bushings = [];
+
+    /// <summary>
+    /// Contextual motion for the isolated system, drawn live over the plant (never recorded): smoke
+    /// from the stacks (fuel and flue gas), vapour plumes over the fan stacks (cooling), wisps from the
+    /// drum's safety valve (steam and water) and pulse rings at the bushings (electrical). Every value
+    /// follows from the clock, so a still frame and a moving one agree.
+    /// </summary>
+    private void DrawMotion(SKCanvas canvas, IReadOnlyList<SolidPart> parts, OrbitProjection projection, SolidFrame frame, Func<UnitId?, float> liftOf)
+    {
+        if (!frame.Motion || !frame.Details || frame.System == PlantSystem.All) return;
+        if (!Palette.Systems.TryGetValue(frame.System, out var ink)) return;
+        if (!SameParts(parts, _emitterParts)) FindEmitters(parts);
+        var t = frame.Seconds;
+        var scale = projection.Scale;
+
+        Vec2 At(Emitter e, float dx, float dy) =>
+            projection.Project(new Vec3(e.At.X + dx, e.At.Y + dy + liftOf(e.Unit), e.At.Z));
+
+        // A soft puff rises dy world units over its life while it widens and fades; puffs are staggered.
+        void Puffs(Emitter[] emitters, int count, double life, float rise, float drift, float r0, float r1, SKColor color, byte alpha)
+        {
+            _puff.MaskFilter = _puffBlur;
+            foreach (var e in emitters)
+            {
+                for (var k = 0; k < count; k++)
+                {
+                    var phase = (float)Frac(t / life + (double)k / count + e.Index * 0.37);
+                    var rising = 1 - (1 - phase) * (1 - phase); // ease-out: fast off the lip, slowing as it cools
+                    var p = At(e, drift * phase, rise * rising);
+                    var fade = (1 - phase) * Math.Min(1, phase * 6); // in over the first sixth, then out
+                    _puff.Color = color.WithAlpha((byte)(alpha * fade));
+                    canvas.DrawCircle(p.X, p.Y, (r0 + (r1 - r0) * phase) * scale, _puff);
+                }
+            }
+            _puff.MaskFilter = null;
+        }
+
+        switch (frame.System)
+        {
+            case PlantSystem.FuelFlue:
+                Puffs(_smoke, 6, 3.2, 30, 6, 3, 9, Lerp(ink, Palette.Lo, 0.4f), 0x90);
+                break;
+            case PlantSystem.Cooling:
+                Puffs(_plumes, 4, 2.6, 24, 3, 3.5f, 10, Lerp(ink, Palette.Paper, 0.3f), 0x58);
+                break;
+            case PlantSystem.SteamWater:
+                Puffs(_vents, 5, 2.2, 18, 4, 1.5f, 6, Lerp(ink, Palette.Paper, 0.2f), 0xB0);
+                break;
+            case PlantSystem.Electrical:
+                // A ring leaves each bushing every 1.4 s and widens from 2 to 12 units as it fades.
+                foreach (var e in _bushings)
+                {
+                    var phase = (float)Frac(t / 1.4 + e.Index * 0.5);
+                    var p = At(e, 0, 0.5f);
+                    _ring.Color = ink.WithAlpha((byte)(0xFF * (1 - phase)));
+                    canvas.DrawCircle(p.X, p.Y, (2 + 10 * phase) * scale, _ring);
+                }
+                break;
+        }
+    }
+
+    private static double Frac(double x) => x - Math.Floor(x);
+
+    private void FindEmitters(IReadOnlyList<SolidPart> parts)
+    {
+        _emitterParts = parts;
+        Emitter[] Tops(Func<SolidPart, bool> match) =>
+            [.. parts.Where(match).Select((p, i) => new Emitter(TopCentre(p.Volume), p.Unit, i))];
+        _smoke = Tops(p => p.Name == "stk.lip");
+        _plumes = Tops(p => p.Name == "clg.stack");
+        _vents = Tops(p => p.Name == "boiler.safety");
+        _bushings = Tops(p => p.Name is "gen.bushing.cap" or "xfmr.bushing.cap");
+    }
+
+    private static Vec3 TopCentre(Volume v)
+    {
+        float x = 0, z = 0;
+        foreach (var q in v.Top) { x += q.X; z += q.Z; }
+        return new Vec3(x / v.Top.Length, v.Y1, z / v.Top.Length);
     }
 
     private bool[] _live = [];
@@ -320,6 +430,11 @@ public sealed class SolidRenderer : IDisposable
         var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
         // Outside the chosen system a part fades toward the paper; the selected unit always stays inked.
         _fade = part.Unit is { } s && s == frame.Selected || PlantSolids.InSystem(part, frame.System) ? 0 : SystemFade;
+        // Inside an isolated system (not the ground, the selection or an alert), a part takes the system's ink.
+        _systemInk = frame.System != PlantSystem.All && _fade == 0 && !lit && !alert
+            && !part.Name.StartsWith("stand.", StringComparison.Ordinal)
+            && PlantSolids.InSystem(part, frame.System)
+            && Palette.Systems.TryGetValue(frame.System, out var ink) ? ink : null;
 
         if (lift > 0)
         {
@@ -333,6 +448,7 @@ public sealed class SolidRenderer : IDisposable
         }
         if (lift > 0) canvas.Restore();
         _fade = 0;
+        _systemInk = null;
     }
 
     /// <summary>How far a part outside the chosen system fades toward the paper (0 = none, 1 = gone).</summary>
@@ -355,8 +471,10 @@ public sealed class SolidRenderer : IDisposable
                     break;
                 case DetailKind.Flow:
                     // Dashes move along the line at 12 px/s, so the direction of flow reads at a glance.
-                    _line.PathEffect = FlowDash(seconds);
-                    StrokeLine(canvas, d.Points, Palette.Leader, 1);
+                    // Isolated, a circuit's flow runs in the system's ink at 24 px/s.
+                    var fast = _systemInk is not null;
+                    _line.PathEffect = fast ? FastFlowDash(seconds) : FlowDash(seconds);
+                    StrokeLine(canvas, d.Points, _systemInk ?? Palette.Leader, fast ? 1.4f : 1);
                     _line.PathEffect = null;
                     break;
                 default:
@@ -381,6 +499,18 @@ public sealed class SolidRenderer : IDisposable
         return _flowDash = SKPathEffect.CreateDash([3, 5], (float)(-(seconds * 12) % 8));
     }
 
+    private SKPathEffect? _fastFlowDash;
+    private double _fastFlowDashSeconds = double.NaN;
+
+    /// <summary>The isolated circuit's dashes at 24 px/s: a second cached effect, so the two speeds in one frame never re-create each other.</summary>
+    private SKPathEffect FastFlowDash(double seconds)
+    {
+        if (_fastFlowDash is not null && seconds == _fastFlowDashSeconds) return _fastFlowDash;
+        _fastFlowDash?.Dispose();
+        _fastFlowDashSeconds = seconds;
+        return _fastFlowDash = SKPathEffect.CreateDash([3, 5], (float)(-(seconds * 24) % 8));
+    }
+
     private SKColor ToneColor(EdgeTone tone) => tone switch
     {
         EdgeTone.Hi => Palette.Hi,
@@ -403,6 +533,14 @@ public sealed class SolidRenderer : IDisposable
     private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert, bool hovered = false, Circuit circuit = Circuit.None)
     {
         var pal = Palette;
+        if (_systemInk is { } halo)
+        {
+            _glow.Color = halo.WithAlpha(0x73);
+            _glow.MaskFilter = _glowBlur;
+            AddOutline(shape.Outline);
+            canvas.DrawPath(_path, _glow);
+            _glow.MaskFilter = null;
+        }
         if (circuit != Circuit.None && pal.Circuits.TryGetValue(circuit, out var tint))
         {
             // A circuit's pipe: shades run from its deep tone to its base, the top a step lighter than
@@ -410,7 +548,7 @@ public sealed class SolidRenderer : IDisposable
             Fill(canvas, shape.Fill, tint.Base);
             for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.ShadeFaces[s], Lerp(tint.Deep, tint.Base, s / 3f));
             Fill(canvas, shape.Top, Lerp(tint.Base, tint.Deep, -0.35f));
-            Stroke(canvas, shape.Outline, Lerp(tint.Deep, pal.Silhouette, 0.5f), pal.SilhouetteStroke);
+            Stroke(canvas, shape.Outline, _systemInk ?? Lerp(tint.Deep, pal.Silhouette, 0.5f), _systemInk is null ? pal.SilhouetteStroke : pal.LitStroke);
             return;
         }
         Fill(canvas, shape.Fill, lit ? pal.LitFace : pal.Paper);
@@ -435,6 +573,11 @@ public sealed class SolidRenderer : IDisposable
         var (ink, width) = edge is EdgeTone.Hi or EdgeTone.Mid
             ? (pal.Silhouette, pal.SilhouetteStroke)
             : (edge == EdgeTone.Lo ? pal.Mid : pal.Lo, pal.Hairline);
+        if (_systemInk is { } sys && !hovered)
+        {
+            Stroke(canvas, shape.Outline, sys, pal.LitStroke);
+            return;
+        }
         Stroke(canvas, shape.Outline, lit ? pal.Lit : hovered ? pal.Hi : ink, lit || hovered ? pal.LitStroke : width);
     }
 
@@ -478,6 +621,17 @@ public sealed class SolidRenderer : IDisposable
         canvas.DrawPath(_path, _line);
     }
 
+    private void AddOutline(List<Vec2[]> lines)
+    {
+        _path.Rewind();
+        foreach (var line in lines)
+        {
+            if (line.Length < 2) continue;
+            _path.MoveTo(line[0].X, line[0].Y);
+            for (var i = 1; i < line.Length; i++) _path.LineTo(line[i].X, line[i].Y);
+        }
+    }
+
     private void AddPolygon(Vec2[] polygon)
     {
         _path.MoveTo(polygon[0].X, polygon[0].Y);
@@ -492,6 +646,12 @@ public sealed class SolidRenderer : IDisposable
         _line.Dispose();
         _shadow.Dispose();
         _flowDash?.Dispose();
+        _fastFlowDash?.Dispose();
+        _glow.Dispose();
+        _glowBlur.Dispose();
+        _puff.Dispose();
+        _puffBlur.Dispose();
+        _ring.Dispose();
         ClearPictures();
         _alertDash.Dispose();
     }

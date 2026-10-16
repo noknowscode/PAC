@@ -50,6 +50,10 @@
   <Color x:Key="CircuitCoolingBrush">#3A6662</Color>
   <Color x:Key="CircuitFuelBrush">#5C4E70</Color>
   <Color x:Key="CircuitElectricalBrush">#6E6040</Color>
+  <Color x:Key="SystemSteamWaterBrush">#E8899C</Color>
+  <Color x:Key="SystemCoolingBrush">#56C4B6</Color>
+  <Color x:Key="SystemFuelFlueBrush">#AD90DB</Color>
+  <Color x:Key="SystemElectricalBrush">#E2B652</Color>
   <Color x:Key="SolidSteamColor">#4A3037</Color>
   <Color x:Key="SolidWaterColor">#283B4B</Color>
   <Color x:Key="SolidCoolingColor">#243F3D</Color>

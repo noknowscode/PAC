@@ -193,28 +193,28 @@
                 <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Steam and water"
                              IsChecked="{Binding Data.IsSteamWater, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="SteamWater">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemSteamWaterBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="Steam &amp; water" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Cooling"
                              IsChecked="{Binding Data.IsCooling, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Cooling">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemCoolingBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="Cooling" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Fuel and flue gas"
                              IsChecked="{Binding Data.IsFuelFlue, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="FuelFlue">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemFuelFlueBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="Fuel &amp; flue gas" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Electrical"
                              IsChecked="{Binding Data.IsElectrical, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Electrical">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitElectricalBrush}" VerticalAlignment="Center" />
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource SystemElectricalBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="Electrical" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>

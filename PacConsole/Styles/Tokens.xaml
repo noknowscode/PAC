@@ -128,6 +128,13 @@
   <SolidColorBrush x:Key="CircuitFuelBrush" Color="#B9A8D0" />
   <!-- Electrical has no pipe; its swatch marks the system in the systems bar. -->
   <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#C9B27A" />
+  <!-- System inks: a system's dot in the systems bar, and its outline, glow and motion when the plant
+       view isolates it. Stronger than the pipe tints, distinct from the slate-teal selection and the
+       burnt-orange alert. -->
+  <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="#B84D66" />
+  <SolidColorBrush x:Key="SystemCoolingBrush" Color="#1F8A7E" />
+  <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="#7457A8" />
+  <SolidColorBrush x:Key="SystemElectricalBrush" Color="#A87B12" />
   <Color x:Key="SolidSteamColor">#F2D9DF</Color>
   <Color x:Key="SolidWaterColor">#D6E7F2</Color>
   <Color x:Key="SolidCoolingColor">#D3ECE9</Color>

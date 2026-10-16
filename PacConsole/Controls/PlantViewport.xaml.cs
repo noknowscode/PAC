@@ -348,7 +348,7 @@ public sealed partial class PlantViewport : UserControl
             if (tag.Opacity != opacity) tag.Opacity = opacity;
         }
 
-        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered, system);
+        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered, system, _animationsEnabled);
         Pose = _pose;
 
         // The view switcher shows the standard view the camera rests in, if any.
