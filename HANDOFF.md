@@ -1,7 +1,30 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-15 18:15
+Updated: 2026-10-15 21:05
 
-## Where we are
+## Console page v3 (SPEC-CONSOLE.md), built this session
+The page now follows the user's mock: header with the alert pill, status strip, systems bar, the plant panel beside the equipment inspector (Overview / Condition / Control), synchronized trends, and the footer. Selection is slate-teal and alerts are burnt orange.
+- **Commits:** `d9dcd43` (core + CND-07 condenser + system dimming), `854a99b` (page, TrendChart, tokens).
+- **Verified via the App MCP** (shots in `docs/spike/v3-*.png`, untracked):
+  - wide 1424 light and graphite
+  - 1100 (side by side) and 900 (inspector stacked)
+  - Electrical isolation dims parts and tags
+  - callout and picker selection
+  - compare toggles add trend rows
+  - the shared cursor moves every row
+  - 15 min / 1 h / 8 h
+  - the Control tab shows only that unit's valves
+- **Tests:** 178/178. **Build:** 0 warnings (Debug).
+- **Behaviour changes to know:**
+  - CLG-05 now drifts in and out of alarm, so the trends have events. The opening selection is pinned to CLG-05.
+  - Trend samples are bucket means plus a 1-2-3-2-1 smoothing.
+  - `ReadingContext.Around` is now mostly a ~50 min wave.
+- **Open:**
+  - Not yet run: the impeccable/lint pass and a perf re-measure. The page dropped the 4 SolidThumb canvases and 2 LiveCharts charts, the largest measured costs.
+  - `OutputChart`, `MetricChart`, `SolidThumb` and the v2 `ConsoleView` fields are now unused. Deleting them needs the user's OK.
+  - The MenuFlyout uses the stock Simple type size.
+  - Auto orbit was kept as a footer toggle; the mock has none.
+
+## Where we are (before v3)
 The console is a quiet instrument (light base, graphite dark, IBM Plex Sans). The plant illustration now follows the user's reference (Andrew Kras, Isometric Swimming Pool):
 - inked silhouettes and flat ground shadows
 - a closed thermal cycle: boiler bay, fuel, steam, feedwater and ash runs with fittings and valves, a transformer yard and cabinets
@@ -13,7 +36,7 @@ The plant opens still. The readings are interactive: picking one plots it in the
 - Build: pass, `net10.0-desktop`, 0 warnings (Debug and Release).
 - Tests: 161/161 (`dotnet test PacConsole.Tests`). Explicit timing tests: `FrameCostTests` (Core work 1.78 ms/frame in Release).
 - Runtime (App MCP + direct Release runs): click-to-select, the light/dark round trip including charts, the 1100 × 720 stacked layout and the 1424 × 861 wide layout. Frame timing (Release, orbiting): render p50 2.3 ms; frame interval p50 8 ms, **p90 45 ms**.
-- Git: `main` at `ac8e03f`. Lint: CARD 0, ICON 0, HEX 18 (Simple role overrides in App.xaml), TOKENTHEME 35 (allowed, in-place repaint), CODEBEHIND 7 (allowed glue).
+- Git (before v3): `main` at `ac8e03f`. Lint: CARD 0, ICON 0, HEX 18 (Simple role overrides in App.xaml), TOKENTHEME 35 (allowed, in-place repaint), CODEBEHIND 7 (allowed glue).
 - Redesign verified via App MCP: wide 1424 x 861 light and graphite, the round trip, and the 1100 x 720 stack (tree bounds). Shots: docs/shots-fukasawa-light.png, docs/shots-fukasawa-graphite.png, docs/shots-before-fukasawa.png.
 
 ## Next actions (in order)
