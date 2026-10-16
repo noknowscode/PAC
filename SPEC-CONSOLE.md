@@ -60,7 +60,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
   - Status is always paired with words ("Alert", "1 active alert").
 - **Tokens:** existing ramp (12/13/16/22/56; the inspector title is 28 SemiBold, the only new size), radii 4/8/12, spacing 4/8/12/16/24/32.
 - **Layout:**
-  - Container max width 1180, centred.
+  - The page fills the window edge to edge (the user, 2026-10-15); the plant panel takes the width beside the 340 inspector.
   - Main row: plant panel `*` and inspector 340.
   - Below 960 px (`{utu:Responsive}`), the inspector stacks under the plant.
   - The page scrolls vertically; the trends sit below the fold, as in the mock.

@@ -8,7 +8,8 @@ namespace PacConsole.Controls.Charts;
 
 /// <summary>
 /// One row of the synchronized trends: a reading's line over the range, three value labels on the
-/// left, start / middle / end times below, its target or limit as a dashed line, the latest alert
+/// left, start / middle / end times below, a fill under the line that fades from 24% accent at the
+/// top of the plot to nothing at the baseline, its target or limit as a dashed line, the latest alert
 /// onset as a dashed mark and the shared cursor as a dotted hairline with a dot on the line.
 /// The labels are XAML text (the type ramp and theme carry them); the marks are drawn on a small
 /// Skia canvas. Every row gets the same label column width, so the plots share their edges.
@@ -152,6 +153,16 @@ public sealed partial class TrendChart : UserControl
         private readonly SKPaint _line = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.6f, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round };
         private readonly SKPaint _hair = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
         private readonly SKPaint _dot = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
+        private readonly SKPaint _area = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
+        private readonly SKPath _fill = new();
+
+        // The fill's gradient depends only on the plot height and the accent, so it is rebuilt only
+        // when one of those changes (a resize or a theme switch), never per frame.
+        private SKShader? _gradient;
+        private (float, SKColor) _gradientKey;
+
+        /// <summary>Alpha of the fill at the top of the plot: 0x3D is 24%.</summary>
+        private const byte FillTopAlpha = 0x3D;
         private readonly SKPathEffect _dashed = SKPathEffect.CreateDash([4, 3], 0);
         private readonly SKPathEffect _dotted = SKPathEffect.CreateDash([1.5f, 2.5f], 0);
         private readonly SKPath _path = new();
@@ -226,6 +237,25 @@ public sealed partial class TrendChart : UserControl
             _path.Rewind();
             _path.MoveTo(X(0), Y(_values[0]));
             for (var i = 1; i < _values.Length; i++) _path.LineTo(X(i), Y(_values[i]));
+
+            // The area under the line, closed along the baseline, under a vertical fade.
+            if (_gradient is null || _gradientKey != (h, _accent))
+            {
+                _gradient?.Dispose();
+                _gradient = SKShader.CreateLinearGradient(
+                    new SKPoint(0, top), new SKPoint(0, bottom),
+                    [_accent.WithAlpha(FillTopAlpha), _accent.WithAlpha(0)],
+                    SKShaderTileMode.Clamp);
+                _gradientKey = (h, _accent);
+                _area.Shader = _gradient;
+            }
+            _fill.Rewind();
+            _fill.AddPath(_path);
+            _fill.LineTo(X(_values.Length - 1), bottom);
+            _fill.LineTo(X(0), bottom);
+            _fill.Close();
+            canvas.DrawPath(_fill, _area);
+
             _line.Color = _accent;
             canvas.DrawPath(_path, _line);
 
