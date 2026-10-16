@@ -47,4 +47,3 @@ public sealed record Valve(int Id, bool Open)
         [.. new[] { true, true, false, true, true, true, false, true, true }.Select((open, i) => new Valve(101 + i, open))];
 }
 
-public sealed record Alert(UnitId Unit, Metric Metric, double Value, double Limit);

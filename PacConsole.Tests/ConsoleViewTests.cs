@@ -1,4 +1,5 @@
 using PacConsole.Core.Console;
+using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 
@@ -16,7 +17,7 @@ public class ConsoleViewTests
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
             setpoints ?? Setpoints.Default,
-            Valve.Defaults,
+            PlantOps.Initial,
             mode,
             selected,
             T0 + (age ?? TimeSpan.Zero));
@@ -27,7 +28,7 @@ public class ConsoleViewTests
         var view = Compose();
         view.Selected.Should().Be(UnitId.Clg);
         view.SelectedIsAlert.Should().BeTrue();
-        view.ActiveAlertText.Should().Be("1 active alert");
+        view.ActiveAlertText.Should().Be("1 active alarm");
     }
 
     [Test]
@@ -53,7 +54,7 @@ public class ConsoleViewTests
     {
         var view = Compose(setpoints: Setpoints.Default with { TurbineLimitBar = 150 }, selected: UnitId.Trb);
         view.AlertingUnits.Should().BeEquivalentTo([UnitId.Trb, UnitId.Clg]);
-        view.ActiveAlertText.Should().Be("2 active alerts");
+        view.ActiveAlertText.Should().Be("2 active alarms");
         view.OverviewTiles.Single(t => t.Key == "trb.press").IsHigh.Should().BeTrue();
     }
 }

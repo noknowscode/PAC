@@ -1,4 +1,5 @@
 using System.Globalization;
+using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 
@@ -55,12 +56,13 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
     /// Samples the net output and each compared reading over the range (bucket means), ending at
     /// <paramref name="tick"/>; finds alert onsets; places the cursor (-1 = newest).
     /// </summary>
-    public static TrendSet Compose(long tick, DateTimeOffset now, Setpoints setpoints, int openValves, TrendRange range, IEnumerable<string> compared, int cursor)
+    public static TrendSet Compose(long tick, DateTimeOffset now, Setpoints setpoints, PlantOps ops, TrendRange range, IEnumerable<string> compared, int cursor)
     {
         var step = TicksIn(range) / (double)(Samples - 1);
         var ticks = Enumerable.Range(0, Samples).Select(k => tick - (long)Math.Round((Samples - 1 - k) * step)).ToArray();
         var times = ticks.Select(t => now - TimeSpan.FromSeconds((tick - t) * 2)).ToImmutableArray();
-        var readings = ticks.Select(t => Simulation.Readings(t, setpoints.DamperPct)).ToArray();
+        var samples = ticks.Select(t => SampleMemo.At(t, setpoints, ops)).ToArray();
+        var readings = samples.Select(s => s.Readings).ToArray();
 
         // Each sample is the mean over its time bucket, as a historian reports it: point samples of a
         // fast-moving signal alias into a zigzag. Up to 12 evenly spaced ticks per bucket.
@@ -74,14 +76,15 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
             for (var j = 0; j < sub; j++)
             {
                 var t = ticks[k] - (long)Math.Round(j * step / sub);
-                var mw = Simulation.OutputMw(t, openValves);
+                var point = SampleMemo.At(t, setpoints, ops);
+                var mw = point.NetMw;
                 net[k] += mw / sub;
                 if (specs.Count == 0) continue;
-                var sample = Simulation.Readings(t, setpoints.DamperPct);
+                var sample = point.Readings;
                 for (var i = 0; i < specs.Count; i++)
                 {
                     var unit = units[i];
-                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, setpoints)) / sub;
+                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, setpoints, ops)) / sub;
                 }
             }
         }
@@ -95,19 +98,19 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
             rows.Add(Row(spec.Key, spec.Label, UnitCatalog.Get(unit).Code, spec.Unit, spec.Format, series[i], spec.Target?.Invoke(setpoints), spec.Limit?.Invoke(setpoints)));
         }
 
-        // An event is an alert that starts inside the range (absent at the previous sample).
+        // An event is an alarm that comes in inside the range (absent at the previous sample).
         var events = ImmutableArray.CreateBuilder<TrendEvent>();
-        var before = AlertRules.Evaluate(readings[0], setpoints).Select(a => (a.Unit, a.Metric)).ToHashSet();
+        var before = AlarmRules.At(ticks[0], setpoints, ops).Where(a => a.Raised).ToImmutableArray();
         for (var k = 1; k < Samples; k++)
         {
-            var alerts = AlertRules.Evaluate(readings[k], setpoints);
-            foreach (var a in alerts.Where(a => !before.Contains((a.Unit, a.Metric))))
+            var alarms = AlarmRules.Standing(before, AlarmRules.At(ticks[k], setpoints, ops));
+            foreach (var a in alarms.Where(a => !AlarmRules.Contains(before, a.Key)))
             {
-                var spec = EquipmentCatalog.Find(EquipmentCatalog.KeyFor(a))!;
+                var spec = EquipmentCatalog.Find(a.Key)!;
                 events.Add(new(k, times[k].ToString("HH:mm", CultureInfo.InvariantCulture),
-                    $"{UnitCatalog.Get(a.Unit).Code} {spec.Label.ToLowerInvariant()} above {a.Limit.ToString(spec.Format, CultureInfo.InvariantCulture)} {spec.Unit}"));
+                    $"{AlarmBook.Title(a.Key)} ({a.Value.ToString(spec.Format, CultureInfo.InvariantCulture)} {spec.Unit})"));
             }
-            before = alerts.Select(a => (a.Unit, a.Metric)).ToHashSet();
+            before = alarms;
         }
 
         var at = cursor < 0 || cursor >= Samples ? Samples - 1 : cursor;

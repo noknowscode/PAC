@@ -1,4 +1,5 @@
 using PacConsole.Core.Console;
+using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 
@@ -13,11 +14,16 @@ public class ConsoleV3Tests
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
             Setpoints.Default,
-            Valve.Defaults,
+            PlantOps.Initial,
             ControlMode.Auto,
             selected,
             T0,
             inputs: inputs);
+
+    private static ConsoleView ComposeWith(PlantOps ops, UnitId selected) =>
+        ConsoleView.Compose(
+            new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
+            Setpoints.Default, ops, ControlMode.Auto, selected, T0);
 
     [Test]
     public void Every_unit_has_equipment_with_unique_reading_keys()
@@ -44,11 +50,56 @@ public class ConsoleV3Tests
     }
 
     [Test]
-    public void Alerts_map_to_the_reading_that_shows_them()
+    public void Alarms_live_on_the_readings_that_show_them()
     {
-        EquipmentCatalog.KeyFor(new Alert(UnitId.Clg, Metric.Vib, 5.1, 4.5)).Should().Be("clg.vib");
-        EquipmentCatalog.KeyFor(new Alert(UnitId.Trb, Metric.Press, 170, 165)).Should().Be("trb.press");
+        EquipmentCatalog.Find("clg.vib")!.Alarm!.Priority.Should().Be(AlarmPriority.Medium);
+        EquipmentCatalog.Find("trb.press")!.Alarm!.Priority.Should().Be(AlarmPriority.High);
         EquipmentCatalog.UnitOf("cnd.ttd").Should().Be(UnitId.Cnd);
+    }
+
+    [Test]
+    public void The_alarm_band_lists_the_cooling_bank_unacknowledged_with_its_response()
+    {
+        var view = Compose(UnitId.Clg);
+        view.AlarmSummaryText.Should().Be("1 active · 1 unacknowledged");
+        view.Alarm0!.Should().Match<AlarmRowView>(r => r.Key == "clg.vib" && r.Priority == "Medium" && r.State == "Unacknowledged" && r.CanAck);
+        view.Alarm0.Title.Should().Be("CLG-05 cooling fan vibration high");
+        view.Response!.Steps.Should().StartWith("1. Start the standby cell 6.").And.Contain("75 %");
+        view.CanAckAll.Should().BeTrue();
+    }
+
+    [Test]
+    public void The_faceplate_lists_the_selected_units_devices_and_setpoints()
+    {
+        var clg = Compose(UnitId.Clg);
+        clg.Devices.Select(d => d.Name).Should().Equal("Cell 1", "Cell 2", "Cell 3", "Cell 4", "Cell 5", "Cell 6 (standby)");
+        clg.Device5!.Should().Match<DeviceView>(d => d.State == "Stopped" && d.Action == "Start");
+        clg.ShowFanSpeed.Should().BeTrue();
+        clg.FanSpeedText.Should().Be("100 %");
+        var trb = Compose(UnitId.Trb);
+        trb.Devices.Should().BeEmpty();
+        trb.LoadText.Should().Be("620 MW");
+        trb.LimitText.Should().Be("170 bar");
+    }
+
+    [Test]
+    public void A_pending_command_reads_as_a_question_and_a_refusal_as_a_reason()
+    {
+        var pending = ComposeWith(PlantOps.Initial.Select(new StartDevice(UnitId.Clg, "clg.cell6", "Cell 6 (standby)"), Simulation.StartTick), UnitId.Clg);
+        pending.Pending!.Should().Match<PendingView>(p => !p.IsRefused && p.Text == "Confirm: start Cell 6 (standby) on CLG-05?");
+        var refused = ComposeWith(PlantOps.Initial.Select(new StopDevice(UnitId.Cnd, "cnd.cwA", "CW pump A"), Simulation.StartTick), UnitId.Cnd);
+        refused.Pending!.IsRefused.Should().BeTrue();
+        refused.Pending.Reason.Should().Contain("condenser vacuum");
+    }
+
+    [Test]
+    public void Reading_tiles_carry_their_range_bar()
+    {
+        var tile = Compose(UnitId.Clg).Condition1!;
+        tile.Key.Should().Be("clg.vib");
+        tile.LimitAt.Should().BeApproximately(4.5 / 7.1, 1e-9);
+        tile.BandStart.Should().Be(0);
+        tile.OutOfBand.Should().BeTrue("5 mm/s is above the 2.8 mm/s normal band");
     }
 
     [TestCase(PlantSystem.Cooling, new[] { UnitId.Clg, UnitId.Cnd })]
@@ -119,7 +170,7 @@ public class ConsoleV3Tests
     public void Status_strip_reads_like_the_mock()
     {
         var view = Compose();
-        view.ActiveAlertText.Should().Be("1 active alert");
+        view.ActiveAlertText.Should().Be("1 active alarm");
         view.TargetText.Should().Be("Target 620 MW");
         view.TargetGapText.Should().MatchRegex(@"^(On target|\d+ MW (below|above) target)$");
         view.ModeLine.Should().Be("Generating · Automatic");

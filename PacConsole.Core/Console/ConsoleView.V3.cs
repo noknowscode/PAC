@@ -1,4 +1,5 @@
 using System.Globalization;
+using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 
@@ -13,6 +14,15 @@ public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableA
 /// <summary>One reading in the inspector: a button that adds it to, or removes it from, the trends.</summary>
 public sealed record ReadingTileView(string Key, string Label, string Value, string Unit, bool IsHigh, bool IsCompared)
 {
+    // The range bar, as fractions of its span: the normal band, the alarm limit (or -1) and the value.
+    public double BandStart { get; init; }
+    public double BandEnd { get; init; }
+    public double LimitAt { get; init; } = -1;
+    public double ValueAt { get; init; }
+
+    /// <summary>True when the value is outside its normal band.</summary>
+    public bool OutOfBand { get; init; }
+
     /// <summary>"high" or "normal": the value's ink.</summary>
     public string Tone => IsHigh ? "high" : "normal";
 
@@ -23,7 +33,7 @@ public sealed record ReadingTileView(string Key, string Label, string Value, str
     public string StatusText => IsHigh ? "Above limit" : "";
 
     public string AutomationName =>
-        $"{Label} {Value} {Unit}{(IsHigh ? ", alert" : "")}. {(IsCompared ? "In the trends; select to remove" : "Select to compare in the trends")}";
+        $"{Label} {Value} {Unit}{(IsHigh ? ", in alarm" : OutOfBand ? ", outside its normal band" : "")}. {(IsCompared ? "In the trends; select to remove" : "Select to compare in the trends")}";
 }
 
 /// <summary>A connected item of equipment, as a chip that selects it.</summary>
@@ -33,7 +43,11 @@ public sealed record ConnectionView(UnitId Id, string Title)
 }
 
 /// <summary>A valve slot in the Control tab: shown only on the equipment it belongs to.</summary>
-public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere, string AutomationName);
+public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere, string AutomationName)
+{
+    /// <summary>"Open", "Shut", "Opening…" or "Closing…": the actual position, which lags the command while the valve travels.</summary>
+    public string State { get; init; } = "";
+}
 
 /// <summary>The console page v3 (SPEC-CONSOLE.md): status strip, systems, inspector, synchronized trends.</summary>
 public sealed partial record ConsoleView
@@ -140,36 +154,50 @@ public sealed partial record ConsoleView
     };
 
     /// <summary>Adds the v3 page's fields to a composed view.</summary>
-    private static ConsoleView WithV3(ConsoleView view, PlantSnapshot snapshot, Setpoints setpoints, ImmutableArray<Valve> valves,
-        ControlMode mode, ImmutableArray<UnitReading> readings, ImmutableArray<Alert> alerts, double netMw, DateTimeOffset now, int age, ViewInputs inputs)
+    private static ConsoleView WithV3(ConsoleView view, PlantSnapshot snapshot, Setpoints setpoints, PlantOps ops,
+        ControlMode mode, ImmutableArray<UnitReading> readings, AlarmBook book, double netMw, DateTimeOffset now, int age, ViewInputs inputs)
     {
         var selected = view.Selected;
         var equipment = EquipmentCatalog.Get(selected);
         var info = equipment.Info;
         var reading = readings.First(r => r.Id == selected);
-        var context = new ReadingContext(reading, snapshot.Tick, netMw, setpoints);
-        var highKeys = alerts.Where(a => a.Unit == selected).Select(EquipmentCatalog.KeyFor).ToHashSet();
+        var tick = snapshot.Tick;
+        var context = new ReadingContext(reading, tick, netMw, setpoints, ops);
+        var highKeys = book.Entries.Where(e => e.Unit == selected && e.IsActive).Select(e => e.Key).ToHashSet();
 
         // Compared readings of the selected equipment; none picked yet means its first reading.
         var compared = inputs.Compared.Where(k => EquipmentCatalog.Find(k) is not null && EquipmentCatalog.UnitOf(k) == selected).ToList();
         if (compared.Count == 0) compared.Add(equipment.Readings[0].Key);
 
-        ReadingTileView Tile(ReadingSpec spec) => new(
-            spec.Key,
-            spec.Label,
-            spec.Value(context).ToString(spec.Format, CultureInfo.InvariantCulture),
-            spec.Unit,
-            highKeys.Contains(spec.Key),
-            compared.Contains(spec.Key));
+        ReadingTileView Tile(ReadingSpec spec)
+        {
+            var value = spec.Value(context);
+            var b = spec.Band;
+            double At(double v) => Math.Clamp((v - b.Min) / Math.Max(b.Max - b.Min, 1e-9), 0, 1);
+            return new ReadingTileView(
+                spec.Key,
+                spec.Label,
+                value.ToString(spec.Format, CultureInfo.InvariantCulture),
+                spec.Unit,
+                highKeys.Contains(spec.Key),
+                compared.Contains(spec.Key))
+            {
+                BandStart = At(b.NormalLow),
+                BandEnd = At(b.NormalHigh),
+                LimitAt = spec.Limit is { } limit ? At(limit(setpoints)) : -1,
+                ValueAt = At(value),
+                OutOfBand = value < b.NormalLow || value > b.NormalHigh,
+            };
+        }
 
-        var trends = TrendSet.Compose(snapshot.Tick, now, setpoints, valves.Count(v => v.Open), inputs.Range, compared, inputs.Cursor);
+        var trends = TrendSet.Compose(tick, now, setpoints, ops, inputs.Range, compared, inputs.Cursor);
         var gap = (int)Math.Round(netMw - setpoints.TargetMw);
-        var alertCount = view.AlertingUnits.Length;
-        var here = valves.Where(v => ValveOwner(v.Id) == selected).ToList();
+        var alarmCount = book.ActiveCount;
+        var here = ops.Valves.Where(v => ValveOwner(v.Id) == selected).ToList();
 
         return view with
         {
-            ActiveAlertText = alertCount == 0 ? "No active alerts" : $"{alertCount} active alert{(alertCount > 1 ? "s" : "")}",
+            ActiveAlertText = alarmCount == 0 ? "No active alarms" : $"{alarmCount} active alarm{(alarmCount > 1 ? "s" : "")}",
             TargetGapText = gap == 0 ? "On target" : $"{Math.Abs(gap)} MW {(gap < 0 ? "below" : "above")} target",
             TargetText = $"Target {setpoints.TargetMw.ToString("0", CultureInfo.InvariantCulture)} MW",
             ModeLine = mode switch
@@ -193,11 +221,15 @@ public sealed partial record ConsoleView
             OverviewTiles = [.. equipment.Readings.Where(r => r.Group == ReadingGroup.Overview).Select(Tile)],
             ConditionTiles = [.. equipment.Readings.Where(r => r.Group == ReadingGroup.Condition).Select(Tile)],
             Connections = [.. equipment.Connections.Select(c => new ConnectionView(c, EquipmentCatalog.Get(c).Title))],
-            ValveSlots = [.. valves.Select(v => new ValveSlotView(v.Id, v.Id.ToString(CultureInfo.InvariantCulture), v.Open, ValveOwner(v.Id) == selected,
-                $"Valve {v.Code} {(v.Open ? "open" : "shut")}"))],
+            ValveSlots = [.. ops.Valves.Select(v =>
+            {
+                var state = PlantEffects.ValveState(ops, v, tick);
+                return new ValveSlotView(v.Id, v.Id.ToString(CultureInfo.InvariantCulture), v.Open, ValveOwner(v.Id) == selected,
+                    $"Valve {v.Code} {state.ToLowerInvariant()}. Select to {(v.Open ? "close" : "open")}") { State = state };
+            })],
             ValvesNote = here.Count == 0
                 ? $"No valves on {info.Code}."
-                : $"{here.Count(v => v.Open)} of {here.Count} open on {info.Code}",
+                : $"{here.Count(v => PlantEffects.ValveOpening(ops, v, tick) >= 1)} of {here.Count} open on {info.Code}",
 
             Trends = trends,
             Range = inputs.Range,
@@ -207,7 +239,7 @@ public sealed partial record ConsoleView
             TimeMid = trends.Times[TrendSet.Samples / 2].ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),
             TimeEnd = trends.Times[^1].ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),
             EventText = trends.Events.IsEmpty
-                ? "No alerts started in this range"
+                ? "No alarms came in during this range"
                 : $"{trends.Events[^1].Time} · {trends.Events[^1].Text}",
         };
     }

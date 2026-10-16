@@ -1,4 +1,5 @@
 using System.Globalization;
+using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 
@@ -7,7 +8,7 @@ namespace PacConsole.Core.Console;
 /// <summary>
 /// Everything the console page shows at one moment, already formatted. Built by one pure
 /// function from the snapshot and the operator's inputs, so the page only binds and the rules
-/// (which unit is selected, what is an alert, what "held" looks like) are unit-testable.
+/// (which unit is selected, what is an alarm, what "held" looks like) are unit-testable.
 /// </summary>
 public sealed partial record ConsoleView
 {
@@ -35,21 +36,22 @@ public sealed partial record ConsoleView
     public static ConsoleView Compose(
         PlantSnapshot snapshot,
         Setpoints setpoints,
-        ImmutableArray<Valve> valves,
+        PlantOps ops,
         ControlMode mode,
         UnitId? requestedUnit,
         DateTimeOffset now,
         ViewInputs? inputs = null)
     {
-        var readings = Simulation.Readings(snapshot.Tick, setpoints.DamperPct);
-        var alerts = AlertRules.Evaluate(readings, setpoints);
-        var alerting = AlertRules.AlertingUnits(alerts);
+        var tick = snapshot.Tick;
+        var readings = Simulation.Readings(tick, setpoints.DamperPct, ops);
+        var outputNow = Simulation.OutputMw(tick, PlantEffects.OpenValves(ops, tick), ops);
+        var book = AlarmBook.Compose(tick, setpoints, ops);
+        var alerting = book.Entries.Where(e => e.IsActive).Select(e => e.Unit).Distinct().OrderBy(u => u).ToImmutableArray();
 
         // Nothing chosen yet: open on the first alerting unit, the one the operator needs.
         var selected = requestedUnit ?? (alerting.IsEmpty ? UnitId.Trb : alerting[0]);
         var held = mode == ControlMode.Hold;
         var age = Math.Max(0, (int)Math.Round((now - snapshot.At).TotalSeconds));
-        var outputNow = Simulation.OutputMw(snapshot.Tick, valves.Count(v => v.Open));
 
         var view = new ConsoleView
         {
@@ -62,6 +64,7 @@ public sealed partial record ConsoleView
             Mode = mode,
             OutputNow = Math.Round(outputNow).ToString("0", Inv),
         };
-        return WithV3(view, snapshot, setpoints, valves, mode, readings, alerts, outputNow, now, age, inputs ?? ViewInputs.Default);
+        view = WithV3(view, snapshot, setpoints, ops, mode, readings, book, outputNow, now, age, inputs ?? ViewInputs.Default);
+        return WithOps(view, snapshot, setpoints, ops, book);
     }
 }

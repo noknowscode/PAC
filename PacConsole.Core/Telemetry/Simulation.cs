@@ -1,3 +1,4 @@
+using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 
 namespace PacConsole.Core.Telemetry;
@@ -25,7 +26,8 @@ public static class Simulation
         return h - Math.Floor(h);
     }
 
-    public static ImmutableArray<UnitReading> Readings(long tick, double damperPct = ReferenceDamperPct)
+    /// <summary>Every unit's base readings; <paramref name="ops"/> carries the operator's actions (the cooling bank's cells and fan speed).</summary>
+    public static ImmutableArray<UnitReading> Readings(long tick, double damperPct = ReferenceDamperPct, PlantOps? ops = null)
     {
         var builder = ImmutableArray.CreateBuilder<UnitReading>(UnitCatalog.All.Length);
         for (var i = 0; i < UnitCatalog.All.Length; i++)
@@ -40,7 +42,7 @@ public static class Simulation
                 Flow: W(flowBase, i + 2, 0.012),
                 Load: W(u.BaseLoad, i + 3, 0.01),
                 Eff: W(u.BaseEff, i + 4, 0.002),
-                Vib: Vibration(u.Id, tick)));
+                Vib: u.Id == UnitId.Clg ? PlantEffects.CoolingVibration(ops ?? PlantOps.Initial, tick) : Vibration(u.Id, tick)));
         }
         return builder.MoveToImmutable();
     }
@@ -49,24 +51,28 @@ public static class Simulation
     {
         var i = (int)id;
         var v = UnitCatalog.Get(id).BaseVib + 0.16 * Math.Sin(tick * 0.9 + i * 1.7) + (Noise(tick, i + 3) - 0.5) * 0.14;
-        // The cooling bank's fans drift in and out of alarm with a ten-minute period (tick = 2 s), in
-        // alarm at the start tick, so trends over 15 min to 8 h carry real alert onsets.
-        if (id == UnitId.Clg) v += 0.4 * Math.Sin(tick * Math.Tau / 300 - 1.0);
+        // Cell 3 of the cooling bank drifts in and out of alarm with a ten-minute period (tick = 2 s),
+        // centred on 4.5 mm/s with a ±0.7 swing so it also clears below the 4.0 mm/s deadband, and in
+        // alarm at the start tick, so trends over 15 min to 8 h carry real alarm onsets.
+        if (id == UnitId.Clg) v += 0.7 * Math.Sin(tick * Math.Tau / 300 - 1.0) - 0.1;
         return v;
     }
 
     /// <summary>
-    /// Net output in MW: a slow drift (about 52 min, ±18), a swell (about 5 min, ±8), a small ripple
-    /// and noise, so the hour's trend reads as load following rather than a sine. Each open valve
-    /// beyond the reference seven adds 6 MW.
+    /// Net output in MW: the turbine's load setpoint less 20 MW of auxiliaries, a slow drift (about
+    /// 52 min, ±18), a swell (about 5 min, ±8), a small ripple and noise, so the hour's trend reads as
+    /// load following rather than a sine. Each open valve beyond the reference seven adds 6 MW; lost
+    /// condenser vacuum takes up to 40 MW.
     /// </summary>
-    public static double OutputMw(long tick, int openValves = ReferenceOpenValves) =>
-        600
-        + 18 * Math.Sin(tick * 0.004 + 0.6)
-        + 8 * Math.Sin(tick * 0.021 + 1)
-        + 3 * Math.Sin(tick * 0.21)
-        + (Noise(tick, 1) - 0.5) * 4
-        + (openValves - ReferenceOpenValves) * 6;
-
-
+    public static double OutputMw(long tick, double openValves = ReferenceOpenValves, PlantOps? ops = null)
+    {
+        var o = ops ?? PlantOps.Initial;
+        return o.Load.ValueAt(tick) - 20
+            + 18 * Math.Sin(tick * 0.004 + 0.6)
+            + 8 * Math.Sin(tick * 0.021 + 1)
+            + 3 * Math.Sin(tick * 0.21)
+            + (Noise(tick, 1) - 0.5) * 4
+            + (openValves - ReferenceOpenValves) * 6
+            - PlantEffects.VacuumLossMw(o, tick);
+    }
 }
