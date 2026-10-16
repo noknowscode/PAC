@@ -401,16 +401,16 @@
   </Style>
 
   <!--
-    A view thumbnail beside the plant: the plant from one standard camera over its name. The view the
-    camera rests in takes the accent outline and ink label; the others keep a hairline.
+    A view thumbnail beside the plant: the plant from one standard camera over its name, straight on the
+    panel ground. The view the camera rests in takes the accent outline and ink label; the others a frame.
   -->
   <Style x:Key="ThumbRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
     <Setter Property="MinWidth" Value="0" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="Background" Value="{StaticResource CardBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource ThumbFrameBrush}" />
     <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />

@@ -35,6 +35,8 @@
 
   <!-- Lines and fills. Controls are filled, not outlined; the border keys serve focus rings and the valve ring. -->
   <SolidColorBrush x:Key="HairlineBrush" Color="#D9DDE2" />
+  <!-- A view thumbnail's frame: the hairline's step from the panel ground, half again (on #F4F5F6). -->
+  <SolidColorBrush x:Key="ThumbFrameBrush" Color="#CCD1D8" />
   <SolidColorBrush x:Key="BorderBrushDefault" Color="#8A939E" />
   <SolidColorBrush x:Key="BorderBrushStrong" Color="#3E4B5A" />
   <SolidColorBrush x:Key="FillBrush" Color="#E9ECEF" />

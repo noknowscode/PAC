@@ -17,6 +17,7 @@
   <Color x:Key="MutedBrush">#A0A7AF</Color>
   <Color x:Key="FaintBrush">#6E767F</Color>
   <Color x:Key="HairlineBrush">#2E3237</Color>
+  <Color x:Key="ThumbFrameBrush">#3A3F45</Color>
   <Color x:Key="BorderBrushDefault">#6E767F</Color>
   <Color x:Key="BorderBrushStrong">#C4C9CF</Color>
   <Color x:Key="FillBrush">#24282D</Color>
