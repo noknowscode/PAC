@@ -476,12 +476,11 @@ public sealed class SolidRenderer : IDisposable
         var lit = part.Lit && part.Unit is { } u && u == frame.Selected;
         var alert = !lit && part.Lit && part.Unit is { } a && frame.Alerting.Contains(a);
         var hovered = !lit && part.Lit && part.Unit is { } h && h == frame.Hovered;
+        var inSystem = InSystem(index, frame.System);
         // Outside the chosen system a part fades toward the paper; the selected unit always stays inked.
-        _fade = part.Unit is { } s && s == frame.Selected || PlantSolids.InSystem(part, frame.System) ? 0 : SystemFade;
+        _fade = part.Unit is { } s && s == frame.Selected || inSystem ? 0 : SystemFade;
         // Inside an isolated system (not the ground, the selection or an alert), a part takes the system's ink.
-        _systemInk = frame.System != PlantSystem.All && _fade == 0 && !lit && !alert
-            && !part.Name.StartsWith("stand.", StringComparison.Ordinal)
-            && PlantSolids.InSystem(part, frame.System)
+        _systemInk = frame.System != PlantSystem.All && inSystem && !lit && !alert && !IsStand(part)
             && Palette.Systems.TryGetValue(frame.System, out var ink) ? ink : null;
 
         if (lift > 0)
@@ -498,6 +497,26 @@ public sealed class SolidRenderer : IDisposable
         _fade = 0;
         _systemInk = null;
     }
+
+    private bool[] _membership = [];
+    private PlantSystem _membershipSystem;
+    private IReadOnlyList<SolidPart>? _membershipParts;
+
+    /// <summary>Whether part <paramref name="index"/> is in <paramref name="system"/>, worked out once per parts list and system.</summary>
+    private bool InSystem(int index, PlantSystem system)
+    {
+        if (!ReferenceEquals(_membershipParts, _cachedParts) || _membershipSystem != system)
+        {
+            var parts = _cachedParts!;
+            _membership = new bool[parts.Count];
+            for (var i = 0; i < parts.Count; i++) _membership[i] = PlantSolids.InSystem(parts[i], system);
+            _membershipParts = _cachedParts;
+            _membershipSystem = system;
+        }
+        return _membership[index];
+    }
+
+    private static bool IsStand(SolidPart part) => part.Name.StartsWith("stand.", StringComparison.Ordinal);
 
     /// <summary>How far a part outside the chosen system fades toward the paper (0 = none, 1 = gone).</summary>
     private const float SystemFade = 0.78f;

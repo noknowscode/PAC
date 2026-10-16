@@ -270,6 +270,7 @@ public sealed partial class PlantViewport : UserControl
         CompositionTarget.Rendering -= OnRendering;
     }
 
+    // xaml-lint: allow codebehind - the frame loop of a Skia viewport; it has no XAML surface.
     private void OnRendering(object? sender, object e) => OnFrame();
 
     private readonly Action _ambient;
@@ -391,6 +392,7 @@ public sealed partial class PlantViewport : UserControl
         tag.Foreground = (Brush)r[alert ? "AlertTextBrush" : selected ? "AccentBrush" : "TextPrimaryBrush"];
     }
 
+    // xaml-lint: allow codebehind - drag-to-orbit reads raw pointer deltas, which no command or gesture surface carries.
     private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         // Don't capture yet: a press that doesn't move must still click a tag.
@@ -415,6 +417,7 @@ public sealed partial class PlantViewport : UserControl
         return PlantSolids.Default.UnitAt(projection, new((float)at.X, (float)at.Y), _lift);
     }
 
+    // xaml-lint: allow codebehind - drag-to-orbit (see OnPointerPressed).
     private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
     {
         var p = e.GetCurrentPoint(Surface).Position;
@@ -445,6 +448,7 @@ public sealed partial class PlantViewport : UserControl
         Refresh();
     }
 
+    // xaml-lint: allow codebehind - drag-to-orbit (see OnPointerPressed).
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
     {
         if (_dragging)
@@ -467,6 +471,7 @@ public sealed partial class PlantViewport : UserControl
         Refresh();
     }
 
+    // xaml-lint: allow codebehind - arrow keys orbit the camera, which is view state.
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
         var target = TargetOrCurrent();

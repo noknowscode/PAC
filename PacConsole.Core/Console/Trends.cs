@@ -65,6 +65,7 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
         // Each sample is the mean over its time bucket, as a historian reports it: point samples of a
         // fast-moving signal alias into a zigzag. Up to 12 evenly spaced ticks per bucket.
         var specs = compared.Select(k => EquipmentCatalog.Find(k)).OfType<ReadingSpec>().ToList();
+        var units = specs.Select(spec => EquipmentCatalog.UnitOf(spec.Key)).ToArray();
         var sub = (int)Math.Clamp(Math.Round(step), 1, 12);
         var net = new double[Samples];
         var series = specs.Select(_ => new double[Samples]).ToList();
@@ -79,7 +80,7 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
                 var sample = Simulation.Readings(t, setpoints.DamperPct);
                 for (var i = 0; i < specs.Count; i++)
                 {
-                    var unit = EquipmentCatalog.UnitOf(specs[i].Key);
+                    var unit = units[i];
                     series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, setpoints)) / sub;
                 }
             }

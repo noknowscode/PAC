@@ -17,13 +17,14 @@
           the app's own token brushes at runtime (ConsoleTheme) and sets the root element theme.
         -->
         <utus:SimpleToolkitTheme>
+          <!-- xaml-lint: allow hex - Simple's colour-role overrides (rung 1 of the semantic ladder); the brand palette belongs here. -->
           <utus:SimpleToolkitTheme.ColorOverrideDictionary>
             <ResourceDictionary>
-              <!-- Accent: the one orange indicator (selected, live) -->
-              <Color x:Key="PrimaryColor">#C2410C</Color>
+              <!-- Accent: the slate-teal selection colour (AccentBrush in Tokens.xaml) -->
+              <Color x:Key="PrimaryColor">#2F5D73</Color>
               <Color x:Key="OnPrimaryColor">#FFFFFF</Color>
-              <Color x:Key="PrimaryContainerColor">#FCEBDF</Color>
-              <Color x:Key="OnPrimaryContainerColor">#7A2908</Color>
+              <Color x:Key="PrimaryContainerColor">#E3EEF3</Color>
+              <Color x:Key="OnPrimaryContainerColor">#173543</Color>
 
               <!-- Soft ink: secondary controls -->
               <Color x:Key="SecondaryColor">#3E4B5A</Color>
@@ -43,8 +44,8 @@
               <Color x:Key="OutlineColor">#8A939E</Color>
               <Color x:Key="OutlineVariantColor">#D9DDE2</Color>
 
-              <!-- Alert -->
-              <Color x:Key="ErrorColor">#B42318</Color>
+              <!-- Alert: burnt orange (AlertTextBrush in Tokens.xaml) -->
+              <Color x:Key="ErrorColor">#AE3A0A</Color>
               <Color x:Key="OnErrorColor">#FFFFFF</Color>
             </ResourceDictionary>
           </utus:SimpleToolkitTheme.ColorOverrideDictionary>

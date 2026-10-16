@@ -57,15 +57,27 @@ public sealed partial class PlantSolids
     {
         if (system == PlantSystem.All || part.Name.StartsWith("stand.", StringComparison.Ordinal)) return true;
         if (part.Unit is { } unit) return PlantSystems.Contains(system, unit);
-        bool Named(params string[] prefixes) => prefixes.Any(p => part.Name.StartsWith(p, StringComparison.Ordinal));
         return system switch
         {
-            PlantSystem.SteamWater => part.Circuit is Circuit.Steam or Circuit.Water || Named("boiler.", "fw."),
+            PlantSystem.SteamWater => part.Circuit is Circuit.Steam or Circuit.Water || Named(part, SteamWaterParts),
             PlantSystem.Cooling => part.Circuit == Circuit.Cooling,
-            PlantSystem.FuelFlue => part.Circuit == Circuit.Fuel || Named("boiler.", "flue.", "ash"),
-            PlantSystem.Electrical => Named("xfmr.", "cab."),
+            PlantSystem.FuelFlue => part.Circuit == Circuit.Fuel || Named(part, FuelFlueParts),
+            PlantSystem.Electrical => Named(part, ElectricalParts),
             _ => false,
         };
+    }
+
+    private static readonly string[] SteamWaterParts = ["boiler.", "fw."];
+    private static readonly string[] FuelFlueParts = ["boiler.", "flue.", "ash"];
+    private static readonly string[] ElectricalParts = ["xfmr.", "cab."];
+
+    private static bool Named(SolidPart part, string[] prefixes)
+    {
+        foreach (var p in prefixes)
+        {
+            if (part.Name.StartsWith(p, StringComparison.Ordinal)) return true;
+        }
+        return false;
     }
     public const float PlateHeight = 10, FootHeight = 6;
     /// <summary>The stand. It reaches west of the figure's plate (x -160) to hold the boiler bay.</summary>

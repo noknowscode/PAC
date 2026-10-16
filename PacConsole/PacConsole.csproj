@@ -22,6 +22,8 @@
       UnoFeatures are used to quickly add and manage features enabled for your app.
       https://aka.platform.uno/singleproject-features
     -->
+    <!-- An API Uno Platform does not implement fails the build instead of doing nothing at runtime. -->
+    <WarningsAsErrors>$(WarningsAsErrors);Uno0001</WarningsAsErrors>
     <UnoFeatures>
       SimpleTheme;
       Hosting;

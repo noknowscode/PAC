@@ -20,6 +20,7 @@ public sealed partial class ConsolePage : Page
         Styles.ConsoleTheme.Apply(item.IsChecked, XamlRoot?.Content as FrameworkElement ?? this);
     }
 
+    // xaml-lint: allow codebehind - keeps the viewport, which sits inside the FeedView template, for the Reset menu item.
     private void OnViewportLoaded(object sender, RoutedEventArgs e) => _viewport = sender as PlantViewport;
 
     // xaml-lint: allow codebehind - the camera is view state owned by PlantViewport, not domain data.
