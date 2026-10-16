@@ -122,6 +122,12 @@ public sealed class SolidRenderer : IDisposable
 
     public required SolidPalette Palette { get; init; }
 
+    /// <summary>Device pixels per drawing unit (the window's rasterization scale), so cached still layers match the screen 1:1.</summary>
+    public float Scale { get; set; } = 1;
+
+    /// <summary>Raised on a worker thread when cached still layers are ready; the owner should redraw.</summary>
+    public event Action? StillLayersReady;
+
     // Shapes depend only on the camera; a lift is a screen translation. So a still camera with a
     // lifting unit, turning fans or moving flow rebuilds nothing, and re-sorts only when a lift moves.
     private IReadOnlyList<SolidPart>? _cachedParts;
@@ -189,7 +195,7 @@ public sealed class SolidRenderer : IDisposable
         // A moving camera or lift draws directly: recording would only add cost to a frame that is
         // thrown away. Once the view holds, static runs are recorded once and replayed, so a still
         // plant costs a few picture replays plus its live parts (trace: ~2,500 paths a frame otherwise).
-        var key = new StillKey(camera, frame.Selected, frame.Hovered, AlertMask(frame.Alerting), frame.Details, frame.System, Palette);
+        var key = new StillKey(camera, frame.Selected, frame.Hovered, AlertMask(frame.Alerting), frame.Details, frame.System, Palette, Scale);
         var moving = cameraChanged || !lifts.AsSpan().SequenceEqual(_stillLift);
         _stillLift = lifts;
         if (moving)
@@ -203,13 +209,14 @@ public sealed class SolidRenderer : IDisposable
         {
             ClearPictures();
             _stillKey = key;
+            _stillFrames = 0;
             var bounds = canvas.LocalClipBounds;
             SKPictureRecorder? recorder = null;
             SKCanvas? recording = null;
             void Flush()
             {
                 if (recorder is null) return;
-                _segments.Add((recorder.EndRecording(), -2));
+                _segments.Add((recorder.EndRecording(), null, default, -2));
                 recorder.Dispose();
                 recorder = null;
                 recording = null;
@@ -219,21 +226,28 @@ public sealed class SolidRenderer : IDisposable
                 if (index >= 0 && _live[index])
                 {
                     Flush();
-                    _segments.Add((null, index));
+                    _segments.Add((null, null, default, index));
                     continue;
                 }
                 if (recorder is null)
                 {
                     recorder = new SKPictureRecorder();
-                    recording = recorder.BeginRecording(bounds);
+                    // An R-tree trims each run's cull rect to what it draws, so its cached layer stays that size.
+                    recording = recorder.BeginRecording(bounds, useRTree: true);
                 }
                 Op(recording!, index);
             }
             Flush();
         }
-        foreach (var (picture, index) in _segments)
+        else
         {
-            if (picture is not null) canvas.DrawPicture(picture);
+            TakeStillLayers();
+            if (++_stillFrames >= StillFramesBeforeLayers && _layeredGeneration != _generation) StartStillLayers();
+        }
+        foreach (var (picture, image, dest, index) in _segments)
+        {
+            if (image is not null) canvas.DrawImage(image, dest, Nearest);
+            else if (picture is not null) canvas.DrawPicture(picture);
             else Op(canvas, index);
         }
         DrawMotion(canvas, parts, projection, frame, LiftOf);
@@ -376,7 +390,23 @@ public sealed class SolidRenderer : IDisposable
     private bool[] _live = [];
     private float[] _stillLift = [];
     private StillKey _stillKey;
-    private readonly List<(SKPicture? Picture, int Part)> _segments = [];
+    private readonly List<(SKPicture? Picture, SKImage? Image, SKRect Dest, int Part)> _segments = [];
+
+    // A recorded run is still vector work: each frame the render thread rasterizes its paths again
+    // inside the damage region, and the fans and flow marks damage the plant's whole rect 20 times a
+    // second (trace, 2026-10-16: skipping the runs cut idle CPU from ~68% to ~43% of a core). Once a
+    // still frame has held for two frames, a worker rasterizes each run into an image of its device
+    // pixels; an immutable raster image is uploaded to the GPU once and then drawn as a texture.
+    // Picture-backed images (SKImage.FromPicture) were tried first: they re-rendered every frame.
+    private const int StillFramesBeforeLayers = 2;
+    private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest);
+    private int _stillFrames;
+    private int _generation;
+    private int _layeredGeneration = -1;
+    private Task? _layerTask;
+    private readonly object _layerGate = new();
+    private (int Generation, SKImage?[] Images, SKRect[] Dests)? _readyLayers;
+    private readonly List<SKPicture> _retired = [];
 
     /// <summary>What a recorded still frame depends on besides the camera and lifts.</summary>
     private readonly record struct StillKey(
@@ -386,7 +416,8 @@ public sealed class SolidRenderer : IDisposable
         int Alerts,
         bool Details,
         PlantSystem System,
-        SolidPalette? Palette);
+        SolidPalette? Palette,
+        float Scale);
 
     private static int AlertMask(IReadOnlyCollection<UnitId> alerting)
     {
@@ -397,8 +428,85 @@ public sealed class SolidRenderer : IDisposable
 
     private void ClearPictures()
     {
-        foreach (var (picture, _) in _segments) picture?.Dispose();
+        _generation++;
+        var busy = _layerTask is { IsCompleted: false };
+        foreach (var (picture, image, _, _) in _segments)
+        {
+            // A worker may still be reading this run; it is disposed once that worker is done.
+            if (picture is not null)
+            {
+                if (busy) _retired.Add(picture);
+                else picture.Dispose();
+            }
+            image?.Dispose();
+        }
         _segments.Clear();
+        if (!busy) DisposeRetired();
+    }
+
+    private void DisposeRetired()
+    {
+        foreach (var picture in _retired) picture.Dispose();
+        _retired.Clear();
+    }
+
+    /// <summary>Rasterizes the current runs on a worker, each snapped outward to the device pixel grid.</summary>
+    private void StartStillLayers()
+    {
+        if (_layerTask is { IsCompleted: false }) return;
+        var generation = _layeredGeneration = _generation;
+        var scale = Scale;
+        var pictures = _segments.Select(s => s.Picture).ToArray();
+        _layerTask = Task.Run(() =>
+        {
+            var images = new SKImage?[pictures.Length];
+            var dests = new SKRect[pictures.Length];
+            for (var i = 0; i < pictures.Length; i++)
+            {
+                if (pictures[i] is not { } picture || picture.CullRect.IsEmpty) continue;
+                var cull = picture.CullRect;
+                var left = MathF.Floor(cull.Left * scale);
+                var top = MathF.Floor(cull.Top * scale);
+                var right = MathF.Ceiling(cull.Right * scale);
+                var bottom = MathF.Ceiling(cull.Bottom * scale);
+                using var surface = SKSurface.Create(new SKImageInfo((int)(right - left), (int)(bottom - top), SKColorType.Rgba8888, SKAlphaType.Premul));
+                if (surface is null) continue;
+                surface.Canvas.Clear(SKColors.Transparent);
+                surface.Canvas.Translate(-left, -top);
+                surface.Canvas.Scale(scale);
+                surface.Canvas.DrawPicture(picture);
+                images[i] = surface.Snapshot();
+                dests[i] = new SKRect(left / scale, top / scale, right / scale, bottom / scale);
+            }
+            lock (_layerGate)
+            {
+                foreach (var stale in _readyLayers?.Images ?? []) stale?.Dispose();
+                _readyLayers = (generation, images, dests);
+            }
+            StillLayersReady?.Invoke();
+        });
+    }
+
+    /// <summary>Swaps in layers a worker finished for the runs on screen; drops layers for runs since replaced.</summary>
+    private void TakeStillLayers()
+    {
+        if (_layerTask is { IsCompleted: true }) DisposeRetired();
+        (int Generation, SKImage?[] Images, SKRect[] Dests)? ready;
+        lock (_layerGate)
+        {
+            ready = _readyLayers;
+            _readyLayers = null;
+        }
+        if (ready is not { } layers) return;
+        if (layers.Generation != _generation || layers.Images.Length != _segments.Count)
+        {
+            foreach (var image in layers.Images) image?.Dispose();
+            return;
+        }
+        for (var i = 0; i < _segments.Count; i++)
+        {
+            if (layers.Images[i] is { } image) _segments[i] = _segments[i] with { Image = image, Dest = layers.Dests[i] };
+        }
     }
 
     private float[] _shadowLift = [];
@@ -721,7 +829,14 @@ public sealed class SolidRenderer : IDisposable
         _ring.Dispose();
         _arc.Dispose();
         _wire.Dispose();
+        _layerTask?.Wait();
         ClearPictures();
+        DisposeRetired();
+        lock (_layerGate)
+        {
+            foreach (var image in _readyLayers?.Images ?? []) image?.Dispose();
+            _readyLayers = null;
+        }
         _alertDash.Dispose();
     }
 }

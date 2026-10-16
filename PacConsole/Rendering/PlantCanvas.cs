@@ -36,7 +36,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            _renderer ??= new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+            _renderer ??= CreateRenderer();
             _leaderPaint.Color = _renderer.Palette.Leader;
             Styles.ConsoleTheme.Changed -= OnThemeChanged;
             Styles.ConsoleTheme.Changed += OnThemeChanged;
@@ -68,9 +68,18 @@ public sealed partial class PlantCanvas : SKCanvasElement
     private void OnThemeChanged()
     {
         _renderer?.Dispose();
-        _renderer = new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        _renderer = CreateRenderer();
         OnPaletteChanged(_renderer.Palette);
         Invalidate();
+    }
+
+    private SolidRenderer CreateRenderer()
+    {
+        var renderer = new SolidRenderer { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        var queue = DispatcherQueue;
+        // Cached still layers arrive on a worker; one more frame puts them on screen.
+        renderer.StillLayersReady += () => queue.TryEnqueue(() => { if (ReferenceEquals(_renderer, renderer)) Invalidate(); });
+        return renderer;
     }
 
     private void OnPaletteChanged(SolidPalette palette) => _leaderPaint.Color = palette.Leader;
@@ -78,6 +87,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {
         if (_renderer is null) return;
+        _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
         var projection = PlantSolids.ViewProjection(_pose, (float)area.Width, (float)area.Height);
         _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered, System: _system, Motion: _motion));
 
