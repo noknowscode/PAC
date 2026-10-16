@@ -1,5 +1,16 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-15 21:05
+Updated: 2026-10-16 00:50
+
+## Since the v3 build (2026-10-15 evening to 2026-10-16)
+- **Commits:** `e33820b` full-bleed page + trend gradient fill; `60caedc` system inks, glow and motion; `719b24f` electrical pulses; `ef094c0` audit fixes; `390c482` dead-code removal, slower net output, inspector 340/400.
+- **Systems:** isolating a system outlines and glows its parts in its ink and runs its motion (steam flow and vent, cooling mist, flue smoke, electrical beads and rings). Inks live in Tokens.xaml / Palette.Dark.xaml as `System*Brush`.
+- **Audit (uno-audit):** lint gating rules all 0 except HEX 18 (Simple role overrides, allowed) and TOKENTHEME 53 (in-place repaint, allowed). Uno0001 is an error. Uno.Sdk 6.7.30 is the latest stable (checked 2026-10-16). The LiveCharts package is gone.
+- **Tests:** 158/158 (20 v2 tests removed with their code). One overnight run read 2 h 35 min of wall clock across a sleep; a normal run is about a minute.
+- **Open:**
+  - graphite not re-checked since the system inks
+  - `WireframeThumb.cs` and the legacy `PlantGeometry` remain (phase 7 cleanup needs the user's OK)
+  - FluentAssertions stays on 6.x (8.x is a commercial licence)
+  - a perf re-measure of the v3 page with motion
 
 ## Console page v3 (SPEC-CONSOLE.md), built this session
 The page now follows the user's mock: header with the alert pill, status strip, systems bar, the plant panel beside the equipment inspector (Overview / Condition / Control), synchronized trends, and the footer. Selection is slate-teal and alerts are burnt orange.
