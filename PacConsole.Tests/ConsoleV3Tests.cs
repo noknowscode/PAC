@@ -85,6 +85,16 @@ public class ConsoleV3Tests
         PlantSystems.SelectionFor(system, current).Should().Be(expected);
     }
 
+    [Test]
+    public void Isolating_a_system_prefers_a_unit_in_alert()
+    {
+        PlantSystems.SelectionFor(PlantSystem.Electrical, UnitId.Clg, [UnitId.Trb, UnitId.Clg]).Should().Be(UnitId.Trb);
+        PlantSystems.SelectionFor(PlantSystem.Electrical, UnitId.Clg, [UnitId.Clg]).Should().Be(UnitId.Gen);
+        PlantSystems.SelectionFor(PlantSystem.SteamWater, UnitId.Stk, [UnitId.Cnd]).Should().Be(UnitId.Cnd);
+        // A selection already inside the system stays, even with an alert elsewhere in it.
+        PlantSystems.SelectionFor(PlantSystem.Electrical, UnitId.Gen, [UnitId.Trb]).Should().Be(UnitId.Gen);
+    }
+
     [TestCase(PlantSystem.Cooling, UnitId.Cnd, PlantSystem.Cooling)]
     [TestCase(PlantSystem.Cooling, UnitId.Gen, PlantSystem.All)]
     [TestCase(PlantSystem.All, UnitId.Gen, PlantSystem.All)]

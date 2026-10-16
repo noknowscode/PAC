@@ -33,13 +33,16 @@ public static class PlantSystems
 
     /// <summary>
     /// The unit to select when the operator isolates <paramref name="system"/>: the current one if it
-    /// belongs to the system, else the system's first unit in plant order, so the inspector and the
-    /// trends follow the drawing.
+    /// belongs to the system; else the system's first unit in alert, the likely reason for isolating
+    /// it; else its first unit. Ties go by plant order, as the alert pill's do. So the inspector and
+    /// the trends follow the drawing.
     /// </summary>
-    public static UnitId SelectionFor(PlantSystem system, UnitId? current) =>
-        current is { } unit && Contains(system, unit)
-            ? unit
-            : Enum.GetValues<UnitId>().First(u => Contains(system, u));
+    public static UnitId SelectionFor(PlantSystem system, UnitId? current, IReadOnlyCollection<UnitId>? alerting = null)
+    {
+        if (current is { } unit && Contains(system, unit)) return unit;
+        var units = Enum.GetValues<UnitId>().Where(u => Contains(system, u)).ToList();
+        return alerting is null ? units[0] : units.FirstOrDefault(alerting.Contains, units[0]);
+    }
 
     /// <summary>
     /// The system to show once <paramref name="unit"/> is selected some other way (a callout, the alert

@@ -75,12 +75,13 @@ public partial record ConsoleModel
 
     /// <summary>
     /// Isolates a system in the plant view (the systems bar passes the enum name). A selection outside
-    /// the system moves to its first unit, so the inspector and trends follow the drawing.
+    /// the system moves to its first unit in alert, else its first unit, so the inspector and trends
+    /// follow the drawing.
     /// </summary>
-    public async ValueTask SelectSystem(string system, UnitSelection selection, CancellationToken ct)
+    public async ValueTask SelectSystem(string system, UnitSelection selection, ConsoleView view, CancellationToken ct)
     {
         if (!Enum.TryParse<PlantSystem>(system, out var value)) return;
-        var unit = PlantSystems.SelectionFor(value, selection.Unit);
+        var unit = PlantSystems.SelectionFor(value, selection.Unit, view.AlertingUnits);
         // Selection first: the picker's list then swaps to the new system with its item already chosen.
         if (unit != selection.Unit) await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
         await System.SetAsync(value, ct);
