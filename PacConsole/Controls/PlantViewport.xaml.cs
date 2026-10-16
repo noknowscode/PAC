@@ -85,6 +85,13 @@ public sealed partial class PlantViewport : UserControl
         RotateLeft.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
         RotateRight.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
         Reset.Click += (_, _) => GoTo(CameraPose.Iso);
+        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan })
+        {
+            view.Click += (sender, _) =>
+            {
+                if (sender is RadioButton { Tag: string key } && CameraPresets.All.FirstOrDefault(p => p.Key == key) is { } preset) GoTo(preset.Pose);
+            };
+        }
         AutoOrbit.Click += (_, _) => { _auto = AutoOrbit.IsChecked == true; _tweening = false; Refresh(); };
 
         Root.PointerEntered += (_, _) => { _hover = true; Refresh(); };
@@ -126,6 +133,26 @@ public sealed partial class PlantViewport : UserControl
 
     public static readonly DependencyProperty SelectedUnitProperty =
         DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => { if (!SameValue(e.OldValue, e.NewValue)) ((PlantViewport)d).Refresh(); }));
+
+    /// <summary>The panel title (the system in view, as the page names it).</summary>
+    public string Title
+    {
+        get => (string)GetValue(TitleProperty);
+        set => SetValue(TitleProperty, value);
+    }
+
+    public static readonly DependencyProperty TitleProperty =
+        DependencyProperty.Register(nameof(Title), typeof(string), typeof(PlantViewport), new PropertyMetadata("", (d, e) => ((PlantViewport)d).TitleText.Text = e.NewValue as string ?? ""));
+
+    /// <summary>What the page puts at the left of the panel's footer bar (the equipment picker).</summary>
+    public object? FooterContent
+    {
+        get => GetValue(FooterContentProperty);
+        set => SetValue(FooterContentProperty, value);
+    }
+
+    public static readonly DependencyProperty FooterContentProperty =
+        DependencyProperty.Register(nameof(FooterContent), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => ((PlantViewport)d).FooterHost.Content = e.NewValue));
 
     /// <summary>The process system in view (a <see cref="PlantSystem"/>); equipment outside it is drawn faded.</summary>
     public object? ShownSystem
@@ -297,7 +324,7 @@ public sealed partial class PlantViewport : UserControl
 
         var requests = UnitCatalog.All.Select(u =>
         {
-            var label = alerting.Contains(u.Id) ? $"{u.Code} · alert" : u.Code;
+            var label = TagLabel(u, selected == u.Id, alerting.Contains(u.Id));
             return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id] with { Y = PlantSolids.Default.Anchors[u.Id].Y + _lift[u.Id] }), TagLayout.EstimateWidth(label));
         }).ToList();
         var placements = TagLayout.Solve(requests, width);
@@ -310,7 +337,7 @@ public sealed partial class PlantViewport : UserControl
             var isSelected = selected == p.Unit;
             // Only touch what changed: a new Content string re-measures and re-shapes the label's
             // text, and this runs every animation frame.
-            var label = isAlert ? $"{info.Code} · alert" : info.Code;
+            var label = TagLabel(info, isSelected, isAlert);
             if (!Equals(tag.Content, label)) tag.Content = label;
             if (tag.Width != p.Width) tag.Width = p.Width;
             Canvas.SetLeft(tag, p.Left);
@@ -324,10 +351,15 @@ public sealed partial class PlantViewport : UserControl
         PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered, system);
         Pose = _pose;
 
-        var caption = $"{PresetName()}, yaw {_pose.YawDegrees:000}°, elevation {_pose.ElevationDegrees:00}°";
-        if (CaptionDetail.Text != caption) CaptionDetail.Text = caption;
+        // The view switcher shows the standard view the camera rests in, if any.
+        var preset = CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Key;
+        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan })
+        {
+            var on = Equals(view.Tag, preset);
+            if (view.IsChecked != on) view.IsChecked = on;
+        }
         var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
-        var help = $"6 units. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
+        var help = $"{UnitCatalog.All.Length} units, {PresetName()} view. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
             $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";
         if (AutomationProperties.GetHelpText(this) != help) AutomationProperties.SetHelpText(this, help);
     }
@@ -335,16 +367,28 @@ public sealed partial class PlantViewport : UserControl
     private string PresetName() =>
         CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Label ?? "Free orbit";
 
+    /// <summary>The callout text: the code alone, the name with it when selected, and the word "Alert" when in alert.</summary>
+    private static string TagLabel(UnitInfo unit, bool selected, bool alert) =>
+        (selected, alert) switch
+        {
+            (true, true) => $"{unit.Code} · {unit.Name} · Alert",
+            (true, false) => $"{unit.Code} · {unit.Name}",
+            (false, true) => $"{unit.Code} · Alert",
+            _ => unit.Code,
+        };
+
     private static void ApplyTagState(Button tag, bool selected, bool alert)
     {
-        var key = selected ? "Selected" : alert ? "Alert" : "Normal";
+        var key = selected ? (alert ? "SelectedAlert" : "Selected") : alert ? "Alert" : "Normal";
         if (Equals(tag.DataContext, key)) return; // avoid restyling every frame
         tag.DataContext = key;
         var r = Application.Current.Resources;
-        // A plate in the ground colour (so the label reads over line work), no outline. The selected
-        // plate is the one orange object on the page; an alert keeps its word in the label.
-        tag.Background = (Brush)r[selected ? "AccentBrush" : "OverlayBrush"];
-        tag.Foreground = (Brush)r[selected ? "OnAccentBrush" : alert ? "AlertTextBrush" : "TextPrimaryBrush"];
+        // A plate in the ground colour (so the label reads over line work). The selected plate takes the
+        // slate-teal outline, an alerting one the orange outline, and its label carries the word.
+        tag.Background = (Brush)r["OverlayBrush"];
+        tag.BorderThickness = new Thickness(selected || alert ? 1 : 0);
+        tag.BorderBrush = (Brush)r[alert ? "AlertBorderBrush" : selected ? "AccentBrush" : "OverlayBrush"];
+        tag.Foreground = (Brush)r[alert ? "AlertTextBrush" : selected ? "AccentBrush" : "TextPrimaryBrush"];
     }
 
     private void OnPointerPressed(object sender, PointerRoutedEventArgs e)

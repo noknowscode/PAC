@@ -19,12 +19,18 @@ public sealed record ReadingTileView(string Key, string Label, string Value, str
     /// <summary>"compared" or "normal": the tile's surface.</summary>
     public string Surface => IsCompared ? "compared" : "normal";
 
+    /// <summary>The word that goes with the alert colour, so the state never rests on colour alone.</summary>
+    public string StatusText => IsHigh ? "Above limit" : "";
+
     public string AutomationName =>
         $"{Label} {Value} {Unit}{(IsHigh ? ", alert" : "")}. {(IsCompared ? "In the trends; select to remove" : "Select to compare in the trends")}";
 }
 
 /// <summary>A connected item of equipment, as a chip that selects it.</summary>
-public sealed record ConnectionView(UnitId Id, string Title);
+public sealed record ConnectionView(UnitId Id, string Title)
+{
+    public override string ToString() => Title;
+}
 
 /// <summary>A valve slot in the Control tab: shown only on the equipment it belongs to.</summary>
 public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere, string AutomationName);
@@ -48,7 +54,10 @@ public sealed partial record ConsoleView
     public bool IsFuelFlue => System == PlantSystem.FuelFlue;
     public bool IsElectrical => System == PlantSystem.Electrical;
 
-    // Equipment picker
+    // Equipment picker. The choices are one shared array, so the picker's ItemsSource keeps the same
+    // instance across recompositions and never resets (and closes) while it is open.
+    private static readonly ConnectionView[] Choices = [.. EquipmentCatalog.All.Select(e => new ConnectionView(e.Id, e.Title))];
+    public IReadOnlyList<ConnectionView> EquipmentChoices => Choices;
     public ImmutableArray<string> EquipmentTitles { get; init; } = [];
     public int SelectedIndex { get; init; }
 
@@ -104,6 +113,9 @@ public sealed partial record ConsoleView
     public string TimeMid { get; init; } = "";
     public string TimeEnd { get; init; } = "";
     public string EventText { get; init; } = "";
+
+    /// <summary>The sample index of the latest alert onset in the range, or -1: every trend marks it.</summary>
+    public int EventIndex => Trends is { Events.IsEmpty: false } t ? t.Events[^1].Index : -1;
     public TrendRange Range { get; init; }
     public bool IsRange15 => Range == TrendRange.Minutes15;
     public bool IsRange1h => Range == TrendRange.Hour1;

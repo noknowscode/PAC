@@ -15,9 +15,13 @@ public enum ReadingGroup
 /// <summary>What a reading is computed from at one tick: the unit's base reading, the plant's net output and the setpoints.</summary>
 public readonly record struct ReadingContext(UnitReading Unit, long Tick, double NetMw, Setpoints Setpoints)
 {
-    /// <summary>A slow oscillation round <paramref name="value"/>: ±<paramref name="swing"/> of it, with a little noise.</summary>
+    /// <summary>
+    /// A drift round <paramref name="value"/>: ±<paramref name="swing"/> of it, mostly a slow wave
+    /// (about 50 min, so an hour's trend reads as drift, not a sine), a faster ripple and a little noise.
+    /// </summary>
     public double Around(double value, double swing, double seed) =>
-        value * (1 + swing * Math.Sin(Tick * 0.05 + seed) + swing * 0.3 * (Simulation.Noise(Tick, seed) - 0.5));
+        value * (1 + swing * (0.75 * Math.Sin(Tick * 0.004 + seed) + 0.25 * Math.Sin(Tick * 0.05 + seed * 2))
+            + swing * 0.3 * (Simulation.Noise(Tick, seed) - 0.5));
 }
 
 /// <summary>

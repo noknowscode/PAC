@@ -5,25 +5,26 @@
       xmlns:utu="using:Uno.Toolkit.UI"
       xmlns:controls="using:PacConsole.Controls"
       xmlns:charts="using:PacConsole.Controls.Charts"
-      xmlns:rendering="using:PacConsole.Rendering"
       xmlns:conv="using:PacConsole.Presentation.Converters"
       NavigationCacheMode="Required"
       Background="{StaticResource GroundBrush}">
 
   <!--
-    A figure plate and a datasheet (.impeccable.md, Direction 2). The plant is Fig. 1, drawn straight
-    on the ground; readings sit in one column separated by space and single hairline rules, with no
-    cards. Net output is the one display-size figure. Orange marks the selected unit and live data only.
+    Console page v3 (SPEC-CONSOLE.md, from the user's mock): one bordered frame on the ground, in bands.
+    Header; a grey status strip (net output against target, mode, snapshot); the systems bar; the plant
+    panel beside the equipment inspector; the synchronized trends; a grey footer. Slate-teal marks what
+    is selected or compared; burnt orange marks alerts, always with the word.
   -->
 
   <Page.Resources>
     <conv:ToneConverter x:Key="Tone" />
     <conv:BoolToVisibilityConverter x:Key="Visible" />
+    <conv:NotNullToVisibilityConverter x:Key="Present" />
 
-    <!-- Slider lightweight styling: an ink value track on a soft fill, orange thumb (the control you hold). -->
-    <StaticResource x:Key="SliderTrackValueFill" ResourceKey="InkSoftBrush" />
-    <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="TextPrimaryBrush" />
-    <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="TextPrimaryBrush" />
+    <!-- Slider lightweight styling: an ink value track on a soft fill, slate-teal thumb. -->
+    <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentBrush" />
+    <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentBrush" />
     <StaticResource x:Key="SliderThumbBackground" ResourceKey="AccentBrush" />
     <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="AccentBrush" />
     <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="AccentBrush" />
@@ -31,55 +32,61 @@
     <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="FillStrongBrush" />
     <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="FillStrongBrush" />
 
-    <!-- Below 1360 px the readings column no longer fits beside the figure: it stacks under it. -->
-    <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="1360" />
+    <!-- Below 960 px the inspector stacks under the plant. -->
+    <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" />
 
-    <!-- Unit and reading buttons stay put (one per item, bound to a record MVUX updates in place);
-         these templates draw their faces. -->
-    <DataTemplate x:Key="UnitFace">
-      <StackPanel Spacing="0" HorizontalAlignment="Center">
-        <TextBlock Text="{Binding ShortCode}" Style="{StaticResource TypeSection}" HorizontalAlignment="Center"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=AccentBrush|normal=TextPrimaryBrush}" />
-        <TextBlock Text="{Binding Subtitle}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Center"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=alert=AlertTextBrush|normal=MutedBrush}" />
-      </StackPanel>
-    </DataTemplate>
-    <DataTemplate x:Key="ReadingFace">
-      <StackPanel Spacing="0">
-        <TextBlock Style="{StaticResource TypeMicro}">
-          <Run Text="{Binding Label}" /><Run Text=" " /><Run Text="{Binding Status}" Foreground="{StaticResource AlertTextBrush}" />
-        </TextBlock>
-        <StackPanel Orientation="Horizontal" Spacing="4">
-          <TextBlock Text="{Binding Value}" Style="{StaticResource TypeValue}"
-                     Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=high=AlertTextBrush|held=MutedBrush|normal=TextPrimaryBrush}" />
-          <TextBlock Text="{Binding Unit}" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="0,0,0,4" />
-        </StackPanel>
-      </StackPanel>
-    </DataTemplate>
-    <Style x:Key="UnitButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-      <Setter Property="Width" Value="64" />
-      <Setter Property="Height" Value="48" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="ContentTemplate" Value="{StaticResource UnitFace}" />
-    </Style>
-    <Style x:Key="ReadingButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-      <Setter Property="Padding" Value="10,5" />
-      <Setter Property="Height" Value="52" />
+    <!-- A reading tile: label, value and unit; the word "Above limit" in alert; ↗ when it is in the trends.
+         One fixed button per slot, bound to a record MVUX updates in place. -->
+    <Style x:Key="TileButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="MinHeight" Value="72" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Top" />
-      <Setter Property="ContentTemplate" Value="{StaticResource ReadingFace}" />
-      <Setter Property="ToolTipService.ToolTip" Value="Plot this reading" />
+      <Setter Property="ToolTipService.ToolTip" Value="Compare in the synchronized trends" />
+      <Setter Property="ContentTemplate">
+        <Setter.Value>
+          <DataTemplate>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" MaxLines="2" />
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <TextBlock Text="{Binding Value}" Style="{StaticResource TypeValue}"
+                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=high=AlertTextBrush|normal=TextPrimaryBrush}" />
+                  <TextBlock Text="{Binding Unit}" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="0,0,0,3" />
+                </StackPanel>
+                <TextBlock Text="{Binding StatusText}" Style="{StaticResource TypeMicro}" Foreground="{StaticResource AlertTextBrush}"
+                           Visibility="{Binding IsHigh, Converter={StaticResource Visible}}" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{StaticResource AccentBrush}"
+                         Visibility="{Binding IsCompared, Converter={StaticResource Visible}}" />
+            </Grid>
+          </DataTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
 
-    <!-- A datasheet rule between sections: a divider, not a container. -->
+    <Style x:Key="ChipButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
+      <Setter Property="Background" Value="{StaticResource CardBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!-- Section caps ("SYSTEMS", "EQUIPMENT INSPECTOR"). -->
+    <Style x:Key="TypeCaps" TargetType="TextBlock" BasedOn="{StaticResource TypeMicro}">
+      <Setter Property="FontSize" Value="11" />
+    </Style>
+
     <Style x:Key="Rule" TargetType="Border">
       <Setter Property="Height" Value="1" />
       <Setter Property="Background" Value="{StaticResource HairlineBrush}" />
     </Style>
   </Page.Resources>
 
-  <mvux:FeedView x:Name="ConsoleFeed" Source="{Binding View}" Margin="32,20,32,24">
+  <mvux:FeedView x:Name="ConsoleFeed" Source="{Binding View}">
 
     <!-- Before the first snapshot: a quiet line where the page will be, so nothing jumps. -->
     <mvux:FeedView.ProgressTemplate>
@@ -102,338 +109,437 @@
     </mvux:FeedView.ErrorTemplate>
 
     <DataTemplate>
-      <Grid RowDefinitions="44,*" RowSpacing="24">
+      <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <!-- xaml-lint: allow card - the page's one frame; surfaces in this app come from Tokens.xaml under the Simple theme. -->
+        <Border MaxWidth="1180" Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal='12,12,12,24', Wide='24,20,24,32'}"
+                Background="{StaticResource CardBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusPanel}">
+          <StackPanel>
 
-        <!-- ============ HEADER: one line, left to right as it is read ============ -->
-        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="20">
-          <StackPanel VerticalAlignment="Center" Spacing="0">
-            <TextBlock Text="Plant 02" Style="{StaticResource TypeTitle}" />
-            <TextBlock Text="Thermal station · central control" Style="{StaticResource TypeMicro}" />
-          </StackPanel>
-
-          <Button Grid.Column="2"
-                  Command="{Binding Parent.SelectFirstAlert}"
-                  Style="{StaticResource ConsoleButton}"
-                  Height="32" CornerRadius="16" Padding="12,0"
-                  Background="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTintBrush|False=FillBrush}"
-                  Foreground="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=InkSoftBrush}"
-                  AutomationProperties.Name="{Binding Data.AlertText}"
-                  ToolTipService.ToolTip="Select the first unit in alert">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Ellipse Width="6" Height="6" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
-                       Fill="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertBrush|False=FaintBrush}" />
-              <TextBlock Text="{Binding Data.AlertText}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-
-          <ToggleButton Grid.Column="3" Style="{StaticResource QuietToggleButton}"
-                        Click="OnThemeClick" VerticalAlignment="Center"
-                        AutomationProperties.Name="Dark theme" ToolTipService.ToolTip="Switch between the light and graphite themes">
-            <TextBlock Text="Dark" Style="{StaticResource ControlLabel}" />
-          </ToggleButton>
-
-          <StackPanel Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="0" MinWidth="112">
-            <TextBlock Text="{Binding Data.Clock}" Style="{StaticResource TypeCode}" HorizontalAlignment="Right" />
-            <TextBlock Style="{StaticResource TypeMicro}" HorizontalAlignment="Right">
-              <Run Text="{Binding Data.DataText}" Foreground="{Binding Data.DataTone, Converter={StaticResource Tone}, ConverterParameter=stale=AlertTextBrush|held=InkSoftBrush|live=MutedBrush}" /><Run Text=" · operator 04" />
-            </TextBlock>
-          </StackPanel>
-        </Grid>
-
-        <!-- ============ BODY ============ -->
-        <ScrollViewer Grid.Row="1" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=Auto, Wide=Disabled}"
-                      Margin="0,0,-16,0" Padding="0,0,16,0">
-          <Grid ColumnDefinitions="*,440" RowDefinitions="*,Auto" ColumnSpacing="56"
-                RowSpacing="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=40, Wide=0}"
-                MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=1500, Wide=600}">
-
-            <!-- ============ FIG. 1: the plant, with units and views beneath it ============ -->
-            <Grid RowDefinitions="*,Auto" RowSpacing="24"
-                  Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}">
-
-              <controls:PlantViewport x:Name="Viewport"
-                                      SelectedUnit="{Binding Data.Selected}"
-                                      AlertingUnits="{Binding Data.AlertingUnits}"
-                                      SelectCommand="{Binding Parent.SelectUnit}"
-                                      Loaded="OnViewportLoaded" />
-
-              <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
-
-                <!-- Units and mode -->
-                <StackPanel Spacing="8" AutomationProperties.Name="Unit control">
-                  <TextBlock Text="Units" Style="{StaticResource TypeMicro}" />
-                  <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button DataContext="{Binding Data.StkTile}" Content="{Binding}" Style="{StaticResource UnitButton}"
-                            Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
-                            AutomationProperties.Name="{Binding AutomationName}"
-                            Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=CardBrush|normal=FillBrush}" />
-                    <Button DataContext="{Binding Data.TkaTile}" Content="{Binding}" Style="{StaticResource UnitButton}"
-                            Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
-                            AutomationProperties.Name="{Binding AutomationName}"
-                            Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=CardBrush|normal=FillBrush}" />
-                    <Button DataContext="{Binding Data.GenTile}" Content="{Binding}" Style="{StaticResource UnitButton}"
-                            Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
-                            AutomationProperties.Name="{Binding AutomationName}"
-                            Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=CardBrush|normal=FillBrush}" />
-                    <Button DataContext="{Binding Data.TrbTile}" Content="{Binding}" Style="{StaticResource UnitButton}"
-                            Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
-                            AutomationProperties.Name="{Binding AutomationName}"
-                            Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=CardBrush|normal=FillBrush}" />
-                    <Button DataContext="{Binding Data.CndTile}" Content="{Binding}" Style="{StaticResource UnitButton}"
-                            Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
-                            AutomationProperties.Name="{Binding AutomationName}"
-                            Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=CardBrush|normal=FillBrush}" />
-                    <Button DataContext="{Binding Data.SilTile}" Content="{Binding}" Style="{StaticResource UnitButton}"
-                            Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
-                            AutomationProperties.Name="{Binding AutomationName}"
-                            Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=selected=CardBrush|normal=FillBrush}" />
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" Spacing="12">
-                    <TextBlock Text="Mode" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-                    <!-- A segmented track: one soft fill, the chosen segment raised to white. -->
-                    <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{StaticResource FillBrush}">
-                      <RadioButton Content="Auto" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsAuto, Mode=OneWay}" Command="{Binding Parent.SetAuto}" />
-                      <RadioButton Grid.Column="1" Content="Manual" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsManual, Mode=OneWay}" Command="{Binding Parent.SetManual}" />
-                      <RadioButton Grid.Column="2" Content="Hold" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsHold, Mode=OneWay}" Command="{Binding Parent.SetHold}" />
-                    </Grid>
-                  </StackPanel>
+            <!-- ============ HEADER ============ -->
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="12" Padding="24,14,16,14">
+              <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <FontIcon Glyph="&#xE81E;" FontSize="16" Foreground="{StaticResource AlertBrush}" VerticalAlignment="Center" />
+                  <TextBlock Text="PAC" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
                 </StackPanel>
+                <Border Width="1" Height="20" Background="{StaticResource HairlineBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="Plant 02" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
+                <TextBlock Text="Steam-cycle station" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+              </StackPanel>
 
-                <!-- Views: the same figure from three standard angles -->
-                <StackPanel Grid.Column="2" Spacing="8">
-                  <TextBlock Text="Views" Style="{StaticResource TypeMicro}" />
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Tag="iso" Click="OnPresetClick" Style="{StaticResource ConsoleButton}" Width="132" Height="104" Padding="8,6" CornerRadius="{StaticResource RadiusCard}"
-                            Background="Transparent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                            AutomationProperties.Name="View isometric">
-                      <Grid RowDefinitions="*,Auto">
-                        <rendering:SolidThumb PresetKey="iso" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
-                        <TextBlock Grid.Row="1" Style="{StaticResource TypeMicro}"><Run Text="Isometric" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  35° · 28°" /></TextBlock>
-                      </Grid>
-                    </Button>
-                    <Button Tag="elevation" Click="OnPresetClick" Style="{StaticResource ConsoleButton}" Width="132" Height="104" Padding="8,6" CornerRadius="{StaticResource RadiusCard}"
-                            Background="Transparent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                            AutomationProperties.Name="View elevation">
-                      <Grid RowDefinitions="*,Auto">
-                        <rendering:SolidThumb PresetKey="elevation" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
-                        <TextBlock Grid.Row="1" Style="{StaticResource TypeMicro}"><Run Text="Elevation" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  0° · 6°" /></TextBlock>
-                      </Grid>
-                    </Button>
-                    <Button Tag="plan" Click="OnPresetClick" Style="{StaticResource ConsoleButton}" Width="132" Height="104" Padding="8,6" CornerRadius="{StaticResource RadiusCard}"
-                            Background="Transparent" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                            AutomationProperties.Name="View plan">
-                      <Grid RowDefinitions="*,Auto">
-                        <rendering:SolidThumb PresetKey="plan" Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
-                        <TextBlock Grid.Row="1" Style="{StaticResource TypeMicro}"><Run Text="Plan" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  0° · 86°" /></TextBlock>
-                      </Grid>
-                    </Button>
-                  </StackPanel>
+              <Button Grid.Column="2"
+                      Command="{Binding Parent.SelectFirstAlert}"
+                      Style="{StaticResource ConsoleButton}"
+                      Height="36" Padding="14,0"
+                      Background="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTintBrush|False=FillBrush}"
+                      Foreground="{Binding Data.HasAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=InkSoftBrush}"
+                      AutomationProperties.Name="{Binding Data.ActiveAlertText}"
+                      ToolTipService.ToolTip="Select the first unit in alert">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <FontIcon Glyph="&#xE7BA;" FontSize="14" VerticalAlignment="Center"
+                            Visibility="{Binding Data.HasAlert, Converter={StaticResource Visible}}" />
+                  <TextBlock Text="{Binding Data.ActiveAlertText}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                 </StackPanel>
-              </Grid>
+              </Button>
+
+              <TextBlock Grid.Column="3" Text="Operator 04" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" Margin="8,0" />
+
+              <Button Grid.Column="4" Style="{StaticResource IconButton}" AutomationProperties.Name="More" ToolTipService.ToolTip="More">
+                <FontIcon Glyph="&#xE712;" FontSize="16" />
+                <Button.Flyout>
+                  <MenuFlyout Placement="BottomEdgeAlignedRight">
+                    <ToggleMenuFlyoutItem Text="Graphite theme" Click="OnThemeClick" />
+                    <MenuFlyoutItem Text="Reset plant view" Click="OnResetViewClick" />
+                  </MenuFlyout>
+                </Button.Flyout>
+              </Button>
+
+              <Button Grid.Column="5" Style="{StaticResource IconButton}" Click="OnFullScreenClick"
+                      AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
+                <FontIcon Glyph="&#xE740;" FontSize="14" />
+              </Button>
             </Grid>
 
-            <!-- ============ READINGS: a datasheet column ============ -->
-            <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
-                          Margin="0,0,-12,0" Padding="0,0,12,0"
-                          Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=0, Wide=1}"
-                          Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=1, Wide=0}"
-                          Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}">
-            <StackPanel Spacing="16" AutomationProperties.Name="Readings">
-
-              <!-- Plant output: the one display figure, plotted over the last 48 seconds or 24 hours.
-                   Every section header: title left, readout or meta right, 8 above its content. -->
-              <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                  <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="Net output" Style="{StaticResource TypeSection}" />
+            <!-- ============ STATUS STRIP ============ -->
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1">
+              <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="20" Padding="24,14">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <TextBlock Text="Net output" Style="{StaticResource TypeBody}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                  <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeDisplay}" />
+                  <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                </StackPanel>
+                <Border Grid.Column="1" Width="1" Background="{StaticResource HairlineBrush}" Margin="0,4" />
+                <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Data.TargetGapText}" Style="{StaticResource TypeBody}" />
+                  <TextBlock Text="{Binding Data.TargetText}" Style="{StaticResource TypeMicro}" />
+                </StackPanel>
+                <StackPanel Grid.Column="4" Spacing="0" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                     <Ellipse Width="6" Height="6" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
                              Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=FaintBrush}" />
-                    <TextBlock Text="{Binding Data.LiveText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Data.ModeLine}" Style="{StaticResource TypeBody}" />
                   </StackPanel>
-                  <!-- Span switch: the same segmented track as Mode, one step smaller. -->
-                  <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{StaticResource FillBrush}">
-                    <RadioButton x:Name="SpanLive" Content="48 s" GroupName="OutputSpan" Style="{StaticResource ModeRadioButton}" Height="24" Padding="8,0" IsChecked="True"
-                                 AutomationProperties.Name="Plot the last 48 seconds" />
-                    <RadioButton x:Name="SpanDay" Grid.Column="1" Content="24 h" GroupName="OutputSpan" Style="{StaticResource ModeRadioButton}" Height="24" Padding="8,0"
-                                 AutomationProperties.Name="Plot the last 24 hours" />
-                  </Grid>
-                </Grid>
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeHero}" />
-                    <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,12" />
-                  </StackPanel>
-                  <TextBlock Grid.Column="1" Text="{Binding Readout, ElementName=OutputPlot}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,12" />
-                </Grid>
-                <!-- One chart, two spans: the switch changes what it shows, never whether it is shown. -->
-                <charts:OutputChart x:Name="OutputPlot" Height="88"
-                                    Values="{Binding Data.OutputSeries}" DayValues="{Binding Data.HourlySeries}" Target="{Binding Data.TargetMw}"
-                                    ShowDay="{Binding IsChecked, ElementName=SpanDay}"
-                                    DefaultReadout="{Binding Data.OutputDelta}" DayReadout="{Binding Data.HourlyText}" />
-              </StackPanel>
-
-              <Border Style="{StaticResource Rule}" />
-
-              <!-- Selected unit: name, state and portrait; its readings (pick one to plot it); the plot. -->
-              <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,96" ColumnSpacing="16">
-                  <StackPanel Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Style="{StaticResource TypeTitle}">
-                      <Run Text="{Binding Data.SelectedCode}" /><Run Text="  " /><Run Text="{Binding Data.SelectedName}" FontFamily="{StaticResource SansFont}" />
-                    </TextBlock>
-                    <TextBlock Text="{Binding Data.SelectedStatusLine}" Style="{StaticResource TypeBody}"
-                               Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=InkSoftBrush}" />
-                    <TextBlock Style="{StaticResource TypeMicro}">
-                      <Run Text="Up " /><Run Text="{Binding Data.SelectedUptime}" /><Run Text=" · serviced " /><Run Text="{Binding Data.SelectedService}" />
-                    </TextBlock>
-                  </StackPanel>
-                  <rendering:SolidThumb Grid.Column="1" Height="64" SingleUnit="True" PresetKey="iso"
-                                        Selected="{Binding Data.Selected}" AlertingUnits="{Binding Data.AlertingUnits}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" RowSpacing="4" AutomationProperties.Name="Readings of the selected unit">
-                  <Button Grid.Row="0" Grid.Column="0" DataContext="{Binding Data.TempTile}" Content="{Binding}" Style="{StaticResource ReadingButton}"
-                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectMetric}" CommandParameter="{Binding Metric}"
-                          AutomationProperties.Name="{Binding AutomationName}"
-                          Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=focused=CardBrush|normal=GroundBrush}" />
-                  <Button Grid.Row="0" Grid.Column="1" DataContext="{Binding Data.PressTile}" Content="{Binding}" Style="{StaticResource ReadingButton}"
-                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectMetric}" CommandParameter="{Binding Metric}"
-                          AutomationProperties.Name="{Binding AutomationName}"
-                          Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=focused=CardBrush|normal=GroundBrush}" />
-                  <Button Grid.Row="0" Grid.Column="2" DataContext="{Binding Data.FlowTile}" Content="{Binding}" Style="{StaticResource ReadingButton}"
-                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectMetric}" CommandParameter="{Binding Metric}"
-                          AutomationProperties.Name="{Binding AutomationName}"
-                          Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=focused=CardBrush|normal=GroundBrush}" />
-                  <Button Grid.Row="1" Grid.Column="0" DataContext="{Binding Data.LoadTile}" Content="{Binding}" Style="{StaticResource ReadingButton}"
-                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectMetric}" CommandParameter="{Binding Metric}"
-                          AutomationProperties.Name="{Binding AutomationName}"
-                          Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=focused=CardBrush|normal=GroundBrush}" />
-                  <Button Grid.Row="1" Grid.Column="1" DataContext="{Binding Data.EffTile}" Content="{Binding}" Style="{StaticResource ReadingButton}"
-                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectMetric}" CommandParameter="{Binding Metric}"
-                          AutomationProperties.Name="{Binding AutomationName}"
-                          Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=focused=CardBrush|normal=GroundBrush}" />
-                  <Button Grid.Row="1" Grid.Column="2" DataContext="{Binding Data.VibTile}" Content="{Binding}" Style="{StaticResource ReadingButton}"
-                          Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectMetric}" CommandParameter="{Binding Metric}"
-                          AutomationProperties.Name="{Binding AutomationName}"
-                          Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=focused=CardBrush|normal=GroundBrush}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,8,0,0">
-                  <TextBlock Style="{StaticResource TypeSection}">
-                    <Run Text="{Binding Data.Plot.Title}" /><Run Text=", " Foreground="{StaticResource MutedBrush}" /><Run Text="{Binding Data.Plot.Unit}" Foreground="{StaticResource MutedBrush}" />
-                  </TextBlock>
-                  <TextBlock Grid.Column="1" Text="{Binding Readout, ElementName=UnitPlot}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-                </Grid>
-                <charts:MetricChart x:Name="UnitPlot" Height="104" Plot="{Binding Data.Plot}" DefaultReadout="{Binding Data.Plot.Readout}" />
-                <TextBlock Text="{Binding Data.Plot.Note}" Style="{StaticResource TypeMicro}" />
-              </StackPanel>
-
-              <Border Style="{StaticResource Rule}" />
-
-              <!-- Valves: filled is open, a ring is shut -->
-              <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Valves" Style="{StaticResource TypeSection}" />
-                  <TextBlock Grid.Column="1" Text="{Binding Data.OpenValvesText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-                </Grid>
-                <!-- One fixed toggle per valve: a recycled toggle could take a press meant for its neighbour. -->
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <ToggleButton DataContext="{Binding Data.Valve1}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve2}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve3}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve4}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve5}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve6}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve7}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve8}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
-                  <ToggleButton DataContext="{Binding Data.Valve9}" Style="{StaticResource ValveToggleButton}" Width="40" Height="32"
-                                IsChecked="{Binding Open, Mode=OneWay}"
-                                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
-                                AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
-                    <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
-                  </ToggleButton>
+                  <TextBlock Text="{Binding Data.SnapshotText}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right" />
                 </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- ============ SYSTEMS ============ -->
+            <ScrollViewer HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled"
+                          BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+              <StackPanel Orientation="Horizontal" Spacing="4" Padding="24,10" AutomationProperties.Name="Systems">
+                <TextBlock Text="SYSTEMS" Style="{StaticResource TypeCaps}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" Content="All systems"
+                             IsChecked="{Binding Data.IsAllSystems, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="All" />
+                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Steam and water"
+                             IsChecked="{Binding Data.IsSteamWater, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="SteamWater">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Steam &amp; water" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Cooling"
+                             IsChecked="{Binding Data.IsCooling, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Cooling">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Cooling" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Fuel and flue gas"
+                             IsChecked="{Binding Data.IsFuelFlue, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="FuelFlue">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Fuel &amp; flue gas" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Electrical"
+                             IsChecked="{Binding Data.IsElectrical, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Electrical">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource CircuitElectricalBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Electrical" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </RadioButton>
               </StackPanel>
+            </ScrollViewer>
+
+            <!-- ============ PLANT + INSPECTOR ============ -->
+            <Grid ColumnDefinitions="*,340" RowDefinitions="Auto,Auto">
+
+              <Border Background="{StaticResource PanelBrush}"
+                      Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
+                      MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=500, Wide=620}">
+                <controls:PlantViewport x:Name="Viewport"
+                                        Title="{Binding Data.SystemTitle}"
+                                        ShownSystem="{Binding Data.System}"
+                                        SelectedUnit="{Binding Data.Selected}"
+                                        AlertingUnits="{Binding Data.AlertingUnits}"
+                                        SelectCommand="{Binding Parent.SelectUnit}"
+                                        Loaded="OnViewportLoaded">
+                  <controls:PlantViewport.FooterContent>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <TextBlock Text="Equipment" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                      <ComboBox MinWidth="220" Height="34" Background="{StaticResource CardBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderBrush="{StaticResource HairlineBrush}"
+                                ItemsSource="{Binding Data.EquipmentChoices}"
+                                SelectedIndex="{Binding Data.SelectedIndex, Mode=OneWay}"
+                                utu:CommandExtensions.Command="{Binding Parent.PickEquipment}"
+                                AutomationProperties.Name="Equipment" />
+                    </StackPanel>
+                  </controls:PlantViewport.FooterContent>
+                </controls:PlantViewport>
+              </Border>
+
+              <!-- ============ EQUIPMENT INSPECTOR ============ -->
+              <Border Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=0, Wide=1}"
+                      Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=1, Wide=0}"
+                      Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
+                      BorderBrush="{StaticResource HairlineBrush}"
+                      BorderThickness="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal='0,1,0,0', Wide='1,0,0,0'}"
+                      Padding="24,20">
+                <StackPanel Spacing="16" AutomationProperties.Name="Equipment inspector">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding Data.InspectorCode}" Style="{StaticResource TypeCaps}" />
+                      <TextBlock Grid.Column="1" Text="EQUIPMENT INSPECTOR" Style="{StaticResource TypeCaps}" />
+                    </Grid>
+                    <TextBlock Text="{Binding Data.InspectorName}" Style="{StaticResource TypeDisplay}" />
+                    <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{StaticResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
+                    <TextBlock Style="{StaticResource TypeMicro}">
+                      <Run Text="{Binding Data.InspectorState}" Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=MutedBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
+                    </TextBlock>
+                  </StackPanel>
+
+                  <!-- Tabs: view-only, so each panel follows its tab's IsChecked. -->
+                  <StackPanel Spacing="0">
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                      <RadioButton x:Name="TabOverview" Content="Overview" GroupName="InspectorTabs" Style="{StaticResource TabRadioButton}" IsChecked="True" />
+                      <RadioButton x:Name="TabCondition" Content="Condition" GroupName="InspectorTabs" Style="{StaticResource TabRadioButton}" />
+                      <RadioButton x:Name="TabControl" Content="Control" GroupName="InspectorTabs" Style="{StaticResource TabRadioButton}" />
+                    </StackPanel>
+                    <Border Style="{StaticResource Rule}" />
+                  </StackPanel>
+
+                  <!-- Overview: what the equipment is doing. -->
+                  <StackPanel Spacing="12" Visibility="{Binding IsChecked, ElementName=TabOverview, Converter={StaticResource Visible}}">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                      <Button DataContext="{Binding Data.Overview0}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Column="1" DataContext="{Binding Data.Overview1}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Row="1" DataContext="{Binding Data.Overview2}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Row="1" Grid.Column="1" DataContext="{Binding Data.Overview3}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Row="2" DataContext="{Binding Data.Overview4}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Row="2" Grid.Column="1" DataContext="{Binding Data.Overview5}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                    </Grid>
+                    <TextBlock Text="Select a reading to compare it in the synchronized trends." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+                  </StackPanel>
+
+                  <!-- Condition: how the equipment is holding up. -->
+                  <StackPanel Spacing="12" Visibility="{Binding IsChecked, ElementName=TabCondition, Converter={StaticResource Visible}}">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                      <Button DataContext="{Binding Data.Condition0}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Column="1" DataContext="{Binding Data.Condition1}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                      <Button Grid.Row="1" DataContext="{Binding Data.Condition2}" Content="{Binding}" Style="{StaticResource TileButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+                              AutomationProperties.Name="{Binding AutomationName}"
+                              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                    </Grid>
+                    <TextBlock Text="Vibration alarms above 4.5 mm/s." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+                  </StackPanel>
+
+                  <!-- Control: mode, setpoints and this equipment's valves. -->
+                  <StackPanel Spacing="16" Visibility="{Binding IsChecked, ElementName=TabControl, Converter={StaticResource Visible}}">
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="Mode" Style="{StaticResource TypeMicro}" />
+                      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{StaticResource FillBrush}">
+                        <RadioButton Content="Auto" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsAuto, Mode=OneWay}" Command="{Binding Parent.SetAuto}" />
+                        <RadioButton Grid.Column="1" Content="Manual" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsManual, Mode=OneWay}" Command="{Binding Parent.SetManual}" />
+                        <RadioButton Grid.Column="2" Content="Hold" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsHold, Mode=OneWay}" Command="{Binding Parent.SetHold}" />
+                      </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Setpoints" Style="{StaticResource TypeSection}" />
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Output target" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TypeSection}"><Run Text="{Binding Parent.TargetMw}" /><Run Text=" MW" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                      </Grid>
+                      <Slider Minimum="400" Maximum="700" StepFrequency="5" SmallChange="5" LargeChange="50"
+                              Value="{Binding Parent.TargetMw, Mode=TwoWay}" AutomationProperties.Name="Output target, megawatts" />
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Turbine inlet limit" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TypeSection}"><Run Text="{Binding Parent.TurbineLimitBar}" /><Run Text=" bar" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                      </Grid>
+                      <Slider Minimum="140" Maximum="180" StepFrequency="1" SmallChange="1" LargeChange="10"
+                              Value="{Binding Parent.TurbineLimitBar, Mode=TwoWay}" AutomationProperties.Name="Turbine inlet pressure limit, bar" />
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Stack damper" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TypeSection}"><Run Text="{Binding Parent.DamperPct}" /><Run Text=" %" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                      </Grid>
+                      <Slider Minimum="0" Maximum="100" StepFrequency="1" SmallChange="1" LargeChange="10"
+                              Value="{Binding Parent.DamperPct, Mode=TwoWay}" AutomationProperties.Name="Stack damper, percent" />
+                    </StackPanel>
+
+                    <!-- Valves on this equipment: filled is open, a ring is shut. One fixed toggle per valve. -->
+                    <StackPanel Spacing="8">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Valves" Style="{StaticResource TypeSection}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Data.ValvesNote}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                      </Grid>
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ToggleButton DataContext="{Binding Data.Slot1}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot2}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot3}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot4}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot5}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot6}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot7}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot8}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                        <ToggleButton DataContext="{Binding Data.Slot9}" Style="{StaticResource ValveToggleButton}" Width="44" Height="32"
+                                      Visibility="{Binding IsHere, Converter={StaticResource Visible}}" IsChecked="{Binding Open, Mode=OneWay}"
+                                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleValve}" CommandParameter="{Binding Id}"
+                                      AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}">
+                          <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                      </StackPanel>
+                    </StackPanel>
+                  </StackPanel>
+
+                  <Border Style="{StaticResource Rule}" />
+
+                  <!-- Connected equipment: chips that select it. -->
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="Connected equipment" Style="{StaticResource TypeMicro}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Button DataContext="{Binding Data.Connection0}" Content="{Binding Title}" Style="{StaticResource ChipButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
+                              AutomationProperties.Name="{Binding Title}" />
+                      <Button DataContext="{Binding Data.Connection1}" Content="{Binding Title}" Style="{StaticResource ChipButton}"
+                              Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+                              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
+                              AutomationProperties.Name="{Binding Title}" />
+                    </StackPanel>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <!-- ============ SYNCHRONIZED TRENDS ============ -->
+            <StackPanel Spacing="16" Padding="24,20" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0"
+                        AutomationProperties.Name="Synchronized trends">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Spacing="2">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <FontIcon Glyph="&#xE9D2;" FontSize="14" Foreground="{StaticResource InkSoftBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Synchronized trends" Style="{StaticResource TypeTitle}" />
+                  </StackPanel>
+                  <TextBlock Text="Generation + selected equipment · shared historical cursor" Style="{StaticResource TypeMicro}" />
+                </StackPanel>
+                <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{StaticResource FillBrush}" VerticalAlignment="Top">
+                  <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="28"
+                               IsChecked="{Binding Data.IsRange15, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Minutes15" />
+                  <RadioButton Grid.Column="1" Content="1 hour" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="28"
+                               IsChecked="{Binding Data.IsRange1h, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Hour1" />
+                  <RadioButton Grid.Column="2" Content="8 hours" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="28"
+                               IsChecked="{Binding Data.IsRange8h, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Hours8" />
+                </Grid>
+              </Grid>
+
+              <!-- One row per series: the reading and its value at the cursor, then its plot. -->
+              <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend0, Converter={StaticResource Present}}">
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Data.Trend0.Label}" Style="{StaticResource TypeMicro}" />
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend0Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend0.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                </StackPanel>
+                <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend0}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
+                                   TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
+              </Grid>
+              <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend1, Converter={StaticResource Present}}">
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Data.Trend1.Label}" Style="{StaticResource TypeMicro}" />
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend1Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend1.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                </StackPanel>
+                <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend1}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
+                                   TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
+              </Grid>
+              <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend2, Converter={StaticResource Present}}">
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Data.Trend2.Label}" Style="{StaticResource TypeMicro}" />
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend2Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend2.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                </StackPanel>
+                <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend2}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
+                                   TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
+              </Grid>
+              <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend3, Converter={StaticResource Present}}">
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Data.Trend3.Label}" Style="{StaticResource TypeMicro}" />
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend3Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend3.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                </StackPanel>
+                <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend3}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
+                                   TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
+              </Grid>
 
               <Border Style="{StaticResource Rule}" />
 
-              <!-- Setpoints -->
-              <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Setpoints" Style="{StaticResource TypeSection}" />
-                  <TextBlock Grid.Column="1" Style="{StaticResource TypeMicro}" VerticalAlignment="Center"><Run Text="mode " /><Run Text="{Binding Data.ModeText}" /></TextBlock>
-                </Grid>
-                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="24">
-                  <StackPanel Spacing="0">
-                    <TextBlock Text="Output target" Style="{StaticResource TypeMicro}" />
-                    <TextBlock Style="{StaticResource TypeValue}">
-                      <Run Text="{Binding Parent.TargetMw}" /><Run Text=" MW" FontSize="12" Foreground="{StaticResource MutedBrush}" />
-                    </TextBlock>
-                    <Slider Minimum="400" Maximum="700" StepFrequency="5" SmallChange="5" LargeChange="50"
-                            Value="{Binding Parent.TargetMw, Mode=TwoWay}" AutomationProperties.Name="Output target, megawatts" ToolTipService.ToolTip="Dashed line on the output plot" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="0">
-                    <TextBlock Text="Turbine inlet limit" Style="{StaticResource TypeMicro}" />
-                    <TextBlock Style="{StaticResource TypeValue}">
-                      <Run Text="{Binding Parent.TurbineLimitBar}" /><Run Text=" bar" FontSize="12" Foreground="{StaticResource MutedBrush}" />
-                    </TextBlock>
-                    <Slider Minimum="140" Maximum="180" StepFrequency="1" SmallChange="1" LargeChange="10"
-                            Value="{Binding Parent.TurbineLimitBar, Mode=TwoWay}" AutomationProperties.Name="Turbine inlet pressure limit, bar" ToolTipService.ToolTip="TRB-04 alarms above it; plot TRB-04 pressure to see the line" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="2" Spacing="0">
-                    <TextBlock Text="Stack damper" Style="{StaticResource TypeMicro}" />
-                    <TextBlock Style="{StaticResource TypeValue}">
-                      <Run Text="{Binding Parent.DamperPct}" /><Run Text=" %" FontSize="12" Foreground="{StaticResource MutedBrush}" />
-                    </TextBlock>
-                    <Slider Minimum="0" Maximum="100" StepFrequency="1" SmallChange="1" LargeChange="10"
-                            Value="{Binding Parent.DamperPct, Mode=TwoWay}" AutomationProperties.Name="Stack damper, percent" ToolTipService.ToolTip="Scales STK-01 flow" />
-                  </StackPanel>
-                </Grid>
-              </StackPanel>
+              <!-- The shared cursor: one slider moves the hairline on every row. -->
+              <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="20">
+                <TextBlock Text="Shared cursor" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" Minimum="0" Maximum="89" StepFrequency="1" SmallChange="1" LargeChange="10" VerticalAlignment="Center"
+                        Value="{Binding Parent.Cursor, Mode=TwoWay}" AutomationProperties.Name="Shared trend cursor" />
+                <TextBlock Grid.Column="2" Text="{Binding Data.CursorTime}" Style="{StaticResource TypeSection}" VerticalAlignment="Center" />
+                <Button Grid.Column="3" Content="Latest" Style="{StaticResource ToolbarButton}" Command="{Binding Parent.SetCursorLatest}"
+                        AutomationProperties.Name="Move the cursor to the latest sample" />
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Border Width="2" Height="14" Background="{StaticResource AlertBrush}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Data.EventText}" Style="{StaticResource TypeMicro}" />
+                </StackPanel>
+              </Grid>
             </StackPanel>
-            </ScrollViewer>
-          </Grid>
-        </ScrollViewer>
-      </Grid>
+
+            <!-- ============ FOOTER ============ -->
+            <!-- xaml-lint: allow card - a band of the page frame, rounding only the frame's bottom corners. -->
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,12,12" Padding="24,12">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <TextBlock Text="Interactive concept · water-cooled condenser + separate cooling bank" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+                <TextBlock Grid.Column="1" Text="Readings, trends and sensor assignments are simulated" Style="{StaticResource TypeMicro}" />
+              </Grid>
+            </Border>
+          </StackPanel>
+        </Border>
+      </ScrollViewer>
     </DataTemplate>
   </mvux:FeedView>
 </Page>

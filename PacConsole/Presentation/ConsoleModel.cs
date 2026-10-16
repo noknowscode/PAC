@@ -36,22 +36,74 @@ public partial record ConsoleModel
     public IState<ControlMode> Mode => State.Value(this, () => ControlMode.Auto);
 
     /// <summary>
-    /// Unit is null until the operator picks one; the view then defaults to the first alert.
-    /// Wrapped in a record because MVUX treats a null value as "no value", which would stall the combine.
+    /// Opens on the cooling bank, the unit in alert at start. Pinned rather than left to follow the
+    /// first alert: the cooling bank drifts in and out of alarm, and the inspector must not change
+    /// equipment on its own. Wrapped in a record because MVUX treats null as "no value".
     /// </summary>
-    public IState<UnitSelection> Selection => State.Value(this, () => new UnitSelection(null));
+    public IState<UnitSelection> Selection => State.Value(this, () => new UnitSelection(UnitId.Clg));
 
     /// <summary>The reading plotted for the selected unit. A value-type state, so it always has a value and never stalls the combine.</summary>
     public IState<Metric> Focus => State.Value(this, () => Metric.Vib);
 
+    // Console v3 view inputs (SPEC-CONSOLE.md). Each has one writer: its command, or the cursor slider.
+    public IState<PlantSystem> System => State.Value(this, () => PlantSystem.All);
+    public IState<TrendRange> Range => State.Value(this, () => TrendRange.Minutes15);
+
+    /// <summary>Reading keys plotted under net generation, for one item of equipment at a time (at most 3).</summary>
+    public IState<ImmutableArray<string>> Compared => State.Value(this, () => ImmutableArray<string>.Empty);
+
+    /// <summary>The shared cursor's sample index; a double because the slider binds two-way to it.</summary>
+    public IState<double> Cursor => State.Value(this, () => (double)(TrendSet.Samples - 1));
+
+    public IFeed<ViewInputs> Inputs => Feed.Combine(System, Range, Compared, Cursor)
+        .Select(t => new ViewInputs(t.Item1, t.Item2, t.Item3, (int)Math.Round(t.Item4)));
+
     public IFeed<Setpoints> CurrentSetpoints => Feed.Combine(TargetMw, TurbineLimitBar, DamperPct)
         .Select(t => new Setpoints(t.Item1, t.Item2, t.Item3));
 
-    public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Valves, Mode, Selection, Clock, Focus)
-        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, t.Item6, t.Item7));
+    // Feed.Combine takes at most eight sources, so the view inputs arrive already combined.
+    public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Valves, Mode, Selection, Clock, Focus, Inputs)
+        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, t.Item6, t.Item7, t.Item8));
 
     public async ValueTask SelectUnit(UnitId unit, CancellationToken ct) =>
         await Selection.UpdateAsync(_ => new UnitSelection(unit), ct);
+
+    /// <summary>The equipment picker's choice (the ComboBox passes its selected item).</summary>
+    public async ValueTask PickEquipment(ConnectionView? item, CancellationToken ct)
+    {
+        if (item is not null) await Selection.UpdateAsync(_ => new UnitSelection(item.Id), ct);
+    }
+
+    /// <summary>Isolates a system in the plant view (the systems bar passes the enum name).</summary>
+    public async ValueTask SelectSystem(string system, CancellationToken ct)
+    {
+        if (Enum.TryParse<PlantSystem>(system, out var value)) await System.SetAsync(value, ct);
+    }
+
+    public async ValueTask SelectRange(string range, CancellationToken ct)
+    {
+        if (Enum.TryParse<TrendRange>(range, out var value)) await Range.SetAsync(value, ct);
+    }
+
+    /// <summary>
+    /// Adds a reading to the trends or takes it out. The trends show one item of equipment at a time,
+    /// so readings of another unit are dropped; when nothing was picked for this unit, its first
+    /// reading (shown by default) counts as picked. At most three: the oldest gives way.
+    /// </summary>
+    public async ValueTask ToggleCompare(string key, CancellationToken ct) =>
+        await Compared.UpdateAsync(current =>
+        {
+            if (EquipmentCatalog.Find(key) is null) return current;
+            var unit = EquipmentCatalog.UnitOf(key);
+            var keys = current.Where(k => EquipmentCatalog.Find(k) is not null && EquipmentCatalog.UnitOf(k) == unit).ToList();
+            if (keys.Count == 0) keys.Add(EquipmentCatalog.Get(unit).Readings[0].Key);
+            if (!keys.Remove(key)) keys.Add(key);
+            while (keys.Count > 3) keys.RemoveAt(0);
+            return [.. keys];
+        }, ct);
+
+    public async ValueTask SetCursorLatest(CancellationToken ct) =>
+        await Cursor.SetAsync(TrendSet.Samples - 1, ct);
 
     public async ValueTask SelectMetric(Metric metric, CancellationToken ct) =>
         await Focus.SetAsync(metric, ct);

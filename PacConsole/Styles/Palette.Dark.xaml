@@ -4,7 +4,7 @@
     Graphite: the dark theme. Not merged as resources: ConsoleTheme copies each colour into the brush
     (or Color) of the same key, so every StaticResource, converter result and canvas palette follows a
     switch. Neutral greys with no blue cast; the same single orange. Contrast on the ground (#16181B):
-    ink 14.9, soft ink 10.2, muted 7.4, accent 6.4, alert 6.2.
+    ink 14.9, soft ink 10.2, muted 7.4, accent 8.1, alert text 6.6.
   -->
   <!-- xaml-lint: allow tokentheme - this file is the dark half of the in-place repaint (see Tokens.xaml). -->
 
@@ -21,24 +21,24 @@
   <Color x:Key="BorderBrushStrong">#C4C9CF</Color>
   <Color x:Key="FillBrush">#24282D</Color>
   <Color x:Key="FillStrongBrush">#353A40</Color>
-  <Color x:Key="AccentBrush">#F0793A</Color>
-  <Color x:Key="AccentFillBrush">#24F0793A</Color>
-  <Color x:Key="AccentTintBrush">#10F0793A</Color>
-  <Color x:Key="AccentBorderBrush">#99F0793A</Color>
-  <Color x:Key="OnAccentBrush">#1A0E07</Color>
-  <Color x:Key="AlertBrush">#F26B5E</Color>
-  <Color x:Key="AlertTextBrush">#F27E72</Color>
-  <Color x:Key="AlertBorderBrush">#B3F26B5E</Color>
-  <Color x:Key="AlertTintBrush">#14F26B5E</Color>
+  <Color x:Key="AccentBrush">#7FB3C8</Color>
+  <Color x:Key="AccentFillBrush">#247FB3C8</Color>
+  <Color x:Key="AccentTintBrush">#107FB3C8</Color>
+  <Color x:Key="AccentBorderBrush">#997FB3C8</Color>
+  <Color x:Key="OnAccentBrush">#0E1A20</Color>
+  <Color x:Key="AlertBrush">#F0793A</Color>
+  <Color x:Key="AlertTextBrush">#F38B55</Color>
+  <Color x:Key="AlertBorderBrush">#B3F0793A</Color>
+  <Color x:Key="AlertTintBrush">#3A2617</Color>
   <Color x:Key="SolidPaperColor">#16181B</Color>
   <Color x:Key="SolidShade0Color">#0F1113</Color>
   <Color x:Key="SolidShade1Color">#131518</Color>
   <Color x:Key="SolidShade2Color">#1A1C20</Color>
   <Color x:Key="SolidShade3Color">#1E2125</Color>
   <Color x:Key="SolidTopColor">#262A2F</Color>
-  <Color x:Key="SolidLitFaceColor">#2E2119</Color>
-  <Color x:Key="SolidLitShadeColor">#261B15</Color>
-  <Color x:Key="SolidLitTopColor">#3D2A1D</Color>
+  <Color x:Key="SolidLitFaceColor">#1A272D</Color>
+  <Color x:Key="SolidLitShadeColor">#152026</Color>
+  <Color x:Key="SolidLitTopColor">#22333B</Color>
   <Color x:Key="SolidLineHiColor">#E8EAEC</Color>
   <Color x:Key="SolidLineMidColor">#9AA1A9</Color>
   <Color x:Key="SolidLineLoColor">#5A6168</Color>
@@ -49,6 +49,7 @@
   <Color x:Key="CircuitWaterBrush">#3F5F78</Color>
   <Color x:Key="CircuitCoolingBrush">#3A6662</Color>
   <Color x:Key="CircuitFuelBrush">#5C4E70</Color>
+  <Color x:Key="CircuitElectricalBrush">#6E6040</Color>
   <Color x:Key="SolidSteamColor">#4A3037</Color>
   <Color x:Key="SolidWaterColor">#283B4B</Color>
   <Color x:Key="SolidCoolingColor">#243F3D</Color>

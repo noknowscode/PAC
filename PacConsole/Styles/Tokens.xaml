@@ -4,8 +4,9 @@
   <!--
     Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Light is the base theme;
     Palette.Dark.xaml holds the graphite values, copied over these by ConsoleTheme on a switch.
-    Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 5 type sizes.
-    Contrast on the ground (#F4F5F6): ink 14.2, soft ink 8.6, muted 5.6, accent 4.9, alert 6.1.
+    Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 6 type sizes.
+    Console v3 (SPEC-CONSOLE.md): selection is a deep slate-teal, alerts a burnt orange.
+    Contrast on the ground (#F4F5F6): ink 14.2, soft ink 8.6, muted 5.6, accent 6.9, alert text 5.4.
   -->
 
   <!-- One family. IBM Plex Sans digits are tabular by default (all 600 units), so live values hold still.
@@ -34,18 +35,19 @@
   <SolidColorBrush x:Key="FillBrush" Color="#E9ECEF" />
   <SolidColorBrush x:Key="FillStrongBrush" Color="#D5DAE0" />
 
-  <!-- Accent: the one orange indicator. Selected and live, nothing else. -->
-  <SolidColorBrush x:Key="AccentBrush" Color="#C2410C" />
-  <SolidColorBrush x:Key="AccentFillBrush" Color="#1FC2410C" />
-  <SolidColorBrush x:Key="AccentTintBrush" Color="#0DC2410C" />
-  <SolidColorBrush x:Key="AccentBorderBrush" Color="#99C2410C" />
+  <!-- Accent: the one selection colour, a deep slate-teal. Selected, compared and plotted, nothing else. -->
+  <SolidColorBrush x:Key="AccentBrush" Color="#2F5D73" />
+  <SolidColorBrush x:Key="AccentFillBrush" Color="#1F2F5D73" />
+  <SolidColorBrush x:Key="AccentTintBrush" Color="#0D2F5D73" />
+  <SolidColorBrush x:Key="AccentBorderBrush" Color="#992F5D73" />
   <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
 
-  <!-- Alert: always paired with the word (alert, high) or a dashed stroke -->
-  <SolidColorBrush x:Key="AlertBrush" Color="#C0261B" />
-  <SolidColorBrush x:Key="AlertTextBrush" Color="#B42318" />
-  <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3C0261B" />
-  <SolidColorBrush x:Key="AlertTintBrush" Color="#12C0261B" />
+  <!-- Alert: burnt orange, always paired with the word (alert, above limit) or a dashed stroke.
+       The tint is an opaque amber, the alert pill's ground. -->
+  <SolidColorBrush x:Key="AlertBrush" Color="#C2410C" />
+  <SolidColorBrush x:Key="AlertTextBrush" Color="#AE3A0A" />
+  <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3C2410C" />
+  <SolidColorBrush x:Key="AlertTintBrush" Color="#FCEAD7" />
 
   <!-- Type ramp, closed: 12 / 13 / 16 / 22 / 56, weights 400 / 500 / 600, sentence case. -->
   <Style x:Key="TypeMicro" TargetType="TextBlock">
@@ -82,6 +84,13 @@
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeFigure" TargetType="TextBlock" BasedOn="{StaticResource TypeValue}" />
+  <!-- Display: net output and the inspector's equipment name, 28 against 13 body. -->
+  <Style x:Key="TypeDisplay" TargetType="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
+    <Setter Property="FontSize" Value="28" />
+    <Setter Property="LineHeight" Value="34" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
   <!-- The one display figure on the page (net output): 56 against 13 body, 4.3x. -->
   <Style x:Key="TypeHero" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
@@ -101,9 +110,9 @@
   <Color x:Key="SolidShade2Color">#E2E9EF</Color>
   <Color x:Key="SolidShade3Color">#ECF1F5</Color>
   <Color x:Key="SolidTopColor">#FFFFFF</Color>
-  <Color x:Key="SolidLitFaceColor">#FCEBDF</Color>
-  <Color x:Key="SolidLitShadeColor">#F6D9C6</Color>
-  <Color x:Key="SolidLitTopColor">#FFF7F1</Color>
+  <Color x:Key="SolidLitFaceColor">#E3EEF3</Color>
+  <Color x:Key="SolidLitShadeColor">#CFE0E8</Color>
+  <Color x:Key="SolidLitTopColor">#F2F7F9</Color>
   <Color x:Key="SolidLineHiColor">#1E2833</Color>
   <Color x:Key="SolidLineMidColor">#5E6E80</Color>
   <Color x:Key="SolidLineLoColor">#9AA9B8</Color>
@@ -117,6 +126,8 @@
   <SolidColorBrush x:Key="CircuitWaterBrush" Color="#9EC1D8" />
   <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#96C9C3" />
   <SolidColorBrush x:Key="CircuitFuelBrush" Color="#B9A8D0" />
+  <!-- Electrical has no pipe; its swatch marks the system in the systems bar. -->
+  <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#C9B27A" />
   <Color x:Key="SolidSteamColor">#F2D9DF</Color>
   <Color x:Key="SolidWaterColor">#D6E7F2</Color>
   <Color x:Key="SolidCoolingColor">#D3ECE9</Color>

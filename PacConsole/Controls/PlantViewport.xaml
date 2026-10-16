@@ -7,73 +7,104 @@
              FocusVisualPrimaryBrush="{StaticResource AccentBrush}"
              AutomationProperties.Name="Plant 3D model">
 
-  <!-- Fig. 1: the plant sits on the ground with no frame; its caption and tools sit beneath it. -->
-  <Grid x:Name="Root" RowDefinitions="*,Auto" RowSpacing="12" Background="Transparent">
+  <!-- The plant panel (SPEC-CONSOLE.md): title and views above the drawing, the circuit legend at
+       its foot, then a footer bar holding the page's equipment picker and the camera tools. -->
+  <Grid x:Name="Root" RowDefinitions="Auto,*,Auto" Background="Transparent">
+
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" Padding="20,16,20,0">
+      <StackPanel Spacing="2" VerticalAlignment="Center" IsHitTestVisible="False">
+        <TextBlock x:Name="TitleText" Style="{StaticResource TypeSection}" />
+        <TextBlock Text="Drag to orbit · Select an assembly" Style="{StaticResource TypeMicro}" />
+      </StackPanel>
+
+      <!-- Standard views: one raised segment shows the view the camera rests in. -->
+      <!-- xaml-lint: allow card - the segmented control's track, not a content surface (same as the page's Mode and range tracks). -->
+      <Border Grid.Column="1" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+              CornerRadius="{StaticResource RadiusControl}" Padding="3" VerticalAlignment="Top">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+          <RadioButton x:Name="ViewIso" Tag="iso" GroupName="PlantView" Style="{StaticResource ViewRadioButton}" AutomationProperties.Name="Isometric view">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <FontIcon Glyph="&#xE7B8;" FontSize="14" />
+              <TextBlock Text="Isometric" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="ViewElevation" Tag="elevation" GroupName="PlantView" Style="{StaticResource ViewRadioButton}" AutomationProperties.Name="Elevation view">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <FontIcon Glyph="&#xE7C3;" FontSize="14" />
+              <TextBlock Text="Elevation" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="ViewPlan" Tag="plan" GroupName="PlantView" Style="{StaticResource ViewRadioButton}" AutomationProperties.Name="Plan view">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <FontIcon Glyph="&#xE8A9;" FontSize="14" />
+              <TextBlock Text="Plan" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+        </StackPanel>
+      </Border>
+    </Grid>
 
     <!-- Drag surface + solid plant. Tags sit in a Canvas above it so they stay real, focusable Buttons. -->
-    <Grid x:Name="Surface" Background="Transparent">
+    <Grid x:Name="Surface" Grid.Row="1" Background="Transparent">
       <rendering:PlantCanvas x:Name="PlantDrawing" />
       <Canvas x:Name="TagLayer" />
-    </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-      <!-- Caption, set like a figure plate: number, title, then what the view shows. -->
-      <StackPanel Spacing="2" VerticalAlignment="Center" IsHitTestVisible="False">
-        <StackPanel Orientation="Horizontal" Spacing="16">
-          <TextBlock Style="{StaticResource TypeSection}">
-            <Run Text="Fig. 1" Foreground="{StaticResource MutedBrush}" /><Run Text="    Plant 02, thermal" />
-          </TextBlock>
-          <!-- Circuit legend: the pipe tints, each with its name. -->
-          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="Steam" Style="{StaticResource TypeMicro}" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitWaterBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="Feedwater" Style="{StaticResource TypeMicro}" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="Cooling water" Style="{StaticResource TypeMicro}" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <Ellipse Width="10" Height="10" StrokeThickness="1" Stroke="{StaticResource FaintBrush}" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="Fuel" Style="{StaticResource TypeMicro}" />
-            </StackPanel>
-          </StackPanel>
+      <!-- Circuit legend: the pipe tints, each with its name. -->
+      <StackPanel Orientation="Horizontal" Spacing="14" Margin="20,0,0,12" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="Steam" Style="{StaticResource TypeMicro}" />
         </StackPanel>
-        <TextBlock Style="{StaticResource TypeMicro}">
-          <Run x:Name="CaptionDetail" /><Run Text=" · drag to orbit, click a unit to select it" />
-        </TextBlock>
-      </StackPanel>
-
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-        <Button x:Name="RotateLeft"
-                Style="{StaticResource IconButton}"
-                AutomationProperties.Name="Rotate left 45 degrees"
-                ToolTipService.ToolTip="Rotate left">
-          <!-- Fluent "Rotate" glyph, mirrored for the anticlockwise turn. -->
-          <FontIcon Glyph="&#xE7AD;" FontSize="16" RenderTransformOrigin="0.5,0.5">
-            <FontIcon.RenderTransform>
-              <ScaleTransform ScaleX="-1" />
-            </FontIcon.RenderTransform>
-          </FontIcon>
-        </Button>
-        <Button x:Name="RotateRight"
-                Style="{StaticResource IconButton}"
-                AutomationProperties.Name="Rotate right 45 degrees"
-                ToolTipService.ToolTip="Rotate right">
-          <FontIcon Glyph="&#xE7AD;" FontSize="16" />
-        </Button>
-        <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
-            <TextBlock x:Name="AutoOrbitLabel" Text="Auto orbit" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <Button x:Name="Reset" Content="Reset view" Style="{StaticResource ToolbarButton}" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitWaterBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="Feedwater" Style="{StaticResource TypeMicro}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="Cooling water" Style="{StaticResource TypeMicro}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="Fuel" Style="{StaticResource TypeMicro}" />
+        </StackPanel>
       </StackPanel>
     </Grid>
+
+    <Border Grid.Row="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="20,8">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <ContentPresenter x:Name="FooterHost" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
+              <TextBlock x:Name="AutoOrbitLabel" Text="Auto orbit" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <Button x:Name="RotateLeft"
+                  Style="{StaticResource IconButton}"
+                  AutomationProperties.Name="Rotate left 45 degrees"
+                  ToolTipService.ToolTip="Rotate left">
+            <!-- Fluent "Rotate" glyph, mirrored for the anticlockwise turn. -->
+            <FontIcon Glyph="&#xE7AD;" FontSize="16" RenderTransformOrigin="0.5,0.5">
+              <FontIcon.RenderTransform>
+                <ScaleTransform ScaleX="-1" />
+              </FontIcon.RenderTransform>
+            </FontIcon>
+          </Button>
+          <Button x:Name="RotateRight"
+                  Style="{StaticResource IconButton}"
+                  AutomationProperties.Name="Rotate right 45 degrees"
+                  ToolTipService.ToolTip="Rotate right">
+            <FontIcon Glyph="&#xE7AD;" FontSize="16" />
+          </Button>
+          <Button x:Name="Reset" Style="{StaticResource ToolbarButton}" AutomationProperties.Name="Reset view">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <FontIcon Glyph="&#xE740;" FontSize="14" />
+              <TextBlock Text="Reset view" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>

@@ -327,6 +327,137 @@
     <Setter Property="GroupName" Value="Mode" />
   </Style>
 
+  <!--
+    Segmented choices that set a view (systems, standard views, trend range): the chosen segment fills
+    with the soft fill and ink text, because it is a filter, not the selection colour.
+  -->
+  <Style x:Key="SegmentRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <Grid x:Name="Root"
+                Background="{TemplateBinding Background}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+            <Border x:Name="StateLayer"
+                    Background="{StaticResource TextPrimaryBrush}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    Opacity="0" />
+            <ContentPresenter x:Name="Presenter"
+                              Padding="{TemplateBinding Padding}"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              FontFamily="{TemplateBinding FontFamily}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="StateLayer.Opacity" Value="0.05" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="StateLayer.Opacity" Value="0.09" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Presenter.Opacity" Value="0.4" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+              <VisualStateGroup x:Name="CheckStates">
+                <VisualState x:Name="Checked">
+                  <VisualState.Setters>
+                    <Setter Target="Root.Background" Value="{StaticResource FillBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Unchecked" />
+                <VisualState x:Name="Indeterminate" />
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="ViewRadioButton" TargetType="RadioButton" BasedOn="{StaticResource SegmentRadioButton}">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+
+  <!-- Inspector tabs: text with a 2 px slate-teal underline on the open tab. -->
+  <Style x:Key="TabRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <Grid x:Name="Root" Background="Transparent">
+            <ContentPresenter x:Name="Presenter"
+                              Padding="{TemplateBinding Padding}"
+                              Content="{TemplateBinding Content}"
+                              Foreground="{TemplateBinding Foreground}"
+                              FontFamily="{TemplateBinding FontFamily}"
+                              VerticalContentAlignment="Center" />
+            <Border x:Name="Indicator" Height="2" VerticalAlignment="Bottom" Background="{StaticResource AccentBrush}" Opacity="0" />
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                  <VisualState.Setters>
+                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                  <VisualState.Setters>
+                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Disabled">
+                  <VisualState.Setters>
+                    <Setter Target="Presenter.Opacity" Value="0.4" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+              <VisualStateGroup x:Name="CheckStates">
+                <VisualState x:Name="Checked">
+                  <VisualState.Setters>
+                    <Setter Target="Indicator.Opacity" Value="1" />
+                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
+                  </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Unchecked" />
+                <VisualState x:Name="Indeterminate" />
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- A neutral switch (theme): checked fills, never orange, because it is a setting, not a selection. -->
   <Style x:Key="QuietToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource ConsoleButtonBase}">
     <Setter Property="Template" Value="{StaticResource FillCheckableTemplate}" />

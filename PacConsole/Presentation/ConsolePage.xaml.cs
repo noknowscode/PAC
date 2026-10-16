@@ -1,5 +1,4 @@
-using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Windowing;
 using PacConsole.Controls;
 using PacConsole.Core.Geometry;
 
@@ -17,22 +16,21 @@ public sealed partial class ConsolePage : Page
     // xaml-lint: allow codebehind - theme switch is view-only glue: it repaints app resources and the root element theme.
     private void OnThemeClick(object sender, RoutedEventArgs e)
     {
-        // The toggle sits inside the FeedView template, so it arrives as the sender, not a field.
-        if (sender is not ToggleButton toggle) return;
-        var dark = toggle.IsChecked == true;
-        Styles.ConsoleTheme.Apply(dark, XamlRoot?.Content as FrameworkElement ?? this);
-        if (toggle.Content is TextBlock label) label.Text = dark ? "Light" : "Dark";
-        AutomationProperties.SetName(toggle, dark ? "Light theme" : "Dark theme");
+        if (sender is not ToggleMenuFlyoutItem item) return;
+        Styles.ConsoleTheme.Apply(item.IsChecked, XamlRoot?.Content as FrameworkElement ?? this);
     }
 
     private void OnViewportLoaded(object sender, RoutedEventArgs e) => _viewport = sender as PlantViewport;
 
-    private void OnPresetClick(object sender, RoutedEventArgs e)
+    // xaml-lint: allow codebehind - the camera is view state owned by PlantViewport, not domain data.
+    private void OnResetViewClick(object sender, RoutedEventArgs e) => _viewport?.GoTo(CameraPose.Iso);
+
+    // xaml-lint: allow codebehind - full screen changes the window's presenter, which has no XAML surface.
+    private void OnFullScreenClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string key }
-            && CameraPresets.All.FirstOrDefault(p => p.Key == key) is { } preset)
-        {
-            _viewport?.GoTo(preset.Pose);
-        }
+        if (App.Shell?.AppWindow is not { } window) return;
+        window.SetPresenter(window.Presenter.Kind == AppWindowPresenterKind.FullScreen
+            ? AppWindowPresenterKind.Default
+            : AppWindowPresenterKind.FullScreen);
     }
 }

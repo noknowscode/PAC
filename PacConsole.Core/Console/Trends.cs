@@ -52,7 +52,7 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
     public static int TicksIn(TrendRange r) => r switch { TrendRange.Hour1 => 1800, TrendRange.Hours8 => 14400, _ => 450 };
 
     /// <summary>
-    /// Samples the net output and each compared reading over the range, evenly, ending at
+    /// Samples the net output and each compared reading over the range (bucket means), ending at
     /// <paramref name="tick"/>; finds alert onsets; places the cursor (-1 = newest).
     /// </summary>
     public static TrendSet Compose(long tick, DateTimeOffset now, Setpoints setpoints, int openValves, TrendRange range, IEnumerable<string> compared, int cursor)
@@ -61,20 +61,37 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
         var ticks = Enumerable.Range(0, Samples).Select(k => tick - (long)Math.Round((Samples - 1 - k) * step)).ToArray();
         var times = ticks.Select(t => now - TimeSpan.FromSeconds((tick - t) * 2)).ToImmutableArray();
         var readings = ticks.Select(t => Simulation.Readings(t, setpoints.DamperPct)).ToArray();
-        var net = ticks.Select(t => Simulation.OutputMw(t, openValves)).ToArray();
+
+        // Each sample is the mean over its time bucket, as a historian reports it: point samples of a
+        // fast-moving signal alias into a zigzag. Up to 12 evenly spaced ticks per bucket.
+        var specs = compared.Select(k => EquipmentCatalog.Find(k)).OfType<ReadingSpec>().ToList();
+        var sub = (int)Math.Clamp(Math.Round(step), 1, 12);
+        var net = new double[Samples];
+        var series = specs.Select(_ => new double[Samples]).ToList();
+        for (var k = 0; k < Samples; k++)
+        {
+            for (var j = 0; j < sub; j++)
+            {
+                var t = ticks[k] - (long)Math.Round(j * step / sub);
+                var mw = Simulation.OutputMw(t, openValves);
+                net[k] += mw / sub;
+                if (specs.Count == 0) continue;
+                var sample = Simulation.Readings(t, setpoints.DamperPct);
+                for (var i = 0; i < specs.Count; i++)
+                {
+                    var unit = EquipmentCatalog.UnitOf(specs[i].Key);
+                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, setpoints)) / sub;
+                }
+            }
+        }
 
         var rows = ImmutableArray.CreateBuilder<TrendSeries>();
         rows.Add(Row("net", "Net generation", "", "MW", "0", net, setpoints.TargetMw, null));
-        foreach (var key in compared)
+        for (var i = 0; i < specs.Count; i++)
         {
-            if (EquipmentCatalog.Find(key) is not { } spec) continue;
-            var unit = EquipmentCatalog.UnitOf(key);
-            var values = new double[Samples];
-            for (var k = 0; k < Samples; k++)
-            {
-                values[k] = spec.Value(new ReadingContext(readings[k].First(r => r.Id == unit), ticks[k], net[k], setpoints));
-            }
-            rows.Add(Row(key, spec.Label, UnitCatalog.Get(unit).Code, spec.Unit, spec.Format, values, spec.Target?.Invoke(setpoints), spec.Limit?.Invoke(setpoints)));
+            var spec = specs[i];
+            var unit = EquipmentCatalog.UnitOf(spec.Key);
+            rows.Add(Row(spec.Key, spec.Label, UnitCatalog.Get(unit).Code, spec.Unit, spec.Format, series[i], spec.Target?.Invoke(setpoints), spec.Limit?.Invoke(setpoints)));
         }
 
         // An event is an alert that starts inside the range (absent at the previous sample).
@@ -96,8 +113,9 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
         return new TrendSet(rows.ToImmutable(), times, events.ToImmutable(), at);
     }
 
-    private static TrendSeries Row(string key, string label, string code, string unit, string format, double[] values, double? target, double? limit)
+    private static TrendSeries Row(string key, string label, string code, string unit, string format, double[] raw, double? target, double? limit)
     {
+        var values = Smooth(raw);
         var lo = values.Min();
         var hi = values.Max();
         foreach (var r in new[] { target, limit })
@@ -106,5 +124,28 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
         }
         var pad = Math.Max((hi - lo) * 0.15, Math.Max(Math.Abs(hi) * 1e-4, 1e-3));
         return new TrendSeries(key, label, code, unit, format, [.. values], lo - pad, hi + pad, target, limit);
+    }
+
+    /// <summary>
+    /// A 1-2-3-2-1 weighted moving average, so a trend reads as the signal's drift rather than the
+    /// simulation's per-tick noise. The ends use the weights that fall inside the series.
+    /// </summary>
+    internal static double[] Smooth(double[] values)
+    {
+        ReadOnlySpan<double> weights = [1, 2, 3, 2, 1];
+        var result = new double[values.Length];
+        for (var i = 0; i < values.Length; i++)
+        {
+            double sum = 0, total = 0;
+            for (var w = 0; w < weights.Length; w++)
+            {
+                var j = i + w - 2;
+                if (j < 0 || j >= values.Length) continue;
+                sum += values[j] * weights[w];
+                total += weights[w];
+            }
+            result[i] = sum / total;
+        }
+        return result;
     }
 }

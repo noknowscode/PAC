@@ -18,6 +18,9 @@ public partial class App : Application
     }
 
     protected Window? MainWindow { get; private set; }
+
+    /// <summary>The app window, for view glue that changes the window itself (full screen).</summary>
+    internal static Window? Shell { get; private set; }
     protected IHost? Host { get; private set; }
 
     [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
@@ -48,6 +51,7 @@ public partial class App : Application
                 .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
             );
         MainWindow = builder.Window;
+        Shell = MainWindow;
         MainWindow.Title = "PAC Control Console";
 
 #if DEBUG
