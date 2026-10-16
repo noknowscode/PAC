@@ -1,5 +1,25 @@
 # HANDOFF — PacConsole solid plant rendering port
-Updated: 2026-10-16 00:50
+Updated: 2026-10-16 02:45
+
+## Operations (SPEC-OPERATIONS.md), 2026-10-16
+The console now handles an alarm from start to finish, as described in SPEC-OPERATIONS.md:
+
+- an alarm band with acknowledge, acknowledge all and shelve
+- the alarm response in the inspector (cause, steps, consequence)
+- a faceplate per unit, with select-before-operate and permissives
+- range bars on reading tiles
+- the operator log with shift notes
+
+The simulation responds to actions (`PlantOps`, `PlantEffects`). Alarms are derived by replaying 15 min (`AlarmBook`), with deadbands.
+
+- **Commits:** `c52f64e`, then the deadband fix. **Tests:** 193. **Build:** 0 warnings. **Lint:** gating rules 0, apart from the allowed brand colours (HEX) and the theme repaint (TOKENTHEME).
+- **Verified via the App MCP:** see SPEC-OPERATIONS.md, "Build status".
+- **Open:**
+  - per-cell fan animation in the drawing (the fans do not stop when a cell stops)
+  - alarm history beyond 15 min
+  - operator identity is a fixed "Operator 04"
+  - feed-parameter commands are disabled for the first seconds after launch, until the snapshot feed delivers (expected MVUX behaviour)
+  - graphite was checked only at 900 px with no alarm rows
 
 ## Since the v3 build (2026-10-15 evening to 2026-10-16)
 - **Commits:** `e33820b` full-bleed page + trend gradient fill; `60caedc` system inks, glow and motion; `719b24f` electrical pulses; `ef094c0` audit fixes; `390c482` dead-code removal, slower net output, inspector 340/400.

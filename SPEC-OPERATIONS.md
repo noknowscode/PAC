@@ -126,6 +126,36 @@ Data flow: `Ops` joins the View combine (8 sources). Commands write `Ops` (singl
 4. **Every unit:** the other faceplates, valve travel, range bars; verify the TRB ramp and the refused CND stop.
 5. **Gates:** build, tests, lint, uno-verify across both themes and widths, handoff.
 
+## Build status (2026-10-16)
+
+Phases 1 to 5 done: `c52f64e` (operations), the deadband fix commit, verified via the App MCP.
+
+**Changes made during the build, decided on evidence:**
+
+- **Alarm deadbands (ISA-18.2).** The first run logged the cooling bank's alarm in and out every few seconds. Each alarm now clears only once back inside its limit by a deadband:
+
+  | Reading | Deadband |
+  |---|---|
+  | Vibration | 0.5 mm/s |
+  | Turbine inlet pressure | 1 bar |
+  | Condenser absolute pressure | 0.5 kPa |
+  | Fuel transfer flow | 5 t/h |
+  | Silo level | 1 % |
+  | NOx | 5 mg/Nm³ |
+
+- **Cell 3's fault.** Its drift now centres on 4.5 mm/s with a ±0.7 swing, so the alarm clears in each 10-minute cycle. The response's speed option is 75 % (at 80 % the peak stays above the 4.0 mm/s clear threshold).
+- **SampleMemo.** Composing the view measured 41 ms; it now remembers per-tick samples while the ops and setpoints hold, and composes in 4 ms (Release).
+- **Valve buttons.** Valves are plain buttons: a ToggleButton flips its own check state before select-before-operate confirms anything.
+
+**Verified in the app:**
+
+- the story: alarm, acknowledge, start cell 6, stop cell 3, the vibration falls on the trend, the alarm returns to normal, and the log shows every step
+- the TRB load ramp (620 → 640 MW, 4 min)
+- V-103 confirm and travel (Shut → Opening… → Open)
+- the refused CND pump stop, with its reason
+- shelve, and a shift note
+- graphite at 900 px
+
 ## Quality Gates
 
 | Phase | Gate (skill) | Done when |
