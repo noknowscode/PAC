@@ -223,17 +223,22 @@ public sealed class SolidRenderer : IDisposable
             }
             foreach (var index in sequence)
             {
-                if (index >= 0 && _live[index])
-                {
-                    Flush();
-                    _segments.Add((null, null, default, index));
-                    continue;
-                }
                 if (recorder is null)
                 {
                     recorder = new SKPictureRecorder();
                     // An R-tree trims each run's cull rect to what it draws, so its cached layer stays that size.
                     recording = recorder.BeginRecording(bounds, useRTree: true);
+                }
+                if (index >= 0 && _live[index])
+                {
+                    // A live part's body is still: it closes the run, and only its moving marks are
+                    // drawn each frame, in the same place in the order.
+                    _pass = PartPass.Body;
+                    Op(recording!, index);
+                    _pass = PartPass.All;
+                    Flush();
+                    _segments.Add((null, null, default, index));
+                    continue;
                 }
                 Op(recording!, index);
             }
@@ -248,7 +253,12 @@ public sealed class SolidRenderer : IDisposable
         {
             if (image is not null) canvas.DrawImage(image, dest, Nearest);
             else if (picture is not null) canvas.DrawPicture(picture);
-            else Op(canvas, index);
+            else
+            {
+                _pass = PartPass.Motion;
+                Op(canvas, index);
+                _pass = PartPass.All;
+            }
         }
         DrawMotion(canvas, parts, projection, frame, LiftOf);
     }
@@ -596,10 +606,10 @@ public sealed class SolidRenderer : IDisposable
             canvas.Save();
             canvas.Translate(0, projection.Rise(lift));
         }
-        DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered, part.Circuit);
+        if (_pass != PartPass.Motion) DrawShape(canvas, _shapes[index], part.Edge, part.Crease, lit, alert, hovered, part.Circuit);
         if (frame.Details && part.Details is { } details)
         {
-            DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds);
+            DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds, part.AnimatedDetails);
         }
         if (lift > 0) canvas.Restore();
         _fade = 0;
@@ -634,10 +644,18 @@ public sealed class SolidRenderer : IDisposable
     /// <summary>A colour as the current part draws it: faded toward the paper when it is outside the system.</summary>
     private SKColor Ink(SKColor c) => _fade == 0 ? c : Lerp(c, Palette.Paper, _fade);
 
-    private void DrawDetails(SKCanvas canvas, IEnumerable<DetailLine> details, double seconds)
+    /// <summary>Which part of a live part a draw covers: everything, its still body, or only its moving marks.</summary>
+    private enum PartPass { All, Body, Motion }
+
+    private PartPass _pass;
+
+    private void DrawDetails(SKCanvas canvas, IEnumerable<DetailLine> details, double seconds, bool animated)
     {
         foreach (var d in details)
         {
+            // Flow marks move, and every line of an animated part (a fan's blades) does.
+            var moves = animated || d.Kind == DetailKind.Flow;
+            if (_pass == PartPass.Body && moves || _pass == PartPass.Motion && !moves) continue;
             switch (d.Kind)
             {
                 case DetailKind.Dot:
