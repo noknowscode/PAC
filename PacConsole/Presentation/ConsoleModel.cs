@@ -24,7 +24,11 @@ public partial record ConsoleModel
 
     public IFeed<PlantSnapshot> Snapshot => Feed.AsyncEnumerable(_telemetry.Stream);
 
-    /// <summary>1 s wall clock for the header and the held-data age.</summary>
+    /// <summary>
+    /// The wall clock for the held-data age. It ticks each second only while the plant is held, the one
+    /// state where the page changes without a snapshot; running, each snapshot carries its own time, and
+    /// a 1 s tick only recomposed the whole page between snapshots.
+    /// </summary>
     public IFeed<DateTimeOffset> Clock => Feed.AsyncEnumerable(Ticks);
 
     // Applied setpoints. Written only by the Apply commands (SPEC-OPERATIONS.md: typed, then applied).
@@ -71,7 +75,9 @@ public partial record ConsoleModel
 
     // Feed.Combine takes at most eight sources, so the view inputs arrive already combined.
     public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Ops, Mode, Selection, Clock, Inputs)
-        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, t.Item6, t.Item7));
+        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, Later(t.Item6, t.Item1.At), t.Item7));
+
+    private static DateTimeOffset Later(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 
     /// <summary>Selects a unit from a callout or a connection chip.</summary>
     public async ValueTask SelectUnit(UnitId unit, PlantSystem system, CancellationToken ct) =>
@@ -242,7 +248,8 @@ public partial record ConsoleModel
         while (!ct.IsCancellationRequested)
         {
             yield return _time.GetLocalNow();
-            await Task.Delay(TimeSpan.FromSeconds(1), _time, ct);
+            do await Task.Delay(TimeSpan.FromSeconds(1), _time, ct);
+            while (!_telemetry.IsPaused && !ct.IsCancellationRequested);
         }
     }
 }
