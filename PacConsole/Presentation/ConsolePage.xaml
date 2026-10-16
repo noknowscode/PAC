@@ -32,8 +32,8 @@
     <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="FillStrongBrush" />
     <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="FillStrongBrush" />
 
-    <!-- Below 960 px the inspector stacks under the plant. -->
-    <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" />
+    <!-- Below 960 px the inspector stacks under the plant; from 1600 px it widens to 400. -->
+    <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" Widest="1600" />
 
     <!-- A reading tile: label, value and unit; the word "Above limit" in alert; ↗ when it is in the trends.
          One fixed button per slot, bound to a record MVUX updates in place. -->
@@ -98,6 +98,17 @@
 
     <!-- Stream fault: say so plainly and offer a retry that re-runs the feed. The template's DataContext
          is the exception, so Retry reaches the FeedView by name (uno-runtime-gotchas, Binding). -->
+    <!-- No snapshot in the stream (the source returned nothing): say so, with the same retry. -->
+    <mvux:FeedView.NoneTemplate>
+      <DataTemplate>
+        <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="No telemetry from plant 02" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" />
+          <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
+          <Button Content="Retry" Command="{Binding Refresh, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
+        </StackPanel>
+      </DataTemplate>
+    </mvux:FeedView.NoneTemplate>
+
     <mvux:FeedView.ErrorTemplate>
       <DataTemplate>
         <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -222,7 +233,9 @@
             </ScrollViewer>
 
             <!-- ============ PLANT + INSPECTOR ============ -->
-            <Grid ColumnDefinitions="*,340" RowDefinitions="Auto,Auto">
+            <!-- The inspector column is Auto and the inspector sets its own width: a responsive
+                 ColumnDefinition.Width does not switch on Skia heads (uno-runtime-gotchas, Layout). -->
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
 
               <Border Background="{StaticResource PanelBrush}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
@@ -253,6 +266,7 @@
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
                       BorderBrush="{StaticResource HairlineBrush}"
                       BorderThickness="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal='0,1,0,0', Wide='1,0,0,0'}"
+                      Width="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=NaN, Wide=340, Widest=400}"
                       Padding="24,20">
                 <StackPanel Spacing="16" AutomationProperties.Name="Equipment inspector">
                   <StackPanel Spacing="4">

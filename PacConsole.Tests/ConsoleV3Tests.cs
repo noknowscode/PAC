@@ -97,8 +97,8 @@ public class ConsoleV3Tests
         view.Overview0.IsCompared.Should().BeTrue();
         view.OverviewTiles.Skip(1).Should().OnlyContain(t => !t.IsCompared);
         view.Connections.Select(c => c.Title).Should().Equal("TRB-04 · Steam turbine");
-        view.EquipmentTitles.Should().HaveCount(7);
-        view.EquipmentTitles[view.SelectedIndex].Should().Be("GEN-03 · Generator");
+        view.EquipmentChoices.Should().HaveCount(7);
+        view.EquipmentChoices[view.SelectedIndex].Title.Should().Be("GEN-03 · Generator");
     }
 
     [Test]

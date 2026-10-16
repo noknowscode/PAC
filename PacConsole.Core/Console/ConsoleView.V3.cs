@@ -58,7 +58,6 @@ public sealed partial record ConsoleView
     // instance across recompositions and never resets (and closes) while it is open.
     private static readonly ConnectionView[] Choices = [.. EquipmentCatalog.All.Select(e => new ConnectionView(e.Id, e.Title))];
     public IReadOnlyList<ConnectionView> EquipmentChoices => Choices;
-    public ImmutableArray<string> EquipmentTitles { get; init; } = [];
     public int SelectedIndex { get; init; }
 
     // Inspector
@@ -138,7 +137,7 @@ public sealed partial record ConsoleView
 
     /// <summary>Adds the v3 page's fields to a composed view.</summary>
     private static ConsoleView WithV3(ConsoleView view, PlantSnapshot snapshot, Setpoints setpoints, ImmutableArray<Valve> valves,
-        ControlMode mode, ImmutableArray<UnitReading> readings, ImmutableArray<Alert> alerts, double netMw, DateTimeOffset now, ViewInputs inputs)
+        ControlMode mode, ImmutableArray<UnitReading> readings, ImmutableArray<Alert> alerts, double netMw, DateTimeOffset now, int age, ViewInputs inputs)
     {
         var selected = view.Selected;
         var equipment = EquipmentCatalog.Get(selected);
@@ -172,7 +171,7 @@ public sealed partial record ConsoleView
             ModeLine = mode switch
             {
                 ControlMode.Manual => "Generating · Manual",
-                ControlMode.Hold => "Data held · telemetry paused",
+                ControlMode.Hold => view.DataIsStale ? $"Data held {age} s · stale" : $"Data held {age} s",
                 _ => "Generating · Automatic",
             },
             SnapshotText = $"Snapshot {snapshot.At.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture)}",
@@ -180,7 +179,6 @@ public sealed partial record ConsoleView
             System = inputs.System,
             SystemTitle = PlantSystems.Title(inputs.System),
 
-            EquipmentTitles = [.. EquipmentCatalog.All.Select(e => e.Title)],
             SelectedIndex = EquipmentCatalog.All.IndexOf(equipment),
 
             InspectorCode = info.Code,

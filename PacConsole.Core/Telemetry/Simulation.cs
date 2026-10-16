@@ -12,13 +12,6 @@ public static class Simulation
     /// <summary>The prototype starts at tick 120.</summary>
     public const long StartTick = 120;
 
-    /// <summary>Ticks per simulated hour for the hourly-generation bars.</summary>
-    public const int TicksPerHour = 30;
-
-    public const int OutputHistoryLength = 48;
-    public const int HourlyLength = 24;
-    public const int VibrationHistoryLength = 30;
-
     /// <summary>Damper position the base flows were measured at.</summary>
     public const double ReferenceDamperPct = 65;
 
@@ -62,33 +55,18 @@ public static class Simulation
         return v;
     }
 
-    public static ImmutableArray<double> VibrationHistory(UnitId id, long tick) =>
-        [.. Enumerable.Range(0, VibrationHistoryLength).Select(k => Vibration(id, tick - (VibrationHistoryLength - 1) + k))];
-
-    /// <summary>The last <see cref="VibrationHistoryLength"/> samples of one unit's reading, oldest first.</summary>
-    public static ImmutableArray<double> MetricHistory(UnitId id, Metric metric, long tick, double damperPct = ReferenceDamperPct) =>
-        [.. Enumerable.Range(0, VibrationHistoryLength).Select(k =>
-            Readings(tick - (VibrationHistoryLength - 1) + k, damperPct).First(r => r.Id == id).Get(metric))];
-
-    /// <summary>Net output in MW. Each open valve beyond the reference seven adds 6 MW.</summary>
+    /// <summary>
+    /// Net output in MW: a slow drift (about 52 min, ±18), a swell (about 5 min, ±8), a small ripple
+    /// and noise, so the hour's trend reads as load following rather than a sine. Each open valve
+    /// beyond the reference seven adds 6 MW.
+    /// </summary>
     public static double OutputMw(long tick, int openValves = ReferenceOpenValves) =>
         600
-        + 22 * Math.Sin(tick * 0.21)
-        + 12 * Math.Sin(tick * 0.057 + 1)
-        + (Noise(tick, 1) - 0.5) * 14
+        + 18 * Math.Sin(tick * 0.004 + 0.6)
+        + 8 * Math.Sin(tick * 0.021 + 1)
+        + 3 * Math.Sin(tick * 0.21)
+        + (Noise(tick, 1) - 0.5) * 4
         + (openValves - ReferenceOpenValves) * 6;
 
-    public static ImmutableArray<double> OutputHistory(long tick, int openValves = ReferenceOpenValves) =>
-        [.. Enumerable.Range(0, OutputHistoryLength).Select(k => OutputMw(tick - (OutputHistoryLength - 1) + k, openValves))];
 
-    /// <summary>The last 24 simulated hours of generation in MWh; the last element is the current hour.</summary>
-    public static ImmutableArray<double> HourlyGeneration(long tick)
-    {
-        var hour = (long)Math.Floor(tick / (double)TicksPerHour);
-        return [.. Enumerable.Range(0, HourlyLength).Select(k =>
-        {
-            var hh = hour - (HourlyLength - 1) + k;
-            return 560 + 70 * Math.Sin((hh - 8) / 24.0 * Math.Tau) + (Noise(hh, 7) - 0.5) * 30;
-        })];
-    }
 }

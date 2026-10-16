@@ -22,12 +22,12 @@ public class ConsoleViewTests
             T0 + (age ?? TimeSpan.Zero));
 
     [Test]
-    public void Opens_on_the_alerting_condenser()
+    public void Opens_on_the_alerting_cooling_bank()
     {
         var view = Compose();
         view.Selected.Should().Be(UnitId.Clg);
         view.SelectedIsAlert.Should().BeTrue();
-        view.AlertText.Should().Be("1 alert · CLG-05");
+        view.ActiveAlertText.Should().Be("1 active alert");
     }
 
     [Test]
@@ -39,46 +39,21 @@ public class ConsoleViewTests
     [Test]
     public void Hold_ages_the_data_and_goes_stale_at_ten_seconds()
     {
-        Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(9)).DataIsStale.Should().BeFalse();
+        var fresh = Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(9));
+        fresh.DataIsStale.Should().BeFalse();
+        fresh.ModeLine.Should().Be("Data held 9 s");
         var held = Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(12));
-        held.DataText.Should().Be("Held 12 s");
         held.DataIsStale.Should().BeTrue();
-        held.SelectedStatusLine.Should().Be("Alert · held");
-    }
-
-    [Test]
-    public void Held_tiles_dim_except_alert_values()
-    {
-        var tiles = Compose(ControlMode.Hold).Tiles;
-        tiles.Single(t => t.Label == "Vibration").Should().Match<MetricTileView>(t => t.IsHigh && !t.IsHeld);
-        tiles.Where(t => t.Label != "Vibration").Should().OnlyContain(t => t.IsHeld);
+        held.DataIsLive.Should().BeFalse();
+        held.ModeLine.Should().Be("Data held 12 s · stale");
     }
 
     [Test]
     public void Low_turbine_limit_raises_a_second_alert()
     {
         var view = Compose(setpoints: Setpoints.Default with { TurbineLimitBar = 150 }, selected: UnitId.Trb);
-        view.AlertText.Should().Be("2 alerts · TRB-04, CLG-05");
-        view.Tiles.Single(t => t.Label == "Pressure").IsHigh.Should().BeTrue();
-    }
-
-    [Test]
-    public void Unit_tiles_mark_selection_and_alerts()
-    {
-        var units = Compose().Units;
-        units.Should().HaveCount(7);
-        units.Single(u => u.IsSelected).Id.Should().Be(UnitId.Clg);
-        units.Single(u => u.Id == UnitId.Clg).Subtitle.Should().Be("05 · alert");
-        units.Single(u => u.Id == UnitId.Stk).Subtitle.Should().Be("01");
-    }
-
-    [TestCase(Metric.Press, 0.0912, "0.09")]
-    [TestCase(Metric.Press, 6.43, "6.4")]
-    [TestCase(Metric.Press, 165.2, "165")]
-    [TestCase(Metric.Flow, 1540.4, "1,540")]
-    [TestCase(Metric.Vib, 4.849, "4.8")]
-    public void Metrics_format_like_the_prototype(Metric metric, double value, string expected)
-    {
-        ConsoleView.FormatMetric(metric, value).Should().Be(expected);
+        view.AlertingUnits.Should().BeEquivalentTo([UnitId.Trb, UnitId.Clg]);
+        view.ActiveAlertText.Should().Be("2 active alerts");
+        view.OverviewTiles.Single(t => t.Key == "trb.press").IsHigh.Should().BeTrue();
     }
 }

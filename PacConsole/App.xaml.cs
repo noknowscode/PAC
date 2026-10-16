@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using PacConsole.Controls.Charts;
 using PacConsole.Core.Telemetry;
 using SkiaSharp;
 using Uno.Resizetizer;
@@ -26,7 +25,6 @@ public partial class App : Application
     [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        LoadChartTypeface();
 
         var builder = this.CreateBuilder(args)
             .UseToolkitNavigation()
@@ -85,20 +83,4 @@ public partial class App : Application
         );
     }
 
-    /// <summary>Chart labels use the same IBM Plex Sans the XAML uses.</summary>
-    private static void LoadChartTypeface()
-    {
-        try
-        {
-            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "IBMPlexSans-Regular.ttf");
-            if (File.Exists(path))
-            {
-                ConsoleChartTheme.LabelFontPath = path;
-            }
-        }
-        catch (IOException)
-        {
-            // Fall back to LiveCharts2's default typeface.
-        }
-    }
 }

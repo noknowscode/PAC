@@ -9,7 +9,7 @@ public class SimulationTests
     public void Same_tick_gives_identical_readings()
     {
         Simulation.Readings(120).Should().Equal(Simulation.Readings(120));
-        Simulation.OutputHistory(120).Should().Equal(Simulation.OutputHistory(120));
+        Simulation.OutputMw(120).Should().Be(Simulation.OutputMw(120));
     }
 
     [Test]
@@ -41,14 +41,6 @@ public class SimulationTests
     public void Each_open_valve_beyond_seven_adds_six_mw()
     {
         (Simulation.OutputMw(120, 9) - Simulation.OutputMw(120, 7)).Should().BeApproximately(12, 1e-9);
-    }
-
-    [Test]
-    public void Series_have_spec_lengths_and_end_at_current_tick()
-    {
-        Simulation.OutputHistory(200).Should().HaveCount(48).And.EndWith(Simulation.OutputMw(200));
-        Simulation.HourlyGeneration(200).Should().HaveCount(24);
-        Simulation.VibrationHistory(UnitId.Clg, 200).Should().HaveCount(30).And.EndWith(Simulation.Vibration(UnitId.Clg, 200));
     }
 
     [Test]

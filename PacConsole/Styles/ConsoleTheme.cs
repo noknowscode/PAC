@@ -6,7 +6,7 @@ namespace PacConsole.Styles;
 /// the same instances, so every binding follows without re-evaluating (a converter-produced brush would
 /// otherwise keep the theme it was first resolved in; see uno-runtime-gotchas, Theming and color).
 /// Colour tokens the Skia painters read (Solid*) are replaced, and <see cref="Changed"/> tells the
-/// canvases and charts to re-read them.
+/// canvases and trend charts to re-read them.
 /// </summary>
 public static class ConsoleTheme
 {
@@ -38,7 +38,6 @@ public static class ConsoleTheme
         IsDark = dark;
         // Stock control templates (tooltips, text selection, scroll bars) follow the element theme.
         if (root is not null) root.RequestedTheme = dark ? ElementTheme.Dark : ElementTheme.Light;
-        Controls.Charts.ConsoleChartTheme.Load(app);
 
         // Each listener on its own: one failing chart or canvas must not leave the rest unthemed.
         foreach (var listener in Changed?.GetInvocationList() ?? [])
