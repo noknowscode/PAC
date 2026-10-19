@@ -1,0 +1,24 @@
+# PAC Control Console
+
+![PAC Control Console: Plant 02 with CLG-05 in alarm, the plant isolating it, and the view thumbnails beside the drawing](media/art/readme-hero.jpg)
+
+An operator console for a simulated steam-cycle power plant, built with [Uno Platform](https://platform.uno). It takes an alarm from start to finish on one screen.
+
+- **The plant**: an inked isometric drawing of seven units, rendered with SkiaSharp, with isometric, elevation and plan views. Each process system, and every unit in alarm, can be isolated.
+- **Alarms**: acknowledge, shelve, and the response for each alarm (likely cause, steps, consequence).
+- **Control**: per-unit faceplates. Every command is selected, then confirmed.
+- **Trends**: synchronized trends with a shared cursor.
+- **Log**: an operator log of every step.
+
+## Run it
+
+Requires the .NET 10 SDK.
+
+```powershell
+dotnet run --project PacConsole -f net10.0-desktop
+```
+
+## More
+
+- `SPEC-CONSOLE.md` and `SPEC-OPERATIONS.md` describe the console and the alarm-to-resolution workflow.
+- `media/art/` holds the launch prints. `media/_source/README.md` explains how they were made.
