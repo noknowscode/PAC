@@ -1,0 +1,5 @@
+[
+ {"id": "A-trb", "theme": "light", "unit": "TRB", "size": [480, 380], "scale": 4, "padding": -36, "caption": "unit"},
+ {"id": "B-orbit", "theme": "dark", "view": "iso", "size": [640, 360], "scale": 4, "framing": "orbit", "padding": 18, "sweep": 50, "exposure": 10, "seconds": 4, "caption": "view"},
+ {"id": "C-clg", "theme": "dark", "view": "iso", "elevation": 0.82, "system": "Cooling", "unit": "CLG", "size": [480, 600], "scale": 4, "padding": -70, "exposure": 40, "seconds": 5, "caption": "unit"}
+]

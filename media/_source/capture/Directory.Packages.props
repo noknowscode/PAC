@@ -1,0 +1,6 @@
+<!-- This tool pins its own package versions (the repo manages them centrally for the app). -->
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

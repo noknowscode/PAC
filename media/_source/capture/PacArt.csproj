@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Capture-only tool for the art set (media/README.md). It compiles the product's own plant renderer,
+    PacConsole/Rendering/SolidRenderer.cs, linked unchanged, and drives it offscreen into SkiaSharp raster
+    surfaces. Nothing here ships with the app.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PacArt</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\PacConsole\Rendering\SolidRenderer.cs" Link="Product\SolidRenderer.cs" />
+    <Using Include="System.Collections.Immutable" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\PacConsole.Core\PacConsole.Core.csproj" />
+    <!-- The SkiaSharp the app runs on (bundled by Uno.Sdk 6.7.30). -->
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
+  </ItemGroup>
+</Project>

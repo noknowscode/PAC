@@ -1,0 +1,786 @@
+[
+ {
+  "id": "dark-iso-All",
+  "theme": "dark",
+  "view": "iso",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-iso-SteamWater",
+  "theme": "dark",
+  "view": "iso",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-iso-Cooling",
+  "theme": "dark",
+  "view": "iso",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-iso-FuelFlue",
+  "theme": "dark",
+  "view": "iso",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-iso-Electrical",
+  "theme": "dark",
+  "view": "iso",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-iso-Alarms",
+  "theme": "dark",
+  "view": "iso",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-elevation-All",
+  "theme": "dark",
+  "view": "elevation",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-elevation-SteamWater",
+  "theme": "dark",
+  "view": "elevation",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-elevation-Cooling",
+  "theme": "dark",
+  "view": "elevation",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-elevation-FuelFlue",
+  "theme": "dark",
+  "view": "elevation",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-elevation-Electrical",
+  "theme": "dark",
+  "view": "elevation",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-elevation-Alarms",
+  "theme": "dark",
+  "view": "elevation",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-plan-All",
+  "theme": "dark",
+  "view": "plan",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-plan-SteamWater",
+  "theme": "dark",
+  "view": "plan",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-plan-Cooling",
+  "theme": "dark",
+  "view": "plan",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-plan-FuelFlue",
+  "theme": "dark",
+  "view": "plan",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-plan-Electrical",
+  "theme": "dark",
+  "view": "plan",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-plan-Alarms",
+  "theme": "dark",
+  "view": "plan",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "dark-unit-STK",
+  "theme": "dark",
+  "unit": "STK",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-unit-TKA",
+  "theme": "dark",
+  "unit": "TKA",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-unit-GEN",
+  "theme": "dark",
+  "unit": "GEN",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-unit-TRB",
+  "theme": "dark",
+  "unit": "TRB",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-unit-CLG",
+  "theme": "dark",
+  "unit": "CLG",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-unit-SIL",
+  "theme": "dark",
+  "unit": "SIL",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-unit-CND",
+  "theme": "dark",
+  "unit": "CND",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-iso-All",
+  "theme": "light",
+  "view": "iso",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-iso-SteamWater",
+  "theme": "light",
+  "view": "iso",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-iso-Cooling",
+  "theme": "light",
+  "view": "iso",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-iso-FuelFlue",
+  "theme": "light",
+  "view": "iso",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-iso-Electrical",
+  "theme": "light",
+  "view": "iso",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-iso-Alarms",
+  "theme": "light",
+  "view": "iso",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-elevation-All",
+  "theme": "light",
+  "view": "elevation",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-elevation-SteamWater",
+  "theme": "light",
+  "view": "elevation",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-elevation-Cooling",
+  "theme": "light",
+  "view": "elevation",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-elevation-FuelFlue",
+  "theme": "light",
+  "view": "elevation",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-elevation-Electrical",
+  "theme": "light",
+  "view": "elevation",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-elevation-Alarms",
+  "theme": "light",
+  "view": "elevation",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-plan-All",
+  "theme": "light",
+  "view": "plan",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-plan-SteamWater",
+  "theme": "light",
+  "view": "plan",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-plan-Cooling",
+  "theme": "light",
+  "view": "plan",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-plan-FuelFlue",
+  "theme": "light",
+  "view": "plan",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-plan-Electrical",
+  "theme": "light",
+  "view": "plan",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-plan-Alarms",
+  "theme": "light",
+  "view": "plan",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ]
+ },
+ {
+  "id": "light-unit-STK",
+  "theme": "light",
+  "unit": "STK",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-unit-TKA",
+  "theme": "light",
+  "unit": "TKA",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-unit-GEN",
+  "theme": "light",
+  "unit": "GEN",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-unit-TRB",
+  "theme": "light",
+  "unit": "TRB",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-unit-CLG",
+  "theme": "light",
+  "unit": "CLG",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-unit-SIL",
+  "theme": "light",
+  "unit": "SIL",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "light-unit-CND",
+  "theme": "light",
+  "unit": "CND",
+  "size": [
+   180,
+   180
+  ],
+  "scale": 1,
+  "padding": 10
+ },
+ {
+  "id": "dark-exposure-All",
+  "theme": "dark",
+  "system": "All",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ],
+  "exposure": 45
+ },
+ {
+  "id": "dark-exposure-FuelFlue",
+  "theme": "dark",
+  "system": "FuelFlue",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ],
+  "exposure": 45
+ },
+ {
+  "id": "dark-exposure-Electrical",
+  "theme": "dark",
+  "system": "Electrical",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ],
+  "exposure": 45
+ },
+ {
+  "id": "dark-exposure-Cooling",
+  "theme": "dark",
+  "system": "Cooling",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ],
+  "exposure": 45
+ },
+ {
+  "id": "dark-exposure-SteamWater",
+  "theme": "dark",
+  "system": "SteamWater",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ],
+  "exposure": 45
+ },
+ {
+  "id": "dark-exposure-Alarms",
+  "theme": "dark",
+  "system": "Alarms",
+  "size": [
+   320,
+   180
+  ],
+  "scale": 1,
+  "padding": 8,
+  "alerting": [
+   "CLG"
+  ],
+  "exposure": 45
+ }
+]

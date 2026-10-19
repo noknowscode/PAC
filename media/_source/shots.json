@@ -1,0 +1,23 @@
+[
+ {"id": "01-plant-graphite", "theme": "dark", "view": "iso", "size": [640, 360], "scale": 4, "padding": 30, "exposure": 24, "caption": "view"},
+ {"id": "02-flue-gas", "theme": "dark", "view": "iso", "system": "FuelFlue", "size": [480, 600], "scale": 4, "fit": ["STK", "SIL"], "padding": 70, "exposure": 150, "seconds": 6, "caption": "system"},
+ {"id": "03-steam-water", "theme": "dark", "view": "iso", "system": "SteamWater", "size": [640, 360], "scale": 4, "padding": 30, "exposure": 120, "seconds": 6, "caption": "system"},
+ {"id": "04-cooling", "theme": "dark", "view": "iso", "system": "Cooling", "size": [480, 480], "scale": 4, "fit": ["CLG", "CND"], "padding": 46, "exposure": 150, "seconds": 6, "caption": "system"},
+ {"id": "05-electrical", "theme": "dark", "view": "elevation", "system": "Electrical", "size": [640, 360], "scale": 4, "fit": ["GEN"], "padding": 96, "exposure": 66, "seconds": 6, "caption": "system", "offset": [-30, -40]},
+ {"id": "06-alarm", "theme": "dark", "view": "iso", "system": "Alarms", "alerting": ["CLG"], "selected": "CLG", "lift": {"CLG": 10}, "size": [480, 480], "scale": 4, "fit": ["CLG"], "padding": 70, "exposure": 96, "seconds": 6, "caption": "alarm", "alarmKey": "clg.vib", "offset": [0, -34]},
+ {"id": "07-plan-graphite", "theme": "dark", "view": "plan", "size": [640, 360], "scale": 4, "padding": 46, "exposure": 24, "caption": "view", "offset": [62, -8]},
+ {"id": "08-plant-paper", "theme": "light", "view": "iso", "size": [640, 360], "scale": 4, "padding": 30, "caption": "view"},
+ {"id": "09-elevation-paper", "theme": "light", "view": "elevation", "size": [640, 360], "scale": 4, "padding": 30, "caption": "view"},
+ {"id": "10-plan-paper", "theme": "light", "view": "plan", "size": [640, 360], "scale": 4, "padding": 46, "caption": "view", "offset": [62, -8]},
+ {"id": "11-stk", "theme": "light", "unit": "STK", "size": [480, 600], "scale": 4, "padding": 80, "caption": "unit"},
+ {"id": "12-trb", "theme": "light", "unit": "TRB", "size": [480, 480], "scale": 4, "padding": 70, "caption": "unit"},
+ {"id": "13-clg", "theme": "light", "unit": "CLG", "size": [480, 480], "scale": 4, "padding": 70, "caption": "unit"},
+ {"id": "14-sil", "theme": "light", "unit": "SIL", "size": [480, 600], "scale": 4, "padding": 80, "caption": "unit"},
+ {"id": "15-systems", "theme": "dark", "view": "iso", "size": [640, 360], "scale": 4, "caption": "systems", "padding": 30},
+ {"id": "grid-SteamWater", "theme": "dark", "view": "iso", "system": "SteamWater", "size": [320, 180], "scale": 4, "padding": 14, "caption": "system"},
+ {"id": "grid-Cooling", "theme": "dark", "view": "iso", "system": "Cooling", "size": [320, 180], "scale": 4, "padding": 14, "caption": "system"},
+ {"id": "grid-FuelFlue", "theme": "dark", "view": "iso", "system": "FuelFlue", "size": [320, 180], "scale": 4, "padding": 14, "caption": "system"},
+ {"id": "grid-Electrical", "theme": "dark", "view": "iso", "system": "Electrical", "size": [320, 180], "scale": 4, "padding": 14, "caption": "system"},
+ {"id": "grid-Alarms", "theme": "dark", "view": "iso", "system": "Alarms", "alerting": ["CLG"], "selected": "CLG", "lift": {"CLG": 10}, "size": [320, 180], "scale": 4, "padding": 14, "caption": "system"},
+ {"id": "grid-All", "theme": "dark", "view": "iso", "size": [320, 180], "scale": 4, "padding": 14, "caption": "view"}
+]

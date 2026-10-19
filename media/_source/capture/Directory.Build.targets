@@ -1,0 +1,2 @@
+<!-- Stops the repo's Uno Platform build targets from applying to this plain console tool. -->
+<Project />

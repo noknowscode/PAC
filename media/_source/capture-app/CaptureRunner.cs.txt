@@ -1,0 +1,156 @@
+// Capture-only (scratch copy, never in the product): walks the console through its real operator story
+// with the page's own commands and saves elements as PNGs with RenderTargetBitmap at 2x or 3x.
+//
+//   PacConsole.exe --capture <outDir>
+//
+// High resolution comes from Uno Platform's internal RootScale test override, so every element rasterizes
+// at that scale for real (RenderTargetBitmap's scaled overload would only resample a 1x render).
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Windows.Input;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
+using SkiaSharp;
+
+namespace PacConsole.Capture;
+
+internal static class CaptureRunner
+{
+    public static async Task RunAsync(Window window, string outDir)
+    {
+        Directory.CreateDirectory(outDir);
+        var log = new StreamWriter(Path.Combine(outDir, "capture.log")) { AutoFlush = true };
+        try
+        {
+            // Wide enough for the console's widest layout (from 1600), parked mostly off the right of the screen.
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32 { Width = 1676, Height = 1080 });
+            window.AppWindow.Move(new Windows.Graphics.PointInt32 { X = 1800, Y = 40 });
+            await Task.Delay(7000);
+
+            var root = (FrameworkElement)window.Content!;
+            var page = Find<ConsolePage>(root) ?? throw new InvalidOperationException("ConsolePage not found");
+            var vm = page.DataContext!;
+            log.WriteLine($"page {page.ActualWidth}x{page.ActualHeight}, vm {vm.GetType().Name}");
+
+            UIElement PageContent() => (UIElement)Find<ScrollViewer>(page)!.Content;
+            UIElement Named(string name) => FindNamed(page, name, null) ?? throw new InvalidOperationException("no element named " + name);
+            UIElement Panel(string name) => FindNamed(page, name, typeof(StackPanel)) ?? throw new InvalidOperationException("no panel named " + name);
+            void Run(string command, object? parameter = null)
+            {
+                var cmd = (ICommand)vm.GetType().GetProperty(command)!.GetValue(vm)!;
+                log.WriteLine($"{command}({parameter}) can={cmd.CanExecute(parameter)}");
+                cmd.Execute(parameter);
+            }
+            async Task Shot(string id, UIElement e, float scale)
+            {
+                SetScale(root, scale);
+                await Task.Delay(900);
+                await Save(e, Path.Combine(outDir, id + ".png"));
+                log.WriteLine($"shot {id} at {scale}x");
+            }
+
+            // 1. The console as it opens.
+            await Shot("console-open", PageContent(), 2);
+            await Shot("header", page.FindName("ConsoleHeader") as UIElement ?? First(PageContent()), 3);
+            await Shot("plant-open", Named("Plant 3D model"), 2);
+
+            // 2. Active alarms: CLG-05 in alarm, its list at the top of the inspector.
+            Run("SelectSystem", "Alarms");
+            await Task.Delay(2500);
+            await Shot("console-alarms", PageContent(), 2);
+            await Shot("plant-alarms", Named("Plant 3D model"), 2);
+            await Shot("alarm-list", Panel("Active alarms"), 3);
+            await Shot("alarm-response", Named("Alarm response"), 3);
+            await Shot("trends-alarm", Named("Synchronized trends"), 2);
+
+            // 3. Acknowledged.
+            Run("Acknowledge", "clg.vib");
+            await Task.Delay(2500);
+            await Shot("alarm-list-acked", Panel("Active alarms"), 3);
+            await Shot("inspector-acked", Named("Equipment inspector"), 2);
+
+            // 4. The response: start the standby cell 6, select before operate.
+            ((ToggleButton)page.FindName("TabControl")).IsChecked = true;
+            await Task.Delay(800);
+            Run("SelectDevice", "clg.cell6");
+            await Task.Delay(1500);
+            await Shot("pending-start-cell6", Named("Pending command"), 3);
+            await Shot("faceplate-pending", Named("Equipment inspector"), 2);
+            Run("ConfirmPending");
+            await Task.Delay(9000);
+
+            // 5. Stop cell 3 once cell 6 runs; vibration falls and the alarm clears.
+            Run("SelectDevice", "clg.cell3");
+            await Task.Delay(1500);
+            await Shot("pending-stop-cell3", Named("Pending command"), 3);
+            Run("ConfirmPending");
+            await Task.Delay(50000);
+            await Shot("console-resolved", PageContent(), 2);
+            await Shot("trends-resolved", Named("Synchronized trends"), 2);
+            await Shot("log-resolved", Named("Operator log"), 3);
+            await Shot("faceplate-resolved", Named("Equipment inspector"), 2);
+
+            // 6. The same console in graphite.
+            Styles.ConsoleTheme.Apply(true, root);
+            await Task.Delay(2500);
+            await Shot("console-graphite", PageContent(), 2);
+            await Shot("plant-graphite", Named("Plant 3D model"), 2);
+            log.WriteLine("done");
+        }
+        catch (Exception ex)
+        {
+            log.WriteLine(ex.ToString());
+        }
+        finally
+        {
+            log.Dispose();
+            Application.Current.Exit();
+        }
+    }
+
+    /// <summary>Uno Platform's internal test hook: the whole visual tree rasterizes at <paramref name="scale"/>.</summary>
+    private static void SetScale(FrameworkElement root, float scale)
+    {
+        const BindingFlags any = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        var tree = typeof(XamlRoot).GetProperty("VisualTree", any)!.GetValue(root.XamlRoot)!;
+        var rootScale = tree.GetType().GetProperty("RootScale", any)!.GetValue(tree)!;
+        rootScale.GetType().GetMethod("SetTestOverride", any)!.Invoke(rootScale, [scale]);
+    }
+
+    private static async Task Save(UIElement element, string path)
+    {
+        var rtb = new RenderTargetBitmap();
+        await rtb.RenderAsync(element);
+        var buffer = await rtb.GetPixelsAsync();
+        var bytes = new byte[buffer.Length];
+        using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(buffer)) reader.ReadBytes(bytes);
+        using var bitmap = new SKBitmap(new SKImageInfo(rtb.PixelWidth, rtb.PixelHeight, SKColorType.Bgra8888, SKAlphaType.Premul));
+        Marshal.Copy(bytes, 0, bitmap.GetPixels(), bytes.Length);
+        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        using var file = File.Create(path);
+        data.SaveTo(file);
+    }
+
+    private static T? Find<T>(DependencyObject from) where T : class
+    {
+        if (from is T hit) return hit;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(from); i++)
+            if (Find<T>(VisualTreeHelper.GetChild(from, i)) is { } found) return found;
+        return null;
+    }
+
+    private static UIElement? FindNamed(DependencyObject from, string name, Type? type)
+    {
+        if (from is UIElement e && AutomationProperties.GetName(e) == name && e.Visibility == Visibility.Visible
+            && (type is null || type.IsInstanceOfType(e))) return e;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(from); i++)
+            if (FindNamed(VisualTreeHelper.GetChild(from, i), name, type) is { } found) return found;
+        return null;
+    }
+
+    /// <summary>The page content's first band (the header).</summary>
+    private static UIElement First(UIElement content) =>
+        (UIElement)VisualTreeHelper.GetChild(Find<StackPanel>(content)!, 0);
+}
