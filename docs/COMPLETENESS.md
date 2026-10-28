@@ -1,70 +1,77 @@
 # Completeness audit: PacConsole (2026-10-28, Uno.Sdk 6.7.30, heads: net10.0-desktop)
 
-Verdict: **Complete with gaps** (0 Blockers, 5 Majors, 12 Minors)
+Verdict: **Complete with gaps** (0 Blockers, 3 Majors, 9 Minors)
 
-Safe to show: the CLG-05 alarm story, select-before-operate, typed setpoints, the systems filter and unit selection, trends (range, cursor, Latest), shift notes, Hold, the graphite theme, the stacked layout below 960 px. These are all `R` on desktop (X11).
+Revision 2, the same day. Since revision 1:
 
-Keep off screen: stream failure and Retry (the simulator never fails, so this path has not run), relaunching after operator actions (nothing persists), and the Active alarms view after every alarm has cleared (the equipment picker goes blank).
+- Retry is fixed and proven, using a Debug fault switch.
+- The dead wireframe code is gone.
+- The theme is now platform-native: System, Light and Graphite, with a saved choice.
 
-Runtime method: `net10.0-desktop` Debug, run on Linux X11 under Xvfb (1600×1000), driven with XTest pointer and keyboard input, with post-state read from screen captures. The App MCP (`uno-app`) was not available in this cloud session. Evidence captures are in `docs/audit/2026-10-28/`.
+Safe to show:
+
+- the CLG-05 alarm story, select-before-operate, typed setpoints, the systems filter and unit selection, trends, shift notes, Hold
+- a telemetry fault with Retry (`PAC_TELEMETRY_FAULT=<n>`, Debug)
+- the theme switch, and a relaunch that keeps the theme
+- the stacked layout below 960 px
+
+All of these are `R` on desktop (X11).
+
+Keep off screen:
+
+- relaunching after operator actions (operator data does not persist yet)
+- the Active alarms view after every alarm has cleared (the equipment picker goes blank)
+
+Runtime method: `net10.0-desktop` Debug, run on Linux X11 under Xvfb, driven with XTest pointer and keyboard input, with post-state read from captures. The App MCP was not available in this cloud session. Evidence captures are in `docs/audit/2026-10-28/`.
 
 ## Inventory
 
 - **Screens:** 1 intended, 1 present, 0 unreachable, 0 missing. Source: SPEC-CONSOLE.md and SPEC-OPERATIONS.md.
-  - One page, `ConsolePage`.
-  - In-page surfaces: header; plant panel with 3 view thumbnails or the segmented switcher; inspector (Active alarms list, alarm response, and the Overview, Condition and Control tabs); trends; operator log; footer; the More flyout.
-  - States: progress, none, error and value.
-- **Routes:** 1 registered (`Console`, `App.xaml.cs:141`), 0 navigation triggers, 0 dead references.
-- **Interactions:** about 75 controls.
-  - 0 dead by construction.
-  - 0 simulated. Every command writes `PlantOps` or a state.
-  - Retry (in the error and none templates) can't be reached, because nothing produces the error.
-- **Critical workflows** (derived from the SPEC-OPERATIONS story, so please confirm):
+- **Routes:** 1 registered (`Console`), 0 navigation triggers, 0 dead references.
+- **Interactions:** about 77 controls, 0 dead by construction, 0 simulated.
+  - The Retry buttons in the error and none states now bind to `RetryTelemetry`.
+  - The theme menu now has 3 radio items.
+- **Critical workflows** (derived, please confirm):
   1. Alarm → acknowledge → the response is shown → the alarm clears
   2. Select-before-operate: select a device command → confirm → the device runs
   3. Typed setpoint → Apply → the value ramps
-  4. Systems filter and unit selection (chip, tag, picker)
+  4. Systems filter and unit selection
   5. Trends: range, shared cursor, Latest
   6. Shift note → operator log
   7. Plant mode Hold → resume
+  8. Telemetry fault → Retry → live again
+  9. Theme: System / Light / Graphite, kept across a relaunch
 
 ## Completeness by area
 
 | # | Area | Status | Evidence | B | M | m | Note |
 |---|---|---|---|---|---|---|---|
-| 1 | Screens | Complete | R | 0 | 0 | 0 | the one page renders at launch, at 1440×900, 900×900 and 1300×560 |
-| 2 | Navigation | Complete | R | 0 | 0 | 1 | single route; benign startup warning `Region '' has no children` |
-| 3 | Interactions | Partial | R / C | 0 | 0 | 2 | 7 workflows driven; Shelve, Ack all, Cancel, valves, compare tiles and drag-orbit checked in code and Core tests only |
-| 4 | Logic | Complete | R (tests) | 0 | 0 | 0 | 195/195 Core tests: SBO, permissives, ramps, alarm lifecycle, the CLG story scenario |
-| 5 | Data | Simulated | R | 0 | 1 | 0 | by design and disclosed in the footer and README; please confirm |
-| 6 | States | Partial | R / X | 0 | 1 | 1 | progress, value and the log's empty state are present; Error/Retry never run |
-| 7 | Forms | Complete | R | 0 | 0 | 0 | NumberBox drafts and the note TextBox write back through `Parent.*`, proven on X11 |
-| 8 | Authentication | N/A | C | 0 | 0 | 0 | fixed "Operator 04", substituted in SPEC-OPERATIONS; please confirm |
-| 9 | Responsive/adaptive | Partial | R | 0 | 0 | 2 | stacking works; system chips overflow below 960 px; short height pushes the plant footer below the fold |
-| 10 | Platform behavior | Partial | R / X | 0 | 1 | 0 | X11 host proven; Win32 and macOS hosts not run this session |
-| 11 | Failure handling | Missing | X | 0 | 1 | 0 | no fault path, and Retry recovery is unproven |
-| 12 | Accessibility | Complete (fixed) | C | 0 | 0 | 0 | Auto orbit had no automation name (fixed); keyboard Tab order reaches the inspector controls (R) |
-| 13 | Performance | Partial | C / X | 0 | 0 | 1 | per-frame allocations trimmed; the lift cache from `997788e` is still unmeasured |
-| 14 | Security/privacy | Complete | C | 0 | 0 | 0 | no network, no secrets; one Debug-only temp-file log |
-| 15 | Visual quality | Partial | R | 0 | 0 | 3 | blank picker; duplicate glyph; type ramp break |
-| 16 | Testing | Partial | R | 0 | 0 | 1 | Core tests are strong; no automated UI test |
-| — | Persistence | Missing | R | 0 | 1 | 0 | log, acknowledgements, shelves, setpoints and theme are lost on relaunch |
+| 1 | Screens | Complete | R | 0 | 0 | 0 | |
+| 2 | Navigation | Complete | R | 0 | 0 | 1 | benign startup warning `Region '' has no children` |
+| 3 | Interactions | Partial | R / C | 0 | 0 | 2 | 9 workflows driven; Shelve, Ack all, Cancel, valves, compare tiles and drag-orbit checked in code and Core tests only |
+| 4 | Logic | Complete | R (tests) | 0 | 0 | 0 | 190/190 Core tests |
+| 5 | Data | Simulated | R | 0 | 1 | 0 | by design and disclosed; please confirm |
+| 6 | States | Complete | R | 0 | 0 | 1 | error and Retry proven; the none state can't be produced by the simulator (same command, `C`) |
+| 7 | Forms | Complete | R | 0 | 0 | 0 | |
+| 8 | Authentication | N/A | C | 0 | 0 | 0 | fixed "Operator 04" (SPEC-OPERATIONS); please confirm |
+| 9 | Responsive/adaptive | Partial | R | 0 | 0 | 2 | chip overflow below 960 px; plant footer below the fold at 560 px |
+| 10 | Platform behavior | Partial | R / X | 0 | 1 | 0 | X11 host proven; Win32 and macOS hosts not run |
+| 11 | Failure handling | Complete | R | 0 | 0 | 0 | fault → "Telemetry stopped" → Retry → snapshots resume (`retry-recovered.jpg`) |
+| 12 | Accessibility | Complete | C / R | 0 | 0 | 0 | Auto orbit named; theme radios carry their text |
+| 13 | Performance | Partial | C / X | 0 | 0 | 1 | the lift cache from `997788e` is still unmeasured |
+| 14 | Security/privacy | Complete | C | 0 | 0 | 0 | |
+| 15 | Visual quality | Partial | R | 0 | 0 | 2 | blank picker; duplicate Reset/Full screen glyph |
+| 16 | Testing | Partial | R | 0 | 0 | 1 | no automated UI test |
+| — | Theming | Complete | R | 0 | 0 | 0 | Light and Graphite on every surface (XAML, converters, tag plates, range bars, Skia plant, thumbnails, trends, Simple controls, error state); the choice persists |
+| — | Persistence | Missing | R | 0 | 1 | 0 | operator data lost on relaunch; deferred by the user ("persistence later") |
 
 ## Critical workflows by head
 
-`net10.0-desktop` is the only TFM (`PacConsole/PacConsole.csproj:4`). Android, iOS and WebAssembly are out of scope by spec (SPEC.md line 7).
-
 | Workflow | desktop (X11) | desktop (Win32) | desktop (macOS) |
 |---|---|---|---|
-| 1. Alarm → ack → response → clear | R: "Unacknowledged" → "Acknowledged" (`ack.jpg`); later "No standing alarms" | X | X |
-| 2. Select-before-operate | R: Cell 6 Start → confirm bar (`sbo-pending.jpg`) → Confirm → "Running 0.5 mm/s"; log "Start Cell 6 (standby) on CLG-05" | X | X |
-| 3. Typed setpoint → Apply | R: GEN-03 reactive 120 → 150, header "122 → 150 MVAr · 1 min" (`setpoint-apply.jpg`) | X | X |
-| 4. Systems filter, unit selection | R: Electrical → GEN-03 selected; STK-01 tag → All systems + STK-01 lifted | X | X |
-| 5. Trends | R: 1 hour axis 11:34–12:34; cursor to 12:24:38, values follow; Latest returns | X | X |
-| 6. Shift note → log | R: "Audit note ok" logged as Note (`note-log.jpg`) | X | X |
-| 7. Hold → resume | R: "Data held 5 s" (`hold.jpg`) → "Generating · Automatic" | X | X |
-
-The Win32 and macOS columns are `X` because this session ran in a Linux container. HANDOFF records a manual Win32 run on 2026-10-19 (a walkthrough video, no App MCP).
+| 1–7 | R (revision 1 proofs: `ack.jpg`, `sbo-pending.jpg`, `setpoint-apply.jpg`, `note-log.jpg`, `hold.jpg`) | X | X |
+| 8. Fault → Retry | R: before the fix, Retry greyed out and stayed stopped (`retry-dead-before.jpg`); after it, the console returned and the snapshot time advanced (`retry-recovered.jpg`); also in Graphite (`fault-error-graphite.jpg`) | X | X |
+| 9. Theme | R: first launch followed the host (light); Graphite → Light → Graphite; after a relaunch the console opened in Graphite with "Graphite theme" checked (`theme-graphite-after-relaunch.jpg`, `theme-menu.png`) | X | X |
 
 ## Findings
 
@@ -74,86 +81,45 @@ None.
 
 ### Majors
 
-- **[Failure handling] Error and Retry have never run, and Retry may not recover.**
-  - Where: `ConsolePage.xaml:185-193`, `ConsoleModel.cs:25,76`, `SimulatedTelemetry.cs:26`.
-  - Evidence: X.
-  - `SimulatedTelemetry.Stream` never throws, so the ErrorTemplate can't be reached.
-  - Retry calls `FeedView.Refresh` on `View`, which is a `Feed.Combine` over the `Feed.AsyncEnumerable` snapshot stream. The gotcha "FeedView.Refresh does not recover a failure thrown upstream of the feed it is bound to" applies to this shape.
-  - Fix: a Debug-only fault switch in `SimulatedTelemetry` (an env var or a menu item), then prove Retry. If it doesn't recover, retry through a model command that restarts the stream.
-  - Owner: `mvux`, `uno-component-states`.
-- **[Persistence] Operator state is lost on relaunch.**
-  - Evidence: R (`relaunch-state-lost.jpg`).
-  - Lost: the shift note, the acknowledgement, the Cell 6 start and the theme. CLG-05 shows as unacknowledged again.
-  - SPEC-OPERATIONS calls actions, acknowledgements and the log "durable data", yet nothing writes to disk (`grep File.|ApplicationData` finds only the Debug theme log).
-  - This needs a product decision (see Unresolved Questions).
-  - Owner: `uno-extensions-services`.
-- **[Data] Telemetry is simulated.**
-  - Where: `App.xaml.cs:106` registers `SimulatedTelemetry`.
-  - Evidence: R.
-  - This is disclosed in the footer ("Readings, trends and sensor assignments are simulated") and in the README, and it is the product's premise. It stays a Major until you confirm it as a product reason.
-- **[States] Retry in the none state is unproven too.**
-  - Where: `ConsolePage.xaml:173-181`.
-  - Evidence: X. Same mechanism and fix as the first Major.
-- **[Platform] The Win32 and macOS desktop hosts were not run this session.**
-  - Where: `Platforms/Desktop/Program.cs:11-14`.
-  - Evidence: X.
-  - Fix: run the 7 workflows through `uno-verify` on Windows.
+- **[Persistence] Operator data is lost on relaunch.**
+  - Lost: the log, acknowledgements, shelves and setpoints. Evidence: R (`relaunch-state-lost.jpg`).
+  - Deferred by the user. The theme choice already persists.
+- **[Data] Telemetry is simulated** (`App.xaml.cs` registers `SimulatedTelemetry`).
+  - It is disclosed in the footer and the README. It stays a Major until you confirm it as the product.
+- **[Platform] The Win32 and macOS desktop hosts have not been run.**
+  - Evidence: X. Run workflows 1–9 through `uno-verify` on Windows.
 
 ### Minors
 
 - **[Visual] The equipment picker is blank in Active alarms with no alarms.**
-  - Where: `ConsolePage.xaml:334`, `ConsoleView.V3.cs:229-230`.
-  - Evidence: R (`alarms-empty-picker.jpg`).
-  - The choices list is empty, so `SelectedIndex` is -1 while STK-01 stays selected.
-- **[Responsive] Below 960 px, the "Electrical" and "Active alarms" chips sit past the right edge.**
-  - Where: `ConsolePage.xaml:281`.
-  - Evidence: R (`narrow-900.jpg`).
-  - The scrollbar is hidden (`HorizontalScrollBarVisibility="Hidden"`), so the chips are reachable only by keyboard focus or by shift+wheel.
-- **[Responsive] At 560 px height, the plant footer (picker, camera tools) is below the fold.**
-  - Evidence: R.
-  - The plant is a fixed 620 px tall by design.
-- **[Interactions] The log keeps 200 entries and shows the last 8.**
-  - Where: `PlantOps.cs:247-250`.
-  - Older entries can't be reached. This is documented in SPEC-OPERATIONS. Status: Partial.
-- **[Interactions] The cursor slider hardcodes `Maximum="89"`.**
-  - Where: `ConsolePage.xaml:721`.
-  - It is coupled to `TrendSet.Samples = 90` (`Trends.cs:50`).
-- **[Visual] The "Caps" text style uses 11 px, outside the closed type ramp (12/13/16/22/56) declared in `Tokens.xaml`.**
-  - Where: `ConsolePage.xaml:88`.
-  - The chip style and 4 trend unit runs also carry a literal 12 (`:83`, `:686`, `:694`, `:702`, `:710`).
-- **[Visual] "Reset view" uses glyph E740, the same glyph as Full screen.**
-  - Where: `PlantViewport.xaml:134`, `ConsolePage.xaml:256`.
-- **[Interactions] "Reset plant view" in the More menu duplicates the panel's Reset view button.**
-  - Where: `ConsolePage.xaml:249`.
-  - It costs a code-behind hook that grabs the viewport on `Loaded` (`ConsolePage.xaml.cs`).
-- **[Performance] Renderer disposal may race the render path.**
-  - Where: `PlantCanvas.cs:45-74`.
-  - Evidence: I.
-  - `Unloaded` and theme changes dispose `SolidRenderer` from the UI thread. If `RenderOverride` runs on a separate render thread on any host, a draw can touch freed native paints.
-  - One theme switch ran clean (R), but that doesn't rule out the race.
-- **[Performance] The per-part lift cache (`997788e`) is still unmeasured.**
-  - Evidence: X (HANDOFF item 2). It needs a Windows Release trace.
-- **[Testing] There is no automated UI or runtime test.**
-  - The 3 timing tests are `[Explicit]` (`FrameCostTests.cs:13,38,56`).
-- **[Navigation] A benign startup warning is logged:** `FrameNavigator: Region '' has no children to forward request to`.
+  - Where: `ConsolePage.xaml` equipment ComboBox, `ConsoleView.V3.cs` `EquipmentChoices` and `SelectedIndex`. Evidence: R.
+- **[Responsive] Below 960 px, the "Electrical" and "Active alarms" chips sit past the right edge** of a hidden-scrollbar strip. Evidence: R.
+- **[Responsive] At 560 px height, the plant footer is below the fold.** Evidence: R.
+- **[Interactions] The log keeps 200 entries and shows the last 8.** Documented in SPEC-OPERATIONS. Status: Partial.
+- **[Interactions] The cursor slider hardcodes `Maximum="89"`**, which is coupled to `TrendSet.Samples = 90`.
+- **[Visual] The "Caps" text style is 11 px, outside the closed type ramp;** a literal 12 also sits on the chip style and 4 trend unit runs.
+- **[Visual] "Reset view" uses glyph E740, the same as Full screen.** "Reset plant view" in the More menu duplicates the panel button.
+- **[Performance] The renderer is disposed on `Unloaded` and on theme change** while `RenderOverride` may run elsewhere.
+  - Evidence: I. Theme switches ran clean 6 times in this session (R), which doesn't rule out the race.
+- **[Testing] There is no automated UI test**; the 3 timing tests are `[Explicit]`.
 
 ## Not checked (X)
 
-- **Error and none states, and Retry:** no fault source. Add a fault switch, then drive Retry.
-- **Shelve, Acknowledge all, Cancel pending, SBO expiry (10 s), permissive refusal, valve moves, compare tiles, the Condition tab, the equipment picker, drag-orbit, the rotate buttons, Full screen:** checked in code and by Core tests only; not driven at runtime.
-- **Mouse-wheel scrolling:** XTest wheel events did not reach the Uno X11 host, so I used the keyboard instead. Re-check with the App MCP or a real mouse.
-- **Win32 and macOS hosts:** not available in this container.
+- **The none state:** the simulator always sends a first snapshot. Its Retry uses the same command as the proven error Retry.
+- **"System" following an OS theme change at runtime:** Xvfb has no OS theme to flip. First launch did follow the host (light).
+- **Shelve, Acknowledge all, Cancel pending, SBO expiry, permissive refusal, valves, compare tiles, the Condition tab, drag-orbit, Full screen:** code and Core tests only.
+- **Mouse wheel:** XTest wheel events did not reach the Uno X11 host.
+- **Win32 and macOS hosts.**
 
 ## Noted for other skills
 
-- **uno-audit:** run in this session. See the audit section of the session summary.
+- **uno-audit:** lint gating rules all 0 (HEX 18 → 0, TOKENTHEME 55 → 0); build 0 warnings; 190/190 tests.
 - **gold-standard-pass:** blank picker, chip overflow below 960 px, duplicate Reset/Full screen glyph, 11 px caps.
 
 ## Unresolved Questions
 
-- **Data `Simulated`:** confirm that simulated telemetry is the product, so Data can be graded N/A.
-- **Authentication `N/A`:** confirm that a fixed "Operator 04" with no login is final.
-- **Android, iOS and WebAssembly `N/A`:** confirm that desktop-only stays the v1 scope.
-- **Persistence:** should the log, acknowledgements, shelves, setpoints and theme survive a relaunch?
-- **Win32 and macOS `X`:** run the 7 workflows on Windows through `uno-verify`.
-- **Derived workflows 1–7:** confirm that these are the critical paths.
+- **Data `Simulated`:** confirm that simulated telemetry is the product.
+- **Authentication `N/A`:** confirm that a fixed "Operator 04" is final.
+- **Android, iOS and WebAssembly `N/A`:** confirm that desktop-only stays the scope.
+- **Win32 and macOS `X`:** run workflows 1–9 on Windows with `uno-verify`.
+- **Derived workflows 1–9:** confirm that these are the critical paths.
