@@ -1,6 +1,6 @@
 using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
-using PacConsole.Core.Telemetry;
+using PacConsole.Core.Solids;
 
 namespace PacConsole.Tests;
 
@@ -11,7 +11,8 @@ namespace PacConsole.Tests;
 /// </summary>
 public class TagLayoutTests
 {
-    private static readonly PlantGeometry Plant = PlantGeometry.Build();
+    // The prototype's viewport, which the probe ran against.
+    private const float Width = 772, Height = 540;
 
     public static IEnumerable<CameraPose> OrbitPoses()
     {
@@ -24,13 +25,13 @@ public class TagLayoutTests
     [TestCaseSource(nameof(OrbitPoses))]
     public void Tags_never_collide_with_each_other_or_the_top_band(CameraPose pose)
     {
-        var placements = Place(pose, alerting: UnitId.Clg, width: OrbitProjection.ReferenceWidth, height: OrbitProjection.ReferenceHeight);
+        var placements = Place(pose, alerting: UnitId.Clg, Width, Height);
 
         foreach (var a in placements)
         {
             a.Top.Should().BeGreaterThanOrEqualTo(TagLayout.TopBand);
             a.Left.Should().BeGreaterThanOrEqualTo(0);
-            (a.Left + a.Width).Should().BeLessThanOrEqualTo(OrbitProjection.ReferenceWidth);
+            (a.Left + a.Width).Should().BeLessThanOrEqualTo(Width);
 
             foreach (var b in placements.Where(b => b.Unit != a.Unit))
             {
@@ -44,16 +45,17 @@ public class TagLayoutTests
     [Test]
     public void Output_keeps_input_order()
     {
-        Place(CameraPose.Iso, alerting: null, 772, 540).Select(p => p.Unit).Should().Equal(Enum.GetValues<UnitId>());
+        Place(CameraPose.Iso, alerting: null, Width, Height).Select(p => p.Unit).Should().Equal(Enum.GetValues<UnitId>());
     }
 
     private static ImmutableArray<TagPlacement> Place(CameraPose pose, UnitId? alerting, float width, float height)
     {
-        var projection = OrbitProjection.ForViewport(pose, width, height);
+        // The same projection and anchors PlantViewport places its tags with.
+        var projection = PlantSolids.ViewProjection(pose, width, height);
         var requests = UnitCatalog.All.Select(u =>
         {
             var label = u.Id == alerting ? $"{u.Code} · alert" : u.Code;
-            return new TagRequest(u.Id, projection.Project(Plant.Anchors[u.Id]), TagLayout.EstimateWidth(label));
+            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id]), TagLayout.EstimateWidth(label));
         }).ToList();
         return TagLayout.Solve(requests, width);
     }
