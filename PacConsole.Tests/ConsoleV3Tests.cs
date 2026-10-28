@@ -26,6 +26,22 @@ public class ConsoleV3Tests
             Setpoints.Default, ops, ControlMode.Auto, selected, T0);
 
     [Test]
+    public void Picker_always_shows_the_selected_unit()
+    {
+        // Active alarms keeps the selection when its alarm clears (or with nothing in alarm): the picker must
+        // still name the unit the inspector shows, and keep one ItemsSource instance across recompositions.
+        var inputs = ViewInputs.Default with { System = PlantSystem.Alarms };
+        var view = Compose(UnitId.Stk, inputs);
+        view.AlertingUnits.Should().NotContain(UnitId.Stk);
+        view.SelectedIndex.Should().BeGreaterThanOrEqualTo(0);
+        view.EquipmentChoices[view.SelectedIndex].Id.Should().Be(UnitId.Stk);
+        Compose(UnitId.Stk, inputs).EquipmentChoices.Should().BeSameAs(view.EquipmentChoices);
+
+        var all = Compose(UnitId.Stk);
+        all.EquipmentChoices.Should().HaveCount(EquipmentCatalog.All.Length, "a unit inside the system adds nothing");
+    }
+
+    [Test]
     public void Theme_choice_checks_exactly_one_menu_item()
     {
         Compose().IsThemeSystem.Should().BeTrue("the console follows the OS until the operator picks a theme");

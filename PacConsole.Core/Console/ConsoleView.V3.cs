@@ -87,14 +87,18 @@ public sealed partial record ConsoleView
         s => s,
         s => EquipmentCatalog.All.Where(e => PlantSystems.Contains(s, e.Id)).Select(e => new ConnectionView(e.Id, e.Title)).ToArray());
 
-    // Under Active alarms the choices are the units in alarm: one array per set of units, for the same reason.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> AlarmChoices = new();
+    // Under Active alarms the choices are the units in alarm, and any view adds the selected unit when it falls
+    // outside (Active alarms keeps the selection when its alarm clears), so the picker always names the unit
+    // the inspector shows. One array per combination, for the same reason.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> MixedChoices = new();
 
-    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting) =>
-        system != PlantSystem.Alarms
-            ? Choices[system]
-            : AlarmChoices.GetOrAdd(string.Join(",", alerting), _ =>
-                [.. EquipmentCatalog.All.Where(e => alerting.Contains(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting, UnitId selected)
+    {
+        bool Listed(UnitId u) => u == selected || PlantSystems.Contains(system, u, alerting);
+        if (system != PlantSystem.Alarms && PlantSystems.Contains(system, selected)) return Choices[system];
+        return MixedChoices.GetOrAdd($"{system}|{string.Join(",", alerting)}|{selected}", _ =>
+            [.. EquipmentCatalog.All.Where(e => Listed(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+    }
 
     /// <summary>The picker's choices: the equipment of the system in view.</summary>
     public IReadOnlyList<ConnectionView> EquipmentChoices { get; init; } = [];
@@ -217,6 +221,7 @@ public sealed partial record ConsoleView
             };
         }
 
+        var choices = ChoicesFor(inputs.System, view.AlertingUnits, selected);
         var trends = TrendSet.Compose(tick, now, setpoints, ops, inputs.Range, compared, inputs.Cursor);
         var gap = (int)Math.Round(netMw - setpoints.TargetMw);
         var alarmCount = book.ActiveCount;
@@ -239,8 +244,8 @@ public sealed partial record ConsoleView
             SystemTitle = PlantSystems.Title(inputs.System),
 
             ActiveAlarmCount = alarmCount,
-            EquipmentChoices = ChoicesFor(inputs.System, view.AlertingUnits),
-            SelectedIndex = Array.FindIndex(ChoicesFor(inputs.System, view.AlertingUnits), c => c.Id == selected),
+            EquipmentChoices = choices,
+            SelectedIndex = Array.FindIndex(choices, c => c.Id == selected),
 
             InspectorCode = info.Code,
             InspectorName = info.Name,
