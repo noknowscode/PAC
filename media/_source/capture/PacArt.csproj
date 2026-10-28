@@ -18,7 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\PacConsole.Core\PacConsole.Core.csproj" />
     <!-- The SkiaSharp the app runs on (bundled by Uno.Sdk 6.7.30). -->
-    <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
   </ItemGroup>
 </Project>
