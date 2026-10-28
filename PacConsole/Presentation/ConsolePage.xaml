@@ -169,8 +169,6 @@
       </DataTemplate>
     </mvux:FeedView.ProgressTemplate>
 
-    <!-- Stream fault: say so plainly and offer a retry that re-runs the feed. The template's DataContext
-         is the exception, so Retry reaches the FeedView by name (uno-runtime-gotchas, Binding). -->
     <!-- No snapshot in the stream (the source returned nothing): say so, with the same retry. -->
     <mvux:FeedView.NoneTemplate>
       <DataTemplate>
@@ -182,6 +180,8 @@
       </DataTemplate>
     </mvux:FeedView.NoneTemplate>
 
+    <!-- Stream fault: say so plainly and offer a retry that re-runs the feed. The template's DataContext
+         is the exception, so Retry reaches the FeedView by name (uno-runtime-gotchas, Binding). -->
     <mvux:FeedView.ErrorTemplate>
       <DataTemplate>
         <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">

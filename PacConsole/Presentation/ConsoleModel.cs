@@ -56,7 +56,6 @@ public partial record ConsoleModel
     /// </summary>
     public IState<UnitSelection> Selection => State.Value(this, () => new UnitSelection(UnitId.Clg));
 
-
     // Console v3 view inputs (SPEC-CONSOLE.md). Each has one writer: its command, or the cursor slider.
     public IState<PlantSystem> System => State.Value(this, () => PlantSystem.All);
     public IState<TrendRange> Range => State.Value(this, () => TrendRange.Minutes15);
@@ -141,6 +140,7 @@ public partial record ConsoleModel
     /// <summary>Updates the ops state; MVUX hands a record state over as nullable, and none means the initial plant.</summary>
     private ValueTask Op(Func<PlantOps, PlantOps> change, CancellationToken ct) =>
         Ops.UpdateAsync(o => change(o ?? PlantOps.Initial), ct);
+
     // Commands read the latest snapshot as a feed parameter (MVUX injects the current value of a feed
     // named like the parameter) for the tick their effects start from.
 

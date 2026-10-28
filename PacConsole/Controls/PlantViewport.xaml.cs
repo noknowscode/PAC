@@ -36,6 +36,10 @@ public sealed partial class PlantViewport : UserControl
     private readonly Dictionary<UnitId, Button> _tags = [];
     private readonly bool _animationsEnabled = AnimationsEnabled();
 
+    // The view switcher's segments and thumbnails, read on every drawn frame.
+    private readonly RadioButton[] _views;
+    private readonly PlantThumb[] _thumbs;
+
     private CameraPose _pose = CameraPose.Iso;
     private bool _auto;
     private bool _hover;
@@ -81,11 +85,13 @@ public sealed partial class PlantViewport : UserControl
             TagLayer.Children.Add(tag);
         }
 
+        _views = [ViewIso, ViewElevation, ViewPlan, ThumbIso, ThumbElevation, ThumbPlan];
+        _thumbs = [ThumbIsoDrawing, ThumbElevationDrawing, ThumbPlanDrawing];
 
         RotateLeft.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
         RotateRight.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
         Reset.Click += (_, _) => GoTo(CameraPose.Iso);
-        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan, ThumbIso, ThumbElevation, ThumbPlan })
+        foreach (var view in _views)
         {
             view.Click += (sender, _) =>
             {
@@ -113,16 +119,6 @@ public sealed partial class PlantViewport : UserControl
         Loaded += (_, _) => Refresh();
         Unloaded += (_, _) => { StopLoop(); AmbientClock.Unsubscribe(_ambient); };
     }
-
-    /// <summary>The current camera pose, updated every frame (a <see cref="CameraPose"/>).</summary>
-    public object Pose
-    {
-        get => GetValue(PoseProperty);
-        private set => SetValue(PoseProperty, value);
-    }
-
-    public static readonly DependencyProperty PoseProperty =
-        DependencyProperty.Register(nameof(Pose), typeof(object), typeof(PlantViewport), new PropertyMetadata(CameraPose.Iso));
 
     /// <summary>The selected unit (a <see cref="UnitId"/>), drawn in the accent.</summary>
     public object? SelectedUnit
@@ -242,7 +238,7 @@ public sealed partial class PlantViewport : UserControl
     {
         if (!_animationsEnabled)
         {
-            foreach (var id in _lift.Keys.ToList()) _lift[id] = LiftTarget(id);
+            foreach (var unit in UnitCatalog.All) _lift[unit.Id] = LiftTarget(unit.Id);
         }
         // Display-rate frames only while the camera or a lift moves. Fans and pipe flow keep turning
         // on the shared 20 fps ambient clock (the same tick as the status-dot pulse), not on a held
@@ -297,8 +293,9 @@ public sealed partial class PlantViewport : UserControl
 
         _seconds += dt;
         var follow = (float)(1 - Math.Exp(-dt / LiftTau));
-        foreach (var id in _lift.Keys.ToList())
+        foreach (var unit in UnitCatalog.All)
         {
+            var id = unit.Id;
             var target = LiftTarget(id);
             var next = _lift[id] + (target - _lift[id]) * follow;
             _lift[id] = Math.Abs(target - next) < 0.02f ? target : next;
@@ -360,17 +357,16 @@ public sealed partial class PlantViewport : UserControl
         }
 
         PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered, system, _animationsEnabled);
-        Pose = _pose;
 
         // The view switcher shows the standard view the camera rests in, if any.
         var preset = CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Key;
-        foreach (var view in new[] { ViewIso, ViewElevation, ViewPlan, ThumbIso, ThumbElevation, ThumbPlan })
+        foreach (var view in _views)
         {
             var on = Equals(view.Tag, preset);
             if (view.IsChecked != on) view.IsChecked = on;
         }
         // Each thumbnail redraws only when the selection, alerts or system actually changed.
-        foreach (var thumb in new[] { ThumbIsoDrawing, ThumbElevationDrawing, ThumbPlanDrawing }) thumb.Show(selected, alerting, system);
+        foreach (var thumb in _thumbs) thumb.Show(selected, alerting, system);
         var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
         var help = $"{UnitCatalog.All.Length} units, {PresetName()} view. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
             $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";

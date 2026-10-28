@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using PacConsole.Core.Telemetry;
-using SkiaSharp;
 using Uno.Resizetizer;
 
 namespace PacConsole;
@@ -25,7 +24,6 @@ public partial class App : Application
     [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
-
         var builder = this.CreateBuilder(args)
             .UseToolkitNavigation()
             .Configure(host => host

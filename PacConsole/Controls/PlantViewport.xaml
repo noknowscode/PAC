@@ -106,7 +106,7 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
         <ContentPresenter x:Name="FooterHost" VerticalAlignment="Center" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-          <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}">
+          <ToggleButton x:Name="AutoOrbit" Style="{StaticResource ToolbarToggleButton}" AutomationProperties.Name="Auto orbit">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Ellipse Width="6" Height="6" Fill="{Binding Foreground, ElementName=AutoOrbitLabel}" VerticalAlignment="Center" />
               <TextBlock x:Name="AutoOrbitLabel" Text="Auto orbit" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
