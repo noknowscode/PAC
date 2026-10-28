@@ -17,8 +17,10 @@ public sealed partial class PlantCanvas : SKCanvasElement
     private static readonly ImmutableArray<SolidPart> Parts = PlantSolids.Default.All;
 
     // Created on Loaded, disposed on Unloaded: an element can be unloaded and loaded again, and a
-    // render after Dispose touches a freed native path.
+    // render after Dispose touches a freed native path. RenderOverride runs on the desktop host's render
+    // thread, so a frame draws under _drawGate and the UI thread swaps the renderer under it (Swap).
     private SolidRenderer? _renderer;
+    private readonly object _drawGate = new();
     private readonly SKPath _leaders = new();
     private readonly SKPaint _leaderPaint = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
 
@@ -36,15 +38,11 @@ public sealed partial class PlantCanvas : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            _renderer ??= CreateRenderer();
-            _leaderPaint.Color = _renderer.Palette.Leader;
+            if (_renderer is null) Swap(CreateRenderer());
+            OnPaletteChanged(_renderer!.Palette);
             Invalidate();
         };
-        Unloaded += (_, _) =>
-        {
-            _renderer?.Dispose();
-            _renderer = null;
-        };
+        Unloaded += (_, _) => Swap(null);
         ActualThemeChanged += (_, _) => OnThemeChanged();
     }
 
@@ -66,10 +64,22 @@ public sealed partial class PlantCanvas : SKCanvasElement
     private void OnThemeChanged()
     {
         if (_renderer is null) return;
-        _renderer.Dispose();
-        _renderer = CreateRenderer();
-        OnPaletteChanged(_renderer.Palette);
+        var renderer = CreateRenderer();
+        Swap(renderer);
+        OnPaletteChanged(renderer.Palette);
         Invalidate();
+    }
+
+    /// <summary>Replaces the renderer once no frame is drawing with it, then frees the old one.</summary>
+    private void Swap(SolidRenderer? next)
+    {
+        SolidRenderer? old;
+        lock (_drawGate)
+        {
+            old = _renderer;
+            _renderer = next;
+        }
+        old?.Dispose();
     }
 
     private SolidRenderer CreateRenderer()
@@ -81,22 +91,28 @@ public sealed partial class PlantCanvas : SKCanvasElement
         return renderer;
     }
 
-    private void OnPaletteChanged(SolidPalette palette) => _leaderPaint.Color = palette.Leader;
+    private void OnPaletteChanged(SolidPalette palette)
+    {
+        lock (_drawGate) _leaderPaint.Color = palette.Leader;
+    }
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {
-        if (_renderer is null) return;
-        _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
-        var projection = PlantSolids.ViewProjection(_pose, (float)area.Width, (float)area.Height);
-        _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered, System: _system, Motion: _motion));
-
-        _leaders.Rewind();
-        foreach (var t in _tags)
+        lock (_drawGate)
         {
-            _leaders.MoveTo(t.Anchor.X, t.Anchor.Y);
-            _leaders.LineTo(t.CenterX, t.Bottom);
-            _leaders.AddRect(new SKRect(t.Anchor.X - 2, t.Anchor.Y - 2, t.Anchor.X + 2, t.Anchor.Y + 2));
+            if (_renderer is null) return;
+            _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
+            var projection = PlantSolids.ViewProjection(_pose, (float)area.Width, (float)area.Height);
+            _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered, System: _system, Motion: _motion));
+
+            _leaders.Rewind();
+            foreach (var t in _tags)
+            {
+                _leaders.MoveTo(t.Anchor.X, t.Anchor.Y);
+                _leaders.LineTo(t.CenterX, t.Bottom);
+                _leaders.AddRect(new SKRect(t.Anchor.X - 2, t.Anchor.Y - 2, t.Anchor.X + 2, t.Anchor.Y + 2));
+            }
+            if (!_leaders.IsEmpty) canvas.DrawPath(_leaders, _leaderPaint);
         }
-        if (!_leaders.IsEmpty) canvas.DrawPath(_leaders, _leaderPaint);
     }
 }

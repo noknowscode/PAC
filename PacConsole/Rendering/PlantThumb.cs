@@ -16,7 +16,9 @@ public sealed partial class PlantThumb : SKCanvasElement
 {
     private static readonly ImmutableArray<SolidPart> Parts = PlantSolids.Default.All;
 
+    // RenderOverride runs on the desktop host's render thread: frames draw under _drawGate, Swap replaces the renderer under it.
     private SolidRenderer? _renderer;
+    private readonly object _drawGate = new();
     private CameraPose _pose = CameraPose.Iso;
     private UnitId? _selected;
     private ImmutableArray<UnitId> _alerting = [];
@@ -26,14 +28,10 @@ public sealed partial class PlantThumb : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            _renderer ??= new() { Palette = SolidPalette.For(ActualTheme) };
+            if (_renderer is null) Swap(new() { Palette = SolidPalette.For(ActualTheme) });
             Invalidate();
         };
-        Unloaded += (_, _) =>
-        {
-            _renderer?.Dispose();
-            _renderer = null;
-        };
+        Unloaded += (_, _) => Swap(null);
         ActualThemeChanged += (_, _) => OnThemeChanged();
     }
 
@@ -65,18 +63,32 @@ public sealed partial class PlantThumb : SKCanvasElement
     private void OnThemeChanged()
     {
         if (_renderer is null) return;
-        _renderer.Dispose();
-        _renderer = new() { Palette = SolidPalette.For(ActualTheme) };
+        Swap(new() { Palette = SolidPalette.For(ActualTheme) });
         Invalidate();
+    }
+
+    /// <summary>Replaces the renderer once no frame is drawing with it, then frees the old one.</summary>
+    private void Swap(SolidRenderer? next)
+    {
+        SolidRenderer? old;
+        lock (_drawGate)
+        {
+            old = _renderer;
+            _renderer = next;
+        }
+        old?.Dispose();
     }
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {
-        if (_renderer is null || area.Width <= 0 || area.Height <= 0) return;
-        _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
-        // A thumbnail's camera never moves, so it fits the plant tightly at its own yaw (the main view's
-        // framing holds every yaw, which leaves a fixed view half empty at this size).
-        var projection = PlantSolids.Fit(_pose, Parts, (float)area.Width, (float)area.Height, 6);
-        _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, Details: false, System: _system, Motion: false));
+        lock (_drawGate)
+        {
+            if (_renderer is null || area.Width <= 0 || area.Height <= 0) return;
+            _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
+            // A thumbnail's camera never moves, so it fits the plant tightly at its own yaw (the main view's
+            // framing holds every yaw, which leaves a fixed view half empty at this size).
+            var projection = PlantSolids.Fit(_pose, Parts, (float)area.Width, (float)area.Height, 6);
+            _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, Details: false, System: _system, Motion: false));
+        }
     }
 }
