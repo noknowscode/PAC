@@ -42,7 +42,13 @@ public partial class App : Application
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton(TimeProvider.System);
-                    services.AddSingleton<ITelemetryService, SimulatedTelemetry>();
+                    services.AddSingleton<ITelemetryService>(sp => new SimulatedTelemetry(sp.GetRequiredService<TimeProvider>())
+                    {
+#if DEBUG
+                        // PAC_TELEMETRY_FAULT=<n> drops the stream after n snapshots, once, to exercise the error state and Retry.
+                        FaultAfter = int.TryParse(Environment.GetEnvironmentVariable("PAC_TELEMETRY_FAULT"), out var n) ? n : null,
+#endif
+                    });
                 })
                 .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
             );

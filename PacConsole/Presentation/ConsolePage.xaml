@@ -175,19 +175,20 @@
         <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="No telemetry from plant 02" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" />
           <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
-          <Button Content="Retry" Command="{Binding Refresh, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
+          <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
         </StackPanel>
       </DataTemplate>
     </mvux:FeedView.NoneTemplate>
 
-    <!-- Stream fault: say so plainly and offer a retry that re-runs the feed. The template's DataContext
-         is the exception, so Retry reaches the FeedView by name (uno-runtime-gotchas, Binding). -->
+    <!-- Stream fault: say so plainly and offer a retry that restarts the stream. The template's DataContext
+         is the exception, so Retry reaches the page model through the FeedView by name; FeedView.Refresh
+         cannot restart a stream (uno-runtime-gotchas, Binding). -->
     <mvux:FeedView.ErrorTemplate>
       <DataTemplate>
         <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{StaticResource AlertTextBrush}" HorizontalAlignment="Center" />
           <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
-          <Button Content="Retry" Command="{Binding Refresh, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
+          <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
         </StackPanel>
       </DataTemplate>
     </mvux:FeedView.ErrorTemplate>

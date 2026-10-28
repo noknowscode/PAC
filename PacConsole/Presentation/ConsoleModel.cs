@@ -22,7 +22,14 @@ public partial record ConsoleModel
         _time = time;
     }
 
-    public IFeed<PlantSnapshot> Snapshot => Feed.AsyncEnumerable(_telemetry.Stream);
+    /// <summary>
+    /// The telemetry stream. Built from messages because <c>Feed.AsyncEnumerable</c> ends for good on an
+    /// exception and ignores <c>FeedView.Refresh</c> (Uno.Extensions.Reactive 7.3.6), so its Retry could
+    /// never recover. Here a fault becomes the feed's error, and <see cref="RetryTelemetry"/> resubscribes.
+    /// </summary>
+    public IFeed<PlantSnapshot> Snapshot => Feed.Create(Telemetry);
+
+    private TaskCompletionSource _retry = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// The wall clock for the held-data age. It ticks each second only while the plant is held, the one
@@ -235,6 +242,45 @@ public partial record ConsoleModel
         _telemetry.IsPaused = next == ControlMode.Hold;
         await Mode.SetAsync(next, ct);
         await Op(o => o.Logged(snapshot.Tick, _time.GetLocalNow(), LogKind.Action, null, $"Plant mode {current} → {next}"), ct);
+    }
+
+    /// <summary>Restarts a stopped or empty telemetry stream (the Retry on the error and none states).</summary>
+    public ValueTask RetryTelemetry()
+    {
+        _retry.TrySetResult();
+        return ValueTask.CompletedTask;
+    }
+
+    private async IAsyncEnumerable<Message<PlantSnapshot>> Telemetry([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        var message = Message<PlantSnapshot>.Initial;
+        while (!ct.IsCancellationRequested)
+        {
+            Exception? fault = null;
+            await using (var snapshots = _telemetry.Stream(ct).GetAsyncEnumerator(ct))
+            {
+                while (true)
+                {
+                    try
+                    {
+                        if (!await snapshots.MoveNextAsync()) break;
+                    }
+                    catch (Exception ex) when (!ct.IsCancellationRequested)
+                    {
+                        fault = ex;
+                        break;
+                    }
+                    yield return message = message.With().Data(snapshots.Current).Error(null);
+                }
+            }
+
+            // Armed before the state is shown, so a Retry pressed at once is not lost.
+            _retry = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            yield return message = fault is not null || message.Current.Data.IsSome(out _)
+                ? message.With().Error(fault ?? new TelemetryFaultException("The telemetry stream from plant 02 ended."))
+                : message.With().Data(Option<PlantSnapshot>.None());
+            await _retry.Task.WaitAsync(ct);
+        }
     }
 
     private async IAsyncEnumerable<DateTimeOffset> Ticks([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)

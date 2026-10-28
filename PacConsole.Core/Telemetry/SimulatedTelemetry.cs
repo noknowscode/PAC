@@ -23,13 +23,26 @@ public sealed class SimulatedTelemetry(TimeProvider time) : ITelemetryService
 
     public bool IsPaused { get; set; }
 
+    /// <summary>
+    /// Fault switch for exercising the console's error state: the stream throws
+    /// <see cref="TelemetryFaultException"/> instead of its next snapshot once this many have been
+    /// sent, then the switch clears, so a new stream runs normally.
+    /// </summary>
+    public int? FaultAfter { get; set; }
+
     public async IAsyncEnumerable<PlantSnapshot> Stream([EnumeratorCancellation] CancellationToken ct)
     {
+        var sent = 0;
         yield return Snapshot(_tick);
         while (!ct.IsCancellationRequested)
         {
             await Task.Delay(Interval, time, ct).ConfigureAwait(false);
             if (IsPaused) continue;
+            if (++sent >= FaultAfter)
+            {
+                FaultAfter = null;
+                throw new TelemetryFaultException("Simulated telemetry fault: the stream from plant 02 dropped.");
+            }
             _tick++;
             yield return Snapshot(_tick);
         }
@@ -37,3 +50,6 @@ public sealed class SimulatedTelemetry(TimeProvider time) : ITelemetryService
 
     private PlantSnapshot Snapshot(long tick) => new(tick, time.GetLocalNow(), Simulation.Readings(tick));
 }
+
+/// <summary>The telemetry stream failed; the console shows it as a stopped stream with Retry.</summary>
+public sealed class TelemetryFaultException(string message) : Exception(message);
