@@ -10,7 +10,7 @@ Source: the user, 2026-10-28: "we need proper theme implementation". Today the g
   - Reason: this is the WinUI theme model. `{ThemeResource}` follows the element theme with no app code, and the lint can see both values.
   - Tradeoff: tokens read from code must ask for a theme explicitly (below).
 - **Simple roles per theme.**
-  - Decision: the colour-role overrides move from `App.xaml` to `Styles/ColorOverride.xaml` via `SimpleToolkitTheme.ColorOverrideSource`, with Light and Dark dictionaries.
+  - Decision: the colour-role overrides move from `App.xaml` to `Styles/ColorOverride.xaml`, with Light and Dark dictionaries, set through `SimpleToolkitTheme.Colors` → `ThemeColors.OverrideSource`. (The first build used `ColorOverrideSource`, which Uno.Themes 7.1.1 marks obsolete in favour of `ThemeColors`; XAML does not surface the warning.)
   - Reason: stock controls (NumberBox, ComboBox, TextBox, tooltips) get the graphite palette instead of Simple's stock dark. HEX is then 0, because the lint exempts palette files.
 - **Switching: `IThemeService`.**
   - Decision: `host.UseThemeSwitching()` (in `Uno.Extensions.Hosting.WinUI` 7.3.6, already referenced, so no new package). `ConsoleModel` gets an `IState<AppTheme> Theme` and a `SetTheme` command. The page's `OnThemeClick` code-behind is deleted.
@@ -58,7 +58,7 @@ Source: the user, 2026-10-28: "we need proper theme implementation". Today the g
 ## Implementation Plan
 
 1. `Styles/Palette.xaml`: ThemeDictionaries Light/Dark holding all 52 tokens. Delete `Palette.Dark.xaml`, and the token block in `Tokens.xaml`.
-2. `Styles/ColorOverride.xaml`: Simple role overrides per theme, wired with `ColorOverrideSource`. Drop `RequestedTheme` from `App.xaml`.
+2. `Styles/ColorOverride.xaml`: Simple role overrides per theme, wired with `ThemeColors.OverrideSource`. Drop `RequestedTheme` from `App.xaml`.
 3. XAML: change about 105 `StaticResource` token references to `ThemeResource` (ConsolePage, Controls, PlantViewport, Tokens).
 4. `ThemeBrushes` registry. Point `ToneConverter`, `PlantViewport.ApplyTagState` and `RangeBar` at it.
 5. Skia: `SolidPalette.For(theme)`; `PlantCanvas`, `PlantThumb` and `TrendChart` move to `ActualThemeChanged`. Delete `ConsoleTheme`.
@@ -92,3 +92,15 @@ Recommendation:
 ## Unresolved Questions
 
 - None open for this spec.
+
+## Who does what: Uno.Themes, Uno.Toolkit, Uno.Extensions
+
+Checked 2026-10-28 against the Uno docs MCP and the shipped assemblies (Uno.Themes 7.1.1, Toolkit 9.1.3, Extensions 7.3.6).
+
+- **Uno.Themes (SimpleTheme, Material, Cupertino) owns the colours, not the switch.** Each theme ships a colour system "for both Light and Dark themes" as ThemeDictionaries. Its styles use `{ThemeResource}`, so they follow whatever theme the element tree is in, with no extra code. Brand colours go in per theme through `Colors` (`ThemeColors.OverrideSource` / `OverrideDictionary`, or a seed colour). That is `Styles/ColorOverride.xaml` here.
+  - Uno.Themes also has `SemanticThemeHelper` (Primary, Secondary and Tertiary seeds), which regenerates the *palette* at runtime. That changes brand colours, not light/dark. Its public API has no light/dark setter.
+- **The switch is `RequestedTheme` on the app's root element.** Two shipped APIs set it:
+  - `Uno.Toolkit.UI.SystemThemeHelper.SetApplicationTheme(XamlRoot or Window, ElementTheme)` / `SetRootTheme(...)`. This is the low-level call; it persists nothing and has no "System" state.
+  - `Uno.Extensions.Toolkit.IThemeService` (`UseThemeSwitching()`): sets the same root theme from a model, saves the choice (`CurrentTheme` setting), restores it at launch, and supports `AppTheme.System`. This app uses it.
+- **What neither does:** re-run a converter or a code lookup that picked a brush earlier. That is why `ThemeBrushes` exists (uno-runtime-gotchas, Theming and color).
+- **Popups:** the Toolkit docs warn that popup-root content (flyouts, ContentDialog, tooltips) may not pick up a root theme. On this Skia desktop head, the ComboBox dropdown and the More menu followed Graphite (checked 2026-10-28). Tooltips were not checked.

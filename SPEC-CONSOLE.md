@@ -24,7 +24,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
   - `IState<PlantSystem> System`
   - `IState<TrendRange> Range` (15 min, 1 h, 8 h)
   - `IState<ImmutableArray<string>> Compared` (reading keys in the trends, at most 3)
-  - `IState<int> Cursor` (-1 means latest)
+  - `IState<double> Cursor`: the slider binds two-way to it; `SetCursorLatest` moves it to the last sample. *(Updated 2026-10-28; first drafted as `IState<int>` with -1 for latest.)*
   - Commands: `SelectSystem`, `SelectRange`, `ToggleCompare`, `SetCursorLatest`; existing `SelectUnit`, `SetMode`, `ToggleValve` and the setpoints stay.
 - **Testing:**
   - Core tests: catalog, every reading has a spec and a simulated value, alerts, systems membership, trend sampling, cursor, events.
@@ -36,12 +36,12 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 | Capability (from the mock) | Status | Note |
 |---|---|---|
 | Header: product mark, plant, station type | implemented | |
-| Alert pill selects the first alerting unit | implemented | existing command |
-| Overflow menu (…) | implemented | MenuFlyout: theme switch, Reset view |
+| Alert pill selects the first alerting unit | superseded | the Active alarms system chip (2026-10-19) isolates the units in alarm and lists them in the inspector |
+| Overflow menu (…) | implemented | MenuFlyout: System / Light / Graphite theme (2026-10-28; Reset view lives on the plant panel only) |
 | Expand (full screen) | implemented | `AppWindow.SetPresenter(FullScreen)` toggle; verified on Win32 in the gotchas |
 | Status strip: net output, gap to target, mode, snapshot time | implemented | |
 | Systems filter | implemented | dims parts outside the system; titles the plant panel |
-| Plant panel: view switcher, legend, equipment picker, rotate, reset | implemented | the view switcher replaces the three view thumbnails (they were the largest per-frame cost) |
+| Plant panel: view switcher, legend, equipment picker, rotate, reset | implemented | live view thumbnails from 960 px, a segmented switcher below (thumbnails returned after the perf pass, 2026-10-19); the systems filter takes its own row below 1280 px |
 | Callouts with code, name and state | implemented | |
 | Inspector: Overview, Condition, Control tabs | implemented | the Control tab is the user's decision |
 | Equipment-specific readings | implemented | simulated; the footer says so |

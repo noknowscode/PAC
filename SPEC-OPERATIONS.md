@@ -28,7 +28,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 
 | Capability | Status | Note |
 |---|---|---|
-| Alarm summary: priority, time, value / limit, state | implemented | an alarm band under the status strip, 4 fixed rows and a "+N more" line |
+| Alarm summary: priority, time, value / limit, state | implemented | an alarm band under the status strip, 4 fixed rows and a "+N more" line. *Moved 2026-10-19: the list now opens at the top of the inspector under the Active alarms view.* |
 | Acknowledge, acknowledge all, shelve | implemented | shelve is 1 h with the reason "Shelved by operator"; notes carry more |
 | Alarm states: unacknowledged, acknowledged, returned unacknowledged, shelved | implemented | ISA-18.2 lifecycle, reduced |
 | Alarm response guidance | implemented | per rule: cause, steps, consequence; in the inspector while the unit is in alarm |
@@ -49,7 +49,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
   - A pending command bar uses the accent tint with the command in words.
   - Range bars use a 4 px hairline track, a 4 px normal band in `FillStrongBrush`, a limit tick in `AlertBrush` and a 2 px value marker in ink. The marker turns alert when out of band.
 - **Layout:**
-  - The alarm band sits under the status strip.
+  - The alarm band sits under the status strip. *(Since 2026-10-19 it is the Active alarms list at the top of the inspector.)*
   - The faceplate replaces the Control tab's contents.
   - The operator log is a section under the trends.
   - Nothing new floats; all panels are in the page flow.

@@ -9,6 +9,7 @@ An operator console for a simulated steam-cycle power plant, built with [Uno Pla
 - **Control**: per-unit faceplates. Every command is selected, then confirmed.
 - **Trends**: synchronized trends with a shared cursor.
 - **Log**: an operator log of every step.
+- **Themes**: System, Light or Graphite from the … menu. The choice is kept between launches.
 
 ## Run it
 
@@ -18,7 +19,16 @@ Requires the .NET 10 SDK.
 dotnet run --project PacConsole -f net10.0-desktop
 ```
 
+Tests: `dotnet test PacConsole.Tests`.
+
+To see the telemetry-fault state and Retry, set `PAC_TELEMETRY_FAULT` in a Debug run. The stream drops once, after that many snapshots:
+
+```powershell
+$env:PAC_TELEMETRY_FAULT = "5"; dotnet run --project PacConsole -f net10.0-desktop
+```
+
 ## More
 
-- `SPEC-CONSOLE.md` and `SPEC-OPERATIONS.md` describe the console and the alarm-to-resolution workflow.
+- `SPEC-CONSOLE.md` and `SPEC-OPERATIONS.md` describe the console and the alarm-to-resolution workflow. `docs/SPEC-THEME.md` describes the theme.
+- `docs/COMPLETENESS.md` is the current completeness verdict, with runtime evidence in `docs/audit/`.
 - `media/art/` holds the launch prints. `media/_source/README.md` explains how they were made.

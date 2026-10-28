@@ -1,65 +1,63 @@
-# HANDOFF — PacConsole perf pass, Active alarms view, art set
-Updated: 2026-10-19
+# HANDOFF: PacConsole audit, Retry, theme, minors
+Updated: 2026-10-28
 
 ## Where we are
-The perf pass is done and committed. Idle render-thread time went from 6.6–8.9 s to 0.3–2.2 s per 10 s, and the lift sort from 2.21 to 0.57 ms per frame. The console page now has:
-- one header band;
-- a fixed-height plant (500 / 620) beside a scrolling inspector;
-- an **Active alarms** system chip that pulses, isolates the units in alarm with a breathing red halo, and puts the alarm list at the top of the inspector;
-- view thumbnails (iso / elevation / plan) beside the plant from 960 px.
-
-After the code, the session made a launch art set: eight app prints from real UI captures, fifteen plant prints from the product renderer, a poster, and `README.md` with a hero image. The art and the README are **untracked**: the brief said to commit only to a named branch, and no branch was named.
+This session ran `uno-audit` and `uno-completeness-audit`, then fixed what they found. Branch `claude/jolly-planck-idsow1`, pushed. The work, in order:
+- **Audit:** hygiene, an unbound `Pose` DP set every frame, per-frame allocations, and an Auto orbit automation name.
+- **Fault switch and Retry:** a Debug fault switch, `PAC_TELEMETRY_FAULT=<n>`. Retry was dead because `Feed.AsyncEnumerable` ignores refresh; the snapshot feed now uses `Feed.Create` with a `RetryTelemetry` command.
+- **Dead code:** the wireframe renderer, `PlantGeometry` and their projection helpers are deleted (SPEC.md phase 7).
+- **Platform theme** (`docs/SPEC-THEME.md`):
+  - `Styles/Palette.xaml` holds the ThemeDictionaries.
+  - Simple's roles are set per theme through `ThemeColors` (`Styles/ColorOverride.xaml`).
+  - `IThemeService` gives System / Light / Graphite and saves the choice.
+  - `ThemeBrushes` serves the brushes chosen by converters and code.
+  - The Skia palettes follow `ActualThemeChanged`.
+- **Minors:**
+  - the blank equipment picker
+  - a render-thread-safe renderer swap
+  - the systems filter on its own row below 1280 px
+  - type-size tokens
+  - the slider max bound to the view
+  - the Reset glyph, and the duplicate menu item removed
 
 ## Last verified state
-- **Build:** Debug `net10.0-desktop` passes. The last Release build was blocked by the running app holding the DLLs.
-- **Tests:** 195/195 (`dotnet test PacConsole.Tests`).
-- **Runtime:** with the user's OK, the app was launched and the alarms view and thumbnails were checked. The walkthrough video is `~/Videos/PacConsole-walkthrough-v2.mp4`. The App MCP was not used this session.
-- **Git:** `main` at `d0d9135`, no remote. Untracked:
-  - `README.md` and `media/` (art and sources);
-  - `.mcp.json`;
-  - `docs/spike/`, `docs/anatomy/plant/shots/`;
-  - `docs/hairline/*.png`.
-- **Lint:** CARD 0 · CODEBEHIND 0 · ICON 0 · RESPONSIVE 0 · HEX 18 (Simple role overrides in App.xaml, allowed) · TOKENTHEME 55 (in-place theme repaint, allowed).
+- **Build:** Debug `net10.0-desktop`, 0 warnings, 0 errors.
+- **Tests:** 191/191 (`dotnet test PacConsole.Tests`).
+- **Lint:** every gating rule 0 (CARD, HEX, TOKENTHEME, BACKBAR, CODEBEHIND, OVERLAY, RESPONSIVE, BUILTIN, ICON).
+- **Runtime:** Linux X11 under Xvfb, driven with XTest. The App MCP was not available in the cloud session.
+  - All 9 critical workflows were driven, including fault → Retry and theme persistence across a relaunch.
+  - Evidence: `docs/audit/2026-10-28/`. Verdict: `docs/COMPLETENESS.md` (Complete with gaps).
+- **Not run:** the Win32 and macOS hosts.
 
 ## Guidance applied
-| Skill / rule / decision | Applied at (file:line) |
+| Skill / rule / decision | Applied at |
 |---|---|
-| uno-toolkit: `{utu:Responsive}` with a custom `ResponsiveLayout` | `PacConsole/Styles/Tokens.xaml:7`, `PacConsole/Controls/PlantViewport.xaml:28,83` |
-| uno-toolkit: lint allow for the thumbnail tile frame | `PacConsole/Styles/Controls.xaml:421` |
-| mvux: `Feed.Combine` view composition, `IState` setpoints | `PacConsole/Presentation/ConsoleModel.cs:70-78`, `:35` |
-| skiasharp-uno: `SKCanvasElement` thumbnails, raster still layers built off the render path | `PacConsole/Rendering/PlantThumb.cs:15`, `PacConsole/Rendering/SolidRenderer.cs:807` |
-| Decision: incremental depth sort (same order as the full sort) | `PacConsole.Core/Solids/DepthOrder.cs:275` (`DepthCache`), test `PacConsole.Tests/DepthCacheTests.cs` |
-
-Read, not applied: none.
+| mvux: errors arrive as feed state; Retry must re-run the source | `PacConsole/Presentation/ConsoleModel.cs` (`Snapshot`, `Telemetry`, `RetryTelemetry`) |
+| uno-scaffolding: theme switch is a model command calling `IThemeService` | `ConsoleModel.SetTheme`, `App.xaml.cs` `UseThemeSwitching()` |
+| uno-scaffolding semantic ladder: role overrides per theme, tokens in ThemeDictionaries | `Styles/ColorOverride.xaml`, `Styles/Palette.xaml` |
+| gotcha (Theming and color): converter brushes from a live registry | `Styles/ThemeBrushes.cs`, `Presentation/Converters/ToneConverter.cs` |
+| uno-toolkit: `{utu:Responsive}` with custom layouts, no breakpoints in code | `Styles/Tokens.xaml` (`ConsoleLayout`, `PlantHeaderLayout`), `Controls/PlantViewport.xaml` |
+| skiasharp-uno: renderer use confined to the render path | `Rendering/PlantCanvas.cs`, `Rendering/PlantThumb.cs` (`Swap`, `_drawGate`) |
 
 ## Next actions (in order)
-1. **Commit the README and art** once the user names a branch. `README.md` needs `media/art/readme-hero.jpg`, so commit them together. Ask before committing the other untracked folders.
-2. **Measure the per-part lift cache** (in `997788e`, never measured). The baseline was 8 lifts in 14 s costing about 11 s of render-thread time. Use the trace method: per-frame spans, A/B alternation, Release. Ask before launching the app.
-3. **Accessibility:** the Auto orbit button has no `AutomationProperties.Name`.
-4. **Record the runtime gotchas with evidence** (`docs/evidence/`, then `~/.claude/rules/uno-runtime-gotchas.md`):
-   - SKCanvasElement content is replayed every frame. `SKImage.FromPicture` re-renders each frame; `SKSurface.Snapshot()` rasters don't.
-   - `RenderTargetBitmap`'s scaled overload resamples. Real hi-res needs `RootScale.SetTestOverride`.
-   - UIA `SelectionItem.Select` blocks about 2 s.
-   - PostMessage clicks don't reach Uno Platform.
-   - Stale `Uno.UI.RemoteControl.Host` processes lock NuGet package files.
-5. **Older open items:**
-   - the gotchas list in git history (`HANDOFF.md` at `d0d9135`);
-   - phase 7 cleanup (`Wireframe*`, unused charts), which needs the user's OK.
+1. **Run on Windows:** run workflows 1–9 (`docs/COMPLETENESS.md`) with `uno-verify` and the App MCP. Check tooltips in Graphite.
+2. **Persistence:** the operator log, acknowledgements, shelves and setpoints. The user deferred this ("persistence later"); the theme already persists.
+3. **Record the gotchas in the shared rules file:** `docs/evidence/2026-10-28-*.md` (AsyncEnumerable refresh, obsolete `ColorOverrideSource`, render thread).
+4. **Measure the per-part lift cache** (`997788e`): a Release trace on Windows.
+5. **Open design questions:**
+   - a full operator log view (the model keeps 200 entries, the page shows 8, by spec)
+   - plant height on windows under ~700 px tall
+   - an automated UI test project (new dependency, needs a decision)
 
 ## Open questions
-- Which branch should the art and README go to?
-- bin/obj and the NuGet cache were deleted externally twice this session (about 14:08 and 14:40). What is doing that?
-- No git remote or CI yet.
-- The app was left in graphite with Electrical selected after the recording.
-- The gotchas above have no exported evidence yet.
+- Simulated telemetry, the fixed "Operator 04" and desktop-only scope: confirm these as product decisions.
+- No CI yet. The repo has a remote, but no workflow runs the tests.
 
 ## Relaunch
 ```
-cd C:\Users\Platform006\UnoProjects\PacConsole
 dotnet build PacConsole/PacConsole.csproj -f net10.0-desktop
 dotnet test PacConsole.Tests
-# Ask the user before launching any window (hard rule).
-# Demo / timing: dotnet run --project PacConsole -f net10.0-desktop -c Release
-# NuGet "access denied" on restore: stop Uno.UI.RemoteControl.Host processes first.
-# Art: media/_source/README.md (capture tool, ui_art2.py, finish.py).
+# Ask the user before launching a window on their desktop.
+# Fault demo (Debug): PAC_TELEMETRY_FAULT=5 dotnet run --project PacConsole -f net10.0-desktop
+# Reset the saved theme: delete the app's local settings (Linux: ~/.local/share/PacConsole/).
 ```

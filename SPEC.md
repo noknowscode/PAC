@@ -6,6 +6,8 @@ Goal: replace the console's wireframe plant (main viewport, three preset thumbna
 
 Out of scope: new routes, new telemetry, theme switching (the app is dark-only, `RequestedTheme="Dark"`), WebAssembly/mobile heads (the app ships `net10.0-desktop` only today).
 
+> **Update 2026-10-28:** the app now has System, Light and Graphite themes (`docs/SPEC-THEME.md`). Phase 7 cleanup is done: the wireframe renderer, `PlantGeometry` and their projection helpers are deleted.
+
 ## Architecture Brief
 
 **Targets.** `net10.0-desktop` (Skia, Win32 host), Uno.Sdk **6.7.30** pinned in `global.json`. Bundled SkiaSharp 3.119.2; no opt-in to SkiaSharp 4 (nothing here needs a v4-only API).
