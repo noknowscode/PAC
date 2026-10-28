@@ -159,6 +159,8 @@ public sealed partial record ConsoleView
 
     /// <summary>The sample index of the latest alert onset in the range, or -1: every trend marks it.</summary>
     public int EventIndex => Trends is { Events.IsEmpty: false } t ? t.Events[^1].Index : -1;
+    /// <summary>The shared cursor slider's maximum: the last sample index.</summary>
+    public int CursorMax => TrendSet.Samples - 1;
     public TrendRange Range { get; init; }
     public bool IsRange15 => Range == TrendRange.Minutes15;
     public bool IsRange1h => Range == TrendRange.Hour1;

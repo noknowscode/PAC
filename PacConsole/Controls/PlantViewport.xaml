@@ -13,13 +13,17 @@
        legend at its foot, then a footer bar holding the page's equipment picker and the camera tools. -->
   <Grid x:Name="Root" RowDefinitions="Auto,*,Auto" Background="Transparent">
 
-    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20" Padding="20,16,20,0">
+    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="20" Padding="20,16,20,0">
       <StackPanel Spacing="2" VerticalAlignment="Center" IsHitTestVisible="False">
         <TextBlock x:Name="TitleText" Style="{StaticResource TypeSection}" />
         <TextBlock Text="Drag to orbit · Select an assembly" Style="{StaticResource TypeMicro}" />
       </StackPanel>
 
-      <ContentPresenter x:Name="HeaderHost" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left" />
+      <ContentPresenter x:Name="HeaderHost" VerticalAlignment="Center" HorizontalAlignment="Left"
+                        Grid.Row="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Normal=1, Wide=0}"
+                        Grid.Column="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Normal=0, Wide=1}"
+                        Grid.ColumnSpan="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Normal=3, Wide=1}"
+                        Margin="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Normal='0,10,0,0', Wide='0'}" />
 
       <!-- Standard views: one raised segment shows the view the camera rests in. -->
       <!-- xaml-lint: allow card - the segmented control's track, not a content surface (same as the page's Mode and range tracks). -->
@@ -129,9 +133,11 @@
                   ToolTipService.ToolTip="Rotate right">
             <FontIcon Glyph="&#xE7AD;" FontSize="16" />
           </Button>
-          <Button x:Name="Reset" Style="{StaticResource ToolbarButton}" AutomationProperties.Name="Reset view">
+          <Button x:Name="Reset" Style="{StaticResource ToolbarButton}" AutomationProperties.Name="Reset view"
+                  ToolTipService.ToolTip="Back to the isometric view (Home)">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <FontIcon Glyph="&#xE740;" FontSize="14" />
+              <!-- Fluent "Home": the camera's home pose, the same as the Home key. -->
+              <FontIcon Glyph="&#xE80F;" FontSize="14" />
               <TextBlock Text="Reset view" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>

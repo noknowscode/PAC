@@ -199,7 +199,7 @@ public sealed partial class PlantViewport : UserControl
         DependencyProperty.Register(nameof(SelectCommand), typeof(ICommand), typeof(PlantViewport), new PropertyMetadata(null));
 
     /// <summary>Eases the camera to <paramref name="pose"/> and switches auto-orbit off.</summary>
-    public void GoTo(CameraPose pose)
+    private void GoTo(CameraPose pose)
     {
         _auto = false;
         AutoOrbit.IsChecked = false;

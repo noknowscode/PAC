@@ -22,7 +22,7 @@
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{StaticResource TypeSizeBody}" />
     <Setter Property="Padding" Value="14,0" />
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -239,11 +239,11 @@
        The state line is one size smaller instead of faded (text opacity breaks contrast). -->
   <Style x:Key="ValveNumber" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
   </Style>
   <Style x:Key="ValveState" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
   </Style>
 
   <Style x:Key="ValveToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource ConsoleButtonBase}">
@@ -564,7 +564,7 @@
     <Setter Property="Height" Value="24" />
     <Setter Property="Padding" Value="6,0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusTag}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
   </Style>
 
   <Style x:Key="PathIconStyle" TargetType="Path">

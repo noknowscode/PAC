@@ -69,13 +69,11 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="10,0" />
       <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
     </Style>
 
-    <!-- Section caps ("SYSTEMS", "EQUIPMENT INSPECTOR"). -->
-    <Style x:Key="TypeCaps" TargetType="TextBlock" BasedOn="{StaticResource TypeMicro}">
-      <Setter Property="FontSize" Value="11" />
-    </Style>
+    <!-- Section caps ("ACTIVE ALARMS", "EQUIPMENT INSPECTOR"): the micro size, set in capitals. -->
+    <Style x:Key="TypeCaps" TargetType="TextBlock" BasedOn="{StaticResource TypeMicro}" />
 
     <Style x:Key="AlarmItem" TargetType="Grid">
       <Setter Property="Margin" Value="0,12,0,0" />
@@ -241,8 +239,6 @@
                                            Command="{Binding Parent.SetTheme}" CommandParameter="Light" />
                       <RadioMenuFlyoutItem Text="Graphite theme" GroupName="Theme" IsChecked="{Binding Data.IsThemeGraphite, Mode=OneWay}"
                                            Command="{Binding Parent.SetTheme}" CommandParameter="Graphite" />
-                      <MenuFlyoutSeparator />
-                      <MenuFlyoutItem Text="Reset plant view" Click="OnResetViewClick" />
                     </MenuFlyout>
                   </Button.Flyout>
                 </Button>
@@ -265,16 +261,15 @@
               <Border Background="{ThemeResource PanelBrush}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
                       Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=500, Wide=620}">
-                <controls:PlantViewport x:Name="Viewport"
-                                        Title="{Binding Data.SystemTitle}"
+                <controls:PlantViewport Title="{Binding Data.SystemTitle}"
                                         ShownSystem="{Binding Data.System}"
                                         SelectedUnit="{Binding Data.Selected}"
                                         AlertingUnits="{Binding Data.AlertingUnits}"
-                                        SelectCommand="{Binding Parent.SelectUnit}"
-                                        Loaded="OnViewportLoaded">
+                                        SelectCommand="{Binding Parent.SelectUnit}">
                   <controls:PlantViewport.HeaderContent>
-                    <!-- The systems filter, with the drawing it filters: a chip isolates its circuit's ink and motion. -->
-                    <ScrollViewer HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled">
+                    <!-- The systems filter, with the drawing it filters: a chip isolates its circuit's ink and motion.
+                         It gets its own row on narrow panels; below about 700 px it scrolls, with a visible bar. -->
+                    <ScrollViewer HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto" VerticalScrollMode="Disabled">
                       <StackPanel Orientation="Horizontal" Spacing="4" AutomationProperties.Name="Systems">
                         <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" Content="All systems"
                                      IsChecked="{Binding Data.IsAllSystems, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="All" />
@@ -679,7 +674,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend0, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend0.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend0Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend0.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend0Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend0.Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend0}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -687,7 +682,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend1, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend1.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend1Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend1.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend1Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend1.Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend1}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -695,7 +690,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend2, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend2.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend2Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend2.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend2Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend2.Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend2}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -703,7 +698,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend3, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend3.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend3Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend3.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend3Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend3.Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend3}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -714,7 +709,7 @@
               <!-- The shared cursor: one slider moves the hairline on every row. -->
               <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="20">
                 <TextBlock Text="Shared cursor" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-                <Slider Grid.Column="1" Minimum="0" Maximum="89" StepFrequency="1" SmallChange="1" LargeChange="10" VerticalAlignment="Center"
+                <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Data.CursorMax}" StepFrequency="1" SmallChange="1" LargeChange="10" VerticalAlignment="Center"
                         Value="{Binding Parent.Cursor, Mode=TwoWay}" AutomationProperties.Name="Shared trend cursor" />
                 <TextBlock Grid.Column="2" Text="{Binding Data.CursorTime}" Style="{StaticResource TypeSection}" VerticalAlignment="Center" />
                 <Button Grid.Column="3" Content="Latest" Style="{StaticResource ToolbarButton}" Command="{Binding Parent.SetCursorLatest}"
