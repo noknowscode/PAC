@@ -7,7 +7,7 @@
       xmlns:charts="using:PacConsole.Controls.Charts"
       xmlns:conv="using:PacConsole.Presentation.Converters"
       NavigationCacheMode="Required"
-      Background="{StaticResource GroundBrush}">
+      Background="{ThemeResource GroundBrush}">
 
   <!--
     Console page v3 (SPEC-CONSOLE.md, from the user's mock): one bordered frame on the ground, in bands.
@@ -20,17 +20,6 @@
     <conv:ToneConverter x:Key="Tone" />
     <conv:BoolToVisibilityConverter x:Key="Visible" />
     <conv:NotNullToVisibilityConverter x:Key="Present" />
-
-    <!-- Slider lightweight styling: an ink value track on a soft fill, slate-teal thumb. -->
-    <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentBrush" />
-    <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentBrush" />
-    <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentBrush" />
-    <StaticResource x:Key="SliderThumbBackground" ResourceKey="AccentBrush" />
-    <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="AccentBrush" />
-    <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="AccentBrush" />
-    <StaticResource x:Key="SliderTrackFill" ResourceKey="FillStrongBrush" />
-    <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="FillStrongBrush" />
-    <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="FillStrongBrush" />
 
     <!-- A reading tile: label, value and unit; the word "Above limit" in alert; ↗ when it is in the trends.
          One fixed button per slot, bound to a record MVUX updates in place. -->
@@ -54,10 +43,10 @@
                 </StackPanel>
                 <controls:RangeBar Margin="0,4,0,0" BandStart="{Binding BandStart}" BandEnd="{Binding BandEnd}"
                                    LimitAt="{Binding LimitAt}" ValueAt="{Binding ValueAt}" OutOfBand="{Binding OutOfBand}" />
-                <TextBlock Text="{Binding StatusText}" Style="{StaticResource TypeMicro}" Foreground="{StaticResource AlertTextBrush}"
+                <TextBlock Text="{Binding StatusText}" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AlertTextBrush}"
                            Visibility="{Binding IsHigh, Converter={StaticResource Visible}}" />
               </StackPanel>
-              <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{StaticResource AccentBrush}"
+              <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AccentBrush}"
                          Visibility="{Binding IsCompared, Converter={StaticResource Visible}}" />
             </Grid>
           </DataTemplate>
@@ -75,8 +64,8 @@
     </Style>
 
     <Style x:Key="ChipButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-      <Setter Property="Background" Value="{StaticResource CardBrush}" />
-      <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+      <Setter Property="Background" Value="{ThemeResource CardBrush}" />
+      <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="10,0" />
       <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
@@ -142,7 +131,7 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="MinHeight" Value="0" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="BorderBrush" Value="{StaticResource BorderBrushDefault}" />
+      <Setter Property="BorderBrush" Value="{ThemeResource BorderBrushDefault}" />
       <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     </Style>
 
@@ -155,7 +144,7 @@
 
     <Style x:Key="Rule" TargetType="Border">
       <Setter Property="Height" Value="1" />
-      <Setter Property="Background" Value="{StaticResource HairlineBrush}" />
+      <Setter Property="Background" Value="{ThemeResource HairlineBrush}" />
     </Style>
   </Page.Resources>
 
@@ -164,7 +153,7 @@
     <!-- Before the first snapshot: a quiet line where the page will be, so nothing jumps. -->
     <mvux:FeedView.ProgressTemplate>
       <DataTemplate>
-        <TextBlock Text="Connecting to plant 02…" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}"
+        <TextBlock Text="Connecting to plant 02…" Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" />
       </DataTemplate>
     </mvux:FeedView.ProgressTemplate>
@@ -174,7 +163,7 @@
       <DataTemplate>
         <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="No telemetry from plant 02" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" />
-          <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" HorizontalAlignment="Center" />
           <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
         </StackPanel>
       </DataTemplate>
@@ -186,8 +175,8 @@
     <mvux:FeedView.ErrorTemplate>
       <DataTemplate>
         <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{StaticResource AlertTextBrush}" HorizontalAlignment="Center" />
-          <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{ThemeResource AlertTextBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" HorizontalAlignment="Center" />
           <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" Style="{StaticResource ConsoleButton}" HorizontalAlignment="Center" />
         </StackPanel>
       </DataTemplate>
@@ -196,21 +185,21 @@
     <DataTemplate>
       <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <!-- The page fills the window edge to edge: the bands carry the structure, not a frame. -->
-        <Border Background="{StaticResource CardBrush}">
+        <Border Background="{ThemeResource CardBrush}">
           <StackPanel>
 
             <!-- ============ HEADER ============
                  One band for the whole station: where (the plant), what it makes (net output against its
                  target), how it runs (mode and data age), and who is at the desk. The systems filter, with
                  its Active alarms view, sits with the drawing it filters. -->
-            <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1">
+            <Border BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,0,0,1">
               <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="20" Padding="24,12,16,12">
                 <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE81E;" FontSize="16" Foreground="{StaticResource AlertBrush}" VerticalAlignment="Center" />
+                    <FontIcon Glyph="&#xE81E;" FontSize="16" Foreground="{ThemeResource AlertBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="PAC" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
                   </StackPanel>
-                  <Border Width="1" Height="20" Background="{StaticResource HairlineBrush}" VerticalAlignment="Center" />
+                  <Border Width="1" Height="20" Background="{ThemeResource HairlineBrush}" VerticalAlignment="Center" />
                   <StackPanel Spacing="0" VerticalAlignment="Center">
                     <TextBlock Text="Plant 02" Style="{StaticResource TypeTitle}" />
                     <TextBlock Text="Steam-cycle station" Style="{StaticResource TypeMicro}"
@@ -218,12 +207,12 @@
                   </StackPanel>
                 </StackPanel>
 
-                <Border Grid.Column="1" Width="1" Background="{StaticResource HairlineBrush}" Margin="0,6" />
+                <Border Grid.Column="1" Width="1" Background="{ThemeResource HairlineBrush}" Margin="0,6" />
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                   <TextBlock Text="Net output" Style="{StaticResource TypeBody}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
                   <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeDisplay}" />
-                  <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                  <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
                 </StackPanel>
                 <StackPanel Grid.Column="3" Spacing="0" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.TargetGapText}" Style="{StaticResource TypeBody}" />
@@ -246,7 +235,13 @@
                   <FontIcon Glyph="&#xE712;" FontSize="16" />
                   <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedRight">
-                      <ToggleMenuFlyoutItem Text="Graphite theme" Click="OnThemeClick" />
+                      <RadioMenuFlyoutItem Text="System theme" GroupName="Theme" IsChecked="{Binding Data.IsThemeSystem, Mode=OneWay}"
+                                           Command="{Binding Parent.SetTheme}" CommandParameter="System" />
+                      <RadioMenuFlyoutItem Text="Light theme" GroupName="Theme" IsChecked="{Binding Data.IsThemeLight, Mode=OneWay}"
+                                           Command="{Binding Parent.SetTheme}" CommandParameter="Light" />
+                      <RadioMenuFlyoutItem Text="Graphite theme" GroupName="Theme" IsChecked="{Binding Data.IsThemeGraphite, Mode=OneWay}"
+                                           Command="{Binding Parent.SetTheme}" CommandParameter="Graphite" />
+                      <MenuFlyoutSeparator />
                       <MenuFlyoutItem Text="Reset plant view" Click="OnResetViewClick" />
                     </MenuFlyout>
                   </Button.Flyout>
@@ -267,7 +262,7 @@
                  selection whose inspector was taller. -->
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
 
-              <Border Background="{StaticResource PanelBrush}"
+              <Border Background="{ThemeResource PanelBrush}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
                       Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=500, Wide=620}">
                 <controls:PlantViewport x:Name="Viewport"
@@ -286,28 +281,28 @@
                         <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Steam and water"
                                      IsChecked="{Binding Data.IsSteamWater, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="SteamWater">
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemSteamWaterBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemSteamWaterBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="Steam &amp; water" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                           </StackPanel>
                         </RadioButton>
                         <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Cooling"
                                      IsChecked="{Binding Data.IsCooling, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Cooling">
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemCoolingBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemCoolingBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="Cooling" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                           </StackPanel>
                         </RadioButton>
                         <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Fuel and flue gas"
                                      IsChecked="{Binding Data.IsFuelFlue, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="FuelFlue">
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemFuelFlueBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFuelFlueBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="Fuel &amp; flue gas" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                           </StackPanel>
                         </RadioButton>
                         <RadioButton GroupName="Systems" Style="{StaticResource SegmentRadioButton}" AutomationProperties.Name="Electrical"
                                      IsChecked="{Binding Data.IsElectrical, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Electrical">
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Ellipse Width="7" Height="7" Fill="{StaticResource SystemElectricalBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemElectricalBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="Electrical" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                           </StackPanel>
                         </RadioButton>
@@ -317,11 +312,11 @@
                                      ToolTipService.ToolTip="{Binding Data.ActiveAlertText}"
                                      IsChecked="{Binding Data.IsAlarms, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Alarms">
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Ellipse Width="7" Height="7" Fill="{StaticResource AlertBrush}" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
+                            <Ellipse Width="7" Height="7" Fill="{ThemeResource AlertBrush}" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
                                      Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}}" />
                             <TextBlock Text="Active alarms" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                             <TextBlock Text="{Binding Data.ActiveAlarmCount}" Style="{StaticResource ControlLabel}" FontFamily="{StaticResource SansMediumFont}"
-                                       Foreground="{StaticResource AlertTextBrush}" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource AlertTextBrush}" VerticalAlignment="Center"
                                        Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}}" />
                           </StackPanel>
                         </RadioButton>
@@ -331,7 +326,7 @@
                   <controls:PlantViewport.FooterContent>
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <TextBlock Text="Equipment" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
-                      <ComboBox MinWidth="220" Height="34" Background="{StaticResource CardBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderBrush="{StaticResource HairlineBrush}"
+                      <ComboBox MinWidth="220" Height="34" Background="{ThemeResource CardBrush}" Foreground="{ThemeResource TextPrimaryBrush}" BorderBrush="{ThemeResource HairlineBrush}"
                                 ItemsSource="{Binding Data.EquipmentChoices}"
                                 SelectedIndex="{Binding Data.SelectedIndex, Mode=OneWay}"
                                 utu:CommandExtensions.Command="{Binding Parent.PickEquipment}"
@@ -345,7 +340,7 @@
               <Border Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=0, Wide=1}"
                       Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=1, Wide=0}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=2, Wide=1}"
-                      BorderBrush="{StaticResource HairlineBrush}"
+                      BorderBrush="{ThemeResource HairlineBrush}"
                       BorderThickness="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal='0,1,0,0', Wide='1,0,0,0'}"
                       Width="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=NaN, Wide=340, Widest=400}"
                       Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=NaN, Wide=620}">
@@ -390,7 +385,7 @@
                         <TextBlock Grid.Column="1" Text="EQUIPMENT INSPECTOR" Style="{StaticResource TypeCaps}" />
                       </Grid>
                       <TextBlock Text="{Binding Data.InspectorName}" Style="{StaticResource TypeDisplay}" />
-                      <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{StaticResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
+                      <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{ThemeResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
                       <TextBlock Style="{StaticResource TypeMicro}">
                         <Run Text="{Binding Data.InspectorState}" Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=MutedBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
                       </TextBlock>
@@ -399,17 +394,17 @@
                     <!-- Alarm response: while the selected unit has an alarm, what to do about it. -->
                     <!-- xaml-lint: allow card - an alarm callout with its own alert ground, not a content surface. -->
                     <Border DataContext="{Binding Data.Response}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
-                            Background="{StaticResource AlertTintBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="14,12"
+                            Background="{ThemeResource AlertTintBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="14,12"
                             AutomationProperties.Name="Alarm response">
                       <StackPanel Spacing="6">
-                        <TextBlock Style="{StaticResource TypeMicro}" Foreground="{StaticResource AlertTextBrush}">
+                        <TextBlock Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AlertTextBrush}">
                           <Run Text="{Binding Priority}" /><Run Text=" priority · " /><Run Text="{Binding State}" />
                         </TextBlock>
                         <TextBlock Text="{Binding Title}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
-                        <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="Likely cause: " /><Run Text="{Binding Cause}" Foreground="{StaticResource TextPrimaryBrush}" /></TextBlock>
+                        <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="Likely cause: " /><Run Text="{Binding Cause}" Foreground="{ThemeResource TextPrimaryBrush}" /></TextBlock>
                         <TextBlock Text="{Binding Steps}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
                         <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="If not handled: " /><Run Text="{Binding Consequence}" /></TextBlock>
-                        <Button Content="Acknowledge" Style="{StaticResource ConsoleButton}" Background="{StaticResource CardBrush}" HorizontalAlignment="Left"
+                        <Button Content="Acknowledge" Style="{StaticResource ConsoleButton}" Background="{ThemeResource CardBrush}" HorizontalAlignment="Left"
                                 Visibility="{Binding CanAck, Converter={StaticResource Visible}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}" />
                       </StackPanel>
@@ -495,10 +490,10 @@
                           <TextBlock Text="{Binding Text}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
                           <TextBlock Text="{Binding Reason}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="Confirm" Style="{StaticResource ConsoleButton}" Background="{StaticResource AccentBrush}" Foreground="{StaticResource OnAccentBrush}"
+                            <Button Content="Confirm" Style="{StaticResource ConsoleButton}" Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource OnAccentBrush}"
                                     Visibility="{Binding IsRefused, Converter={StaticResource Visible}, ConverterParameter=Invert}"
                                     Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ConfirmPending}" />
-                            <Button Content="Cancel" Style="{StaticResource ConsoleButton}" Background="{StaticResource CardBrush}"
+                            <Button Content="Cancel" Style="{StaticResource ConsoleButton}" Background="{ThemeResource CardBrush}"
                                     Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.CancelPending}" />
                           </StackPanel>
                         </StackPanel>
@@ -506,7 +501,7 @@
 
                       <StackPanel Spacing="8">
                         <TextBlock Text="Plant mode" Style="{StaticResource TypeMicro}" />
-                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{StaticResource FillBrush}">
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{ThemeResource FillBrush}">
                           <RadioButton Content="Auto" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsAuto, Mode=OneWay}" Command="{Binding Parent.SetAuto}" />
                           <RadioButton Grid.Column="1" Content="Manual" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsManual, Mode=OneWay}" Command="{Binding Parent.SetManual}" />
                           <RadioButton Grid.Column="2" Content="Hold" Style="{StaticResource ModeRadioButton}" Height="28" IsChecked="{Binding Data.IsHold, Mode=OneWay}" Command="{Binding Parent.SetHold}" />
@@ -660,17 +655,17 @@
             </Grid>
 
             <!-- ============ SYNCHRONIZED TRENDS ============ -->
-            <StackPanel Spacing="16" Padding="24,20" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0"
+            <StackPanel Spacing="16" Padding="24,20" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
                         AutomationProperties.Name="Synchronized trends">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <StackPanel Spacing="2">
                   <StackPanel Orientation="Horizontal" Spacing="10">
-                    <FontIcon Glyph="&#xE9D2;" FontSize="14" Foreground="{StaticResource InkSoftBrush}" VerticalAlignment="Center" />
+                    <FontIcon Glyph="&#xE9D2;" FontSize="14" Foreground="{ThemeResource InkSoftBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="Synchronized trends" Style="{StaticResource TypeTitle}" />
                   </StackPanel>
                   <TextBlock Text="Generation + selected equipment · shared historical cursor" Style="{StaticResource TypeMicro}" />
                 </StackPanel>
-                <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{StaticResource FillBrush}" VerticalAlignment="Top">
+                <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="2" Padding="3" CornerRadius="9" Background="{ThemeResource FillBrush}" VerticalAlignment="Top">
                   <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="28"
                                IsChecked="{Binding Data.IsRange15, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Minutes15" />
                   <RadioButton Grid.Column="1" Content="1 hour" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="28"
@@ -684,7 +679,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend0, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend0.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend0Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend0.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend0Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend0.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend0}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -692,7 +687,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend1, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend1.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend1Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend1.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend1Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend1.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend1}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -700,7 +695,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend2, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend2.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend2Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend2.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend2Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend2.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend2}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -708,7 +703,7 @@
               <Grid ColumnDefinitions="160,*" ColumnSpacing="16" Height="96" Visibility="{Binding Data.Trend3, Converter={StaticResource Present}}">
                 <StackPanel Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{Binding Data.Trend3.Label}" Style="{StaticResource TypeMicro}" />
-                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend3Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend3.Unit}" FontSize="12" Foreground="{StaticResource MutedBrush}" /></TextBlock>
+                  <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Data.Trend3Value}" /><Run Text=" " /><Run Text="{Binding Data.Trend3.Unit}" FontSize="12" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
                 </StackPanel>
                 <charts:TrendChart Grid.Column="1" Series="{Binding Data.Trend3}" Cursor="{Binding Data.CursorIndex}" EventIndex="{Binding Data.EventIndex}"
                                    TimeStart="{Binding Data.TimeStart}" TimeMid="{Binding Data.TimeMid}" TimeEnd="{Binding Data.TimeEnd}" Margin="0,16,0,0" />
@@ -725,14 +720,14 @@
                 <Button Grid.Column="3" Content="Latest" Style="{StaticResource ToolbarButton}" Command="{Binding Parent.SetCursorLatest}"
                         AutomationProperties.Name="Move the cursor to the latest sample" />
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                  <Border Width="2" Height="14" Background="{StaticResource AlertBrush}" VerticalAlignment="Center" />
+                  <Border Width="2" Height="14" Background="{ThemeResource AlertBrush}" VerticalAlignment="Center" />
                   <TextBlock Text="{Binding Data.EventText}" Style="{StaticResource TypeMicro}" />
                 </StackPanel>
               </Grid>
             </StackPanel>
 
             <!-- ============ OPERATOR LOG ============ -->
-            <StackPanel Spacing="10" Padding="24,20" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0"
+            <StackPanel Spacing="10" Padding="24,20" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
                         AutomationProperties.Name="Operator log">
               <StackPanel Spacing="2">
                 <TextBlock Text="Operator log" Style="{StaticResource TypeTitle}" />
@@ -764,7 +759,7 @@
             </StackPanel>
 
             <!-- ============ FOOTER ============ -->
-            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0"
+            <Border Background="{ThemeResource PanelBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
                     Padding="24,12">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <TextBlock Text="Interactive concept · water-cooled condenser + separate cooling bank" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />

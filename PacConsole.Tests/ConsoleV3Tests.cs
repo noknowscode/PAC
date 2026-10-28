@@ -26,6 +26,14 @@ public class ConsoleV3Tests
             Setpoints.Default, ops, ControlMode.Auto, selected, T0);
 
     [Test]
+    public void Theme_choice_checks_exactly_one_menu_item()
+    {
+        Compose().IsThemeSystem.Should().BeTrue("the console follows the OS until the operator picks a theme");
+        var graphite = Compose(inputs: ViewInputs.Default with { Theme = ThemeChoice.Graphite });
+        (graphite.IsThemeSystem, graphite.IsThemeLight, graphite.IsThemeGraphite).Should().Be((false, false, true));
+    }
+
+    [Test]
     public void Every_unit_has_equipment_with_unique_reading_keys()
     {
         EquipmentCatalog.All.Select(e => e.Id).Should().BeEquivalentTo(Enum.GetValues<UnitId>());

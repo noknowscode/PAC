@@ -9,18 +9,18 @@
   -->
 
   <Style x:Key="CardStyle" TargetType="Border">
-    <Setter Property="Background" Value="{StaticResource CardBrush}" />
+    <Setter Property="Background" Value="{ThemeResource CardBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
     <Setter Property="Padding" Value="16" />
   </Style>
 
   <Style x:Key="ConsoleButtonBase" TargetType="ButtonBase">
-    <Setter Property="Background" Value="{StaticResource FillBrush}" />
+    <Setter Property="Background" Value="{ThemeResource FillBrush}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Padding" Value="14,0" />
@@ -28,7 +28,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="UseSystemFocusVisuals" Value="True" />
-    <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentBrush}" />
     <Setter Property="FocusVisualPrimaryThickness" Value="2" />
     <Setter Property="FocusVisualSecondaryThickness" Value="0" />
     <Setter Property="FocusVisualMargin" Value="-3" />
@@ -44,7 +44,7 @@
                 BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{TemplateBinding CornerRadius}">
             <Border x:Name="StateLayer"
-                    Background="{StaticResource TextPrimaryBrush}"
+                    Background="{ThemeResource TextPrimaryBrush}"
                     CornerRadius="{TemplateBinding CornerRadius}"
                     Opacity="0" />
             <ContentPresenter x:Name="Presenter"
@@ -88,7 +88,7 @@
           BorderThickness="{TemplateBinding BorderThickness}"
           CornerRadius="{TemplateBinding CornerRadius}">
       <Border x:Name="StateLayer"
-              Background="{StaticResource TextPrimaryBrush}"
+              Background="{ThemeResource TextPrimaryBrush}"
               CornerRadius="{TemplateBinding CornerRadius}"
               Opacity="0" />
       <ContentPresenter x:Name="Presenter"
@@ -118,21 +118,21 @@
           </VisualState>
           <VisualState x:Name="Checked">
             <VisualState.Setters>
-              <Setter Target="Root.Background" Value="{StaticResource CardBrush}" />
-              <Setter Target="Presenter.Foreground" Value="{StaticResource AccentBrush}" />
+              <Setter Target="Root.Background" Value="{ThemeResource CardBrush}" />
+              <Setter Target="Presenter.Foreground" Value="{ThemeResource AccentBrush}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="CheckedPointerOver">
             <VisualState.Setters>
-              <Setter Target="Root.Background" Value="{StaticResource CardBrush}" />
-              <Setter Target="Presenter.Foreground" Value="{StaticResource AccentBrush}" />
+              <Setter Target="Root.Background" Value="{ThemeResource CardBrush}" />
+              <Setter Target="Presenter.Foreground" Value="{ThemeResource AccentBrush}" />
               <Setter Target="StateLayer.Opacity" Value="0.06" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="CheckedPressed">
             <VisualState.Setters>
-              <Setter Target="Root.Background" Value="{StaticResource CardBrush}" />
-              <Setter Target="Presenter.Foreground" Value="{StaticResource AccentBrush}" />
+              <Setter Target="Root.Background" Value="{ThemeResource CardBrush}" />
+              <Setter Target="Presenter.Foreground" Value="{ThemeResource AccentBrush}" />
               <Setter Target="StateLayer.Opacity" Value="0.10" />
             </VisualState.Setters>
           </VisualState>
@@ -158,7 +158,7 @@
           BorderThickness="{TemplateBinding BorderThickness}"
           CornerRadius="{TemplateBinding CornerRadius}">
       <Border x:Name="StateLayer"
-              Background="{StaticResource TextPrimaryBrush}"
+              Background="{ThemeResource TextPrimaryBrush}"
               CornerRadius="{TemplateBinding CornerRadius}"
               Opacity="0" />
       <ContentPresenter x:Name="Presenter"
@@ -188,24 +188,24 @@
           </VisualState>
           <VisualState x:Name="Checked">
             <VisualState.Setters>
-              <Setter Target="Root.Background" Value="{StaticResource FillStrongBrush}" />
+              <Setter Target="Root.Background" Value="{ThemeResource FillStrongBrush}" />
               <Setter Target="Root.BorderBrush" Value="Transparent" />
-              <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+              <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="CheckedPointerOver">
             <VisualState.Setters>
-              <Setter Target="Root.Background" Value="{StaticResource FillStrongBrush}" />
+              <Setter Target="Root.Background" Value="{ThemeResource FillStrongBrush}" />
               <Setter Target="Root.BorderBrush" Value="Transparent" />
-              <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+              <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
               <Setter Target="StateLayer.Opacity" Value="0.06" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="CheckedPressed">
             <VisualState.Setters>
-              <Setter Target="Root.Background" Value="{StaticResource FillStrongBrush}" />
+              <Setter Target="Root.Background" Value="{ThemeResource FillStrongBrush}" />
               <Setter Target="Root.BorderBrush" Value="Transparent" />
-              <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+              <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
               <Setter Target="StateLayer.Opacity" Value="0.10" />
             </VisualState.Setters>
           </VisualState>
@@ -255,8 +255,8 @@
     <Setter Property="CornerRadius" Value="16" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrushDefault}" />
-    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource BorderBrushDefault}" />
+    <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
   </Style>
 
   <!-- RadioButton template: same look, RadioButton's own state names (CheckStates group). -->
@@ -271,7 +271,7 @@
                 BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{TemplateBinding CornerRadius}">
             <Border x:Name="StateLayer"
-                    Background="{StaticResource TextPrimaryBrush}"
+                    Background="{ThemeResource TextPrimaryBrush}"
                     CornerRadius="{TemplateBinding CornerRadius}"
                     Opacity="0" />
             <ContentPresenter x:Name="Presenter"
@@ -303,8 +303,8 @@
               <VisualStateGroup x:Name="CheckStates">
                 <VisualState x:Name="Checked">
                   <VisualState.Setters>
-                    <Setter Target="Root.Background" Value="{StaticResource CardBrush}" />
-                    <Setter Target="Presenter.Foreground" Value="{StaticResource AccentBrush}" />
+                    <Setter Target="Root.Background" Value="{ThemeResource CardBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{ThemeResource AccentBrush}" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Unchecked" />
@@ -321,7 +321,7 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Height" Value="{StaticResource ControlHeight}" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="GroupName" Value="Mode" />
@@ -338,7 +338,7 @@
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource InkSoftBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="Template">
       <Setter.Value>
@@ -347,7 +347,7 @@
                 Background="{TemplateBinding Background}"
                 CornerRadius="{TemplateBinding CornerRadius}">
             <Border x:Name="StateLayer"
-                    Background="{StaticResource TextPrimaryBrush}"
+                    Background="{ThemeResource TextPrimaryBrush}"
                     CornerRadius="{TemplateBinding CornerRadius}"
                     Opacity="0" />
             <ContentPresenter x:Name="Presenter"
@@ -380,8 +380,8 @@
               <VisualStateGroup x:Name="CheckStates">
                 <VisualState x:Name="Checked">
                   <VisualState.Setters>
-                    <Setter Target="Root.Background" Value="{StaticResource FillBrush}" />
-                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Root.Background" Value="{ThemeResource FillBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
                     <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
                   </VisualState.Setters>
                 </VisualState>
@@ -410,8 +410,8 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="{StaticResource ThumbFrameBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource ThumbFrameBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
@@ -425,7 +425,7 @@
                   BorderThickness="1"
                   CornerRadius="{TemplateBinding CornerRadius}">
             <Grid>
-              <Border x:Name="StateLayer" Background="{StaticResource TextPrimaryBrush}" CornerRadius="{TemplateBinding CornerRadius}" Opacity="0" />
+              <Border x:Name="StateLayer" Background="{ThemeResource TextPrimaryBrush}" CornerRadius="{TemplateBinding CornerRadius}" Opacity="0" />
               <ContentPresenter x:Name="Presenter"
                                 Padding="{TemplateBinding Padding}"
                                 Content="{TemplateBinding Content}"
@@ -452,8 +452,8 @@
               <VisualStateGroup x:Name="CheckStates">
                 <VisualState x:Name="Checked">
                   <VisualState.Setters>
-                    <Setter Target="Frame.BorderBrush" Value="{StaticResource AccentBrush}" />
-                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Frame.BorderBrush" Value="{ThemeResource AccentBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
                     <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
                   </VisualState.Setters>
                 </VisualState>
@@ -475,7 +475,7 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="Template">
       <Setter.Value>
@@ -487,18 +487,18 @@
                               Foreground="{TemplateBinding Foreground}"
                               FontFamily="{TemplateBinding FontFamily}"
                               VerticalContentAlignment="Center" />
-            <Border x:Name="Indicator" Height="2" VerticalAlignment="Bottom" Background="{StaticResource AccentBrush}" Opacity="0" />
+            <Border x:Name="Indicator" Height="2" VerticalAlignment="Bottom" Background="{ThemeResource AccentBrush}" Opacity="0" />
             <VisualStateManager.VisualStateGroups>
               <VisualStateGroup x:Name="CommonStates">
                 <VisualState x:Name="Normal" />
                 <VisualState x:Name="PointerOver">
                   <VisualState.Setters>
-                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Pressed">
                   <VisualState.Setters>
-                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Disabled">
@@ -511,7 +511,7 @@
                 <VisualState x:Name="Checked">
                   <VisualState.Setters>
                     <Setter Target="Indicator.Opacity" Value="1" />
-                    <Setter Target="Presenter.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Target="Presenter.Foreground" Value="{ThemeResource TextPrimaryBrush}" />
                     <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
                   </VisualState.Setters>
                 </VisualState>
@@ -531,7 +531,7 @@
     <Setter Property="Height" Value="{StaticResource ControlHeight}" />
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource InkSoftBrush}" />
   </Style>
 
   <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
@@ -539,21 +539,21 @@
     <Setter Property="Height" Value="{StaticResource ControlHeight}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource InkSoftBrush}" />
   </Style>
 
   <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
     <Setter Property="Height" Value="{StaticResource ControlHeight}" />
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource InkSoftBrush}" />
   </Style>
 
   <Style x:Key="ToolbarToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource ConsoleToggleButton}">
     <Setter Property="Height" Value="{StaticResource ControlHeight}" />
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource InkSoftBrush}" />
   </Style>
 
   <!-- Figure callout in the plant view: a quiet label plate at the end of a hairline leader, 24 px tall

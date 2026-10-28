@@ -39,6 +39,7 @@ public partial class App : Application
                                 LogLevel.Warning)
                         .CoreLogLevel(LogLevel.Warning);
                 }, enableUnoLogging: true)
+                .UseThemeSwitching()
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton(TimeProvider.System);
@@ -74,6 +75,8 @@ public partial class App : Application
             () => Task.FromResult(Host),
             initialRoute: "Console"
         );
+        // Brushes chosen in code (converters, tag plates, range bars) follow the root's theme.
+        if (MainWindow.Content is FrameworkElement root) Styles.ThemeBrushes.Track(root);
     }
 
     private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)

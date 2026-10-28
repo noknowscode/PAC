@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Shapes;
+using PacConsole.Styles;
 
 namespace PacConsole.Controls;
 
@@ -24,10 +25,9 @@ public sealed partial class RangeBar : Canvas
         Children.Add(_band);
         Children.Add(_limit);
         Children.Add(_marker);
-        var r = Application.Current.Resources;
-        _track.Fill = (Brush)r["FillBrush"];
-        _band.Fill = (Brush)r["FillStrongBrush"];
-        _limit.Fill = (Brush)r["AlertBrush"];
+        _track.Fill = ThemeBrushes.Get("FillBrush");
+        _band.Fill = ThemeBrushes.Get("FillStrongBrush");
+        _limit.Fill = ThemeBrushes.Get("AlertBrush");
         SizeChanged += (_, _) => Arrange();
     }
 
@@ -60,8 +60,8 @@ public sealed partial class RangeBar : Canvas
         _limit.Visibility = LimitAt >= 0 ? Visibility.Visible : Visibility.Collapsed;
         Place(_limit, Math.Clamp(LimitAt * w - 1, 0, w - 2), 1, null);
         Place(_marker, Math.Clamp(ValueAt * w - 1, 0, w - 2), 0, null);
-        // Theme switches repaint these brushes in place (ConsoleTheme), so reading them here is enough.
-        _marker.Fill = (Brush)Application.Current.Resources[OutOfBand ? "AlertTextBrush" : "TextPrimaryBrush"];
+        // ThemeBrushes repaints these on a theme switch, so choosing one here is enough.
+        _marker.Fill = ThemeBrushes.Get(OutOfBand ? "AlertTextBrush" : "TextPrimaryBrush");
     }
 
     private static void Place(Rectangle r, double x, double y, double? width)

@@ -7,11 +7,10 @@
   <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" Widest="1600" />
 
   <!--
-    Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Light is the base theme;
-    Palette.Dark.xaml holds the graphite values, copied over these by ConsoleTheme on a switch.
+    Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Fonts, type, strokes and
+    radii live here; every colour lives once per theme in Palette.xaml.
     Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 6 type sizes.
     Console v3 (SPEC-CONSOLE.md): selection is a deep slate-teal, alerts a burnt orange.
-    Contrast on the ground (#F4F5F6): ink 14.2, soft ink 8.6, muted 5.6, accent 6.9, alert text 5.4.
   -->
 
   <!-- One family. IBM Plex Sans digits are tabular by default (all 600 units), so live values hold still.
@@ -20,75 +19,39 @@
   <FontFamily x:Key="SansMediumFont">ms-appx:///Assets/Fonts/IBMPlexSans-Medium.ttf#IBM Plex Sans Medm</FontFamily>
   <FontFamily x:Key="SansStrongFont">ms-appx:///Assets/Fonts/IBMPlexSans-SemiBold.ttf#IBM Plex Sans SmBld</FontFamily>
 
-  <!-- xaml-lint: allow tokentheme - ConsoleTheme repaints these brushes in place from Palette.Dark.xaml; ThemeDictionaries would hand converters a snapshot (uno-runtime-gotchas, Theming and color). -->
-  <!-- Ground and surfaces: the page is the ground; white is reserved for things you touch or read closely. -->
-  <SolidColorBrush x:Key="GroundBrush" Color="#F4F5F6" />
-  <SolidColorBrush x:Key="PanelBrush" Color="#F4F5F6" />
-  <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="OverlayBrush" Color="#EBF4F5F6" />
-
-  <!-- Text: ink, soft ink, muted, faint (faint is for non-text marks and placeholders only) -->
-  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1E2833" />
-  <SolidColorBrush x:Key="InkSoftBrush" Color="#3E4B5A" />
-  <SolidColorBrush x:Key="MutedBrush" Color="#5A6573" />
-  <SolidColorBrush x:Key="FaintBrush" Color="#8A939E" />
-
-  <!-- Lines and fills. Controls are filled, not outlined; the border keys serve focus rings and the valve ring. -->
-  <SolidColorBrush x:Key="HairlineBrush" Color="#D9DDE2" />
-  <!-- A view thumbnail's frame: the hairline's step from the panel ground, half again (on #F4F5F6). -->
-  <SolidColorBrush x:Key="ThumbFrameBrush" Color="#CCD1D8" />
-  <SolidColorBrush x:Key="BorderBrushDefault" Color="#8A939E" />
-  <SolidColorBrush x:Key="BorderBrushStrong" Color="#3E4B5A" />
-  <SolidColorBrush x:Key="FillBrush" Color="#E9ECEF" />
-  <SolidColorBrush x:Key="FillStrongBrush" Color="#D5DAE0" />
-
-  <!-- Accent: the one selection colour, a deep slate-teal. Selected, compared and plotted, nothing else. -->
-  <SolidColorBrush x:Key="AccentBrush" Color="#2F5D73" />
-  <SolidColorBrush x:Key="AccentFillBrush" Color="#1F2F5D73" />
-  <SolidColorBrush x:Key="AccentTintBrush" Color="#0D2F5D73" />
-  <SolidColorBrush x:Key="AccentBorderBrush" Color="#992F5D73" />
-  <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
-
-  <!-- Alert: burnt orange, always paired with the word (alert, above limit) or a dashed stroke.
-       The tint is an opaque amber, the alert pill's ground. -->
-  <SolidColorBrush x:Key="AlertBrush" Color="#C2410C" />
-  <SolidColorBrush x:Key="AlertTextBrush" Color="#AE3A0A" />
-  <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3C2410C" />
-  <SolidColorBrush x:Key="AlertTintBrush" Color="#FCEAD7" />
-
   <!-- Type ramp, closed: 12 / 13 / 16 / 22 / 56, weights 400 / 500 / 600, sentence case. -->
   <Style x:Key="TypeMicro" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="12" />
     <Setter Property="LineHeight" Value="16" />
-    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
   </Style>
   <Style x:Key="TypeBody" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="LineHeight" Value="20" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeSection" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="LineHeight" Value="20" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeCode" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
     <Setter Property="FontSize" Value="16" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeTitle" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
     <Setter Property="FontSize" Value="16" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeValue" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="22" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
   <Style x:Key="TypeFigure" TargetType="TextBlock" BasedOn="{StaticResource TypeValue}" />
   <!-- Display: net output and the inspector's equipment name, 28 against 13 body. -->
@@ -96,58 +59,16 @@
     <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
     <Setter Property="FontSize" Value="28" />
     <Setter Property="LineHeight" Value="34" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
   <!-- The one display figure on the page (net output): 56 against 13 body, 4.3x. -->
   <Style x:Key="TypeHero" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="56" />
     <Setter Property="LineHeight" Value="60" />
-    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
 
-  <!--
-    Plant drawings (hero, presets, unit preview): the Anatomy figure's solid look, drawn straight on
-    the ground. Paper is the ground colour, so the figure's silhouette sits on the page with no frame.
-    Shades step down from paper, tops step up; the selected unit is lit with a faint orange.
-  -->
-  <Color x:Key="SolidPaperColor">#F4F5F6</Color>
-  <Color x:Key="SolidShade0Color">#C9D4DE</Color>
-  <Color x:Key="SolidShade1Color">#D6DFE7</Color>
-  <Color x:Key="SolidShade2Color">#E2E9EF</Color>
-  <Color x:Key="SolidShade3Color">#ECF1F5</Color>
-  <Color x:Key="SolidTopColor">#FFFFFF</Color>
-  <Color x:Key="SolidLitFaceColor">#E3EEF3</Color>
-  <Color x:Key="SolidLitShadeColor">#CFE0E8</Color>
-  <Color x:Key="SolidLitTopColor">#F2F7F9</Color>
-  <Color x:Key="SolidLineHiColor">#1E2833</Color>
-  <Color x:Key="SolidLineMidColor">#5E6E80</Color>
-  <Color x:Key="SolidLineLoColor">#9AA9B8</Color>
-  <Color x:Key="SolidLineFaintColor">#C3CED8</Color>
-  <!-- The inked silhouette every piece of equipment carries (the reference's navy, kept in slate). -->
-  <Color x:Key="SolidSilhouetteColor">#2C3D50</Color>
-  <Color x:Key="SolidLeaderColor">#8A939E</Color>
-  <!-- Pipe circuits, muted so orange stays the only call to attention. The brush is the deep tone
-       (shades, outline, and the legend swatch); the colour is the base face. -->
-  <SolidColorBrush x:Key="CircuitSteamBrush" Color="#D4A3AF" />
-  <SolidColorBrush x:Key="CircuitWaterBrush" Color="#9EC1D8" />
-  <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#96C9C3" />
-  <SolidColorBrush x:Key="CircuitFuelBrush" Color="#B9A8D0" />
-  <!-- Electrical has no pipe; its swatch marks the system in the systems bar. -->
-  <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#C9B27A" />
-  <!-- System inks: a system's dot in the systems bar, and its outline, glow and motion when the plant
-       view isolates it. Stronger than the pipe tints, distinct from the slate-teal selection and the
-       burnt-orange alert. -->
-  <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="#B84D66" />
-  <SolidColorBrush x:Key="SystemCoolingBrush" Color="#1F8A7E" />
-  <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="#7457A8" />
-  <SolidColorBrush x:Key="SystemElectricalBrush" Color="#A87B12" />
-  <Color x:Key="SolidSteamColor">#F2D9DF</Color>
-  <Color x:Key="SolidWaterColor">#D6E7F2</Color>
-  <Color x:Key="SolidCoolingColor">#D3ECE9</Color>
-  <Color x:Key="SolidFuelColor">#E5DDEF</Color>
-  <!-- Flat ground shadow: one opaque tone, so overlapping shadows never darken. -->
-  <Color x:Key="SolidShadowColor">#D3DDE6</Color>
   <x:Double x:Key="SolidStrokeHairline">0.7</x:Double>
   <x:Double x:Key="SolidStrokeSilhouette">1.15</x:Double>
   <x:Double x:Key="SolidStrokeLit">1.3</x:Double>

@@ -5,7 +5,7 @@
              xmlns:utu="using:Uno.Toolkit.UI"
              IsTabStop="True"
              UseSystemFocusVisuals="True"
-             FocusVisualPrimaryBrush="{StaticResource AccentBrush}"
+             FocusVisualPrimaryBrush="{ThemeResource AccentBrush}"
              AutomationProperties.Name="Plant 3D model">
 
   <!-- The plant panel (SPEC-CONSOLE.md): title and the page's systems filter above the drawing, the
@@ -23,7 +23,7 @@
 
       <!-- Standard views: one raised segment shows the view the camera rests in. -->
       <!-- xaml-lint: allow card - the segmented control's track, not a content surface (same as the page's Mode and range tracks). -->
-      <Border Grid.Column="2" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+      <Border Grid.Column="2" Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1"
               CornerRadius="{StaticResource RadiusControl}" Padding="3" VerticalAlignment="Top"
               Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Normal=Visible, Wide=Collapsed}">
         <StackPanel Orientation="Horizontal" Spacing="2">
@@ -58,19 +58,19 @@
       <!-- Circuit legend: the pipe tints, each with its name. -->
       <StackPanel Orientation="Horizontal" Spacing="14" Margin="20,0,0,12" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False">
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitSteamBrush}" VerticalAlignment="Center" />
+          <Ellipse Width="8" Height="8" Fill="{ThemeResource CircuitSteamBrush}" VerticalAlignment="Center" />
           <TextBlock Text="Steam" Style="{StaticResource TypeMicro}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitWaterBrush}" VerticalAlignment="Center" />
+          <Ellipse Width="8" Height="8" Fill="{ThemeResource CircuitWaterBrush}" VerticalAlignment="Center" />
           <TextBlock Text="Feedwater" Style="{StaticResource TypeMicro}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitCoolingBrush}" VerticalAlignment="Center" />
+          <Ellipse Width="8" Height="8" Fill="{ThemeResource CircuitCoolingBrush}" VerticalAlignment="Center" />
           <TextBlock Text="Cooling water" Style="{StaticResource TypeMicro}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Ellipse Width="8" Height="8" Fill="{StaticResource CircuitFuelBrush}" VerticalAlignment="Center" />
+          <Ellipse Width="8" Height="8" Fill="{ThemeResource CircuitFuelBrush}" VerticalAlignment="Center" />
           <TextBlock Text="Fuel" Style="{StaticResource TypeMicro}" />
         </StackPanel>
       </StackPanel>
@@ -102,7 +102,7 @@
     </StackPanel>
     </Grid>
 
-    <Border Grid.Row="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="20,8">
+    <Border Grid.Row="2" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0" Padding="20,8">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
         <ContentPresenter x:Name="FooterHost" VerticalAlignment="Center" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">

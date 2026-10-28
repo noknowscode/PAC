@@ -5,6 +5,7 @@ using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Solids;
 using PacConsole.Rendering;
+using PacConsole.Styles;
 using Windows.System;
 
 namespace PacConsole.Controls;
@@ -391,13 +392,12 @@ public sealed partial class PlantViewport : UserControl
         var key = selected ? (alert ? "SelectedAlert" : "Selected") : alert ? "Alert" : "Normal";
         if (Equals(tag.DataContext, key)) return; // avoid restyling every frame
         tag.DataContext = key;
-        var r = Application.Current.Resources;
         // A plate in the ground colour (so the label reads over line work). The selected plate takes the
         // slate-teal outline, an alerting one the orange outline, and its label carries the word.
-        tag.Background = (Brush)r["OverlayBrush"];
+        tag.Background = ThemeBrushes.Get("OverlayBrush");
         tag.BorderThickness = new Thickness(selected || alert ? 1 : 0);
-        tag.BorderBrush = (Brush)r[alert ? "AlertBorderBrush" : selected ? "AccentBrush" : "OverlayBrush"];
-        tag.Foreground = (Brush)r[alert ? "AlertTextBrush" : selected ? "AccentBrush" : "TextPrimaryBrush"];
+        tag.BorderBrush = ThemeBrushes.Get(alert ? "AlertBorderBrush" : selected ? "AccentBrush" : "OverlayBrush");
+        tag.Foreground = ThemeBrushes.Get(alert ? "AlertTextBrush" : selected ? "AccentBrush" : "TextPrimaryBrush");
     }
 
     // xaml-lint: allow codebehind - drag-to-orbit reads raw pointer deltas, which no command or gesture surface carries.

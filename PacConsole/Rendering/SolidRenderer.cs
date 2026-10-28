@@ -1,6 +1,7 @@
 using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Solids;
+using PacConsole.Styles;
 using SkiaSharp;
 
 namespace PacConsole.Rendering;
@@ -32,16 +33,18 @@ public sealed record SolidPalette(
     /// <summary>Each process system's ink: its outline, glow and motion when the plant view isolates it.</summary>
     public IReadOnlyDictionary<PlantSystem, SKColor> Systems { get; init; } = new Dictionary<PlantSystem, SKColor>();
 
-    /// <summary>The console palette from <c>Styles/Tokens.xaml</c> (the Solid* colours), so every plant drawing matches its card.</summary>
-    public static SolidPalette FromResources(ResourceDictionary r)
+    /// <summary>
+    /// The console palette for one theme (the Solid* colours in <c>Styles/Palette.xaml</c>), so every plant
+    /// drawing matches its card. Stroke widths are theme-invariant and come from <c>Styles/Tokens.xaml</c>.
+    /// </summary>
+    public static SolidPalette For(ElementTheme theme)
     {
-        SKColor C(string key) => r[key] switch
+        SKColor C(string key)
         {
-            Windows.UI.Color c => new SKColor(c.R, c.G, c.B, c.A),
-            SolidColorBrush b => new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A),
-            _ => SKColors.Magenta,
-        };
-        float D(string key) => (float)(double)r[key];
+            var c = ThemeBrushes.Color(key, theme);
+            return new SKColor(c.R, c.G, c.B, c.A);
+        }
+        float D(string key) => (float)(double)Application.Current.Resources[key];
         return new(
             Paper: C("SolidPaperColor"),
             Shades: [C("SolidShade0Color"), C("SolidShade1Color"), C("SolidShade2Color"), C("SolidShade3Color")],

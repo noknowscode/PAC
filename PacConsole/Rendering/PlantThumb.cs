@@ -26,17 +26,15 @@ public sealed partial class PlantThumb : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            _renderer ??= new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
-            Styles.ConsoleTheme.Changed -= OnThemeChanged;
-            Styles.ConsoleTheme.Changed += OnThemeChanged;
+            _renderer ??= new() { Palette = SolidPalette.For(ActualTheme) };
             Invalidate();
         };
         Unloaded += (_, _) =>
         {
-            Styles.ConsoleTheme.Changed -= OnThemeChanged;
             _renderer?.Dispose();
             _renderer = null;
         };
+        ActualThemeChanged += (_, _) => OnThemeChanged();
     }
 
     /// <summary>Key of a <see cref="CameraPresets"/> entry ("iso", "elevation", "plan").</summary>
@@ -66,8 +64,9 @@ public sealed partial class PlantThumb : SKCanvasElement
 
     private void OnThemeChanged()
     {
-        _renderer?.Dispose();
-        _renderer = new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        if (_renderer is null) return;
+        _renderer.Dispose();
+        _renderer = new() { Palette = SolidPalette.For(ActualTheme) };
         Invalidate();
     }
 

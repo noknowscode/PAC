@@ -13,13 +13,6 @@ public sealed partial class ConsolePage : Page
         InitializeComponent();
     }
 
-    // xaml-lint: allow codebehind - theme switch is view-only glue: it repaints app resources and the root element theme.
-    private void OnThemeClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleMenuFlyoutItem item) return;
-        Styles.ConsoleTheme.Apply(item.IsChecked, XamlRoot?.Content as FrameworkElement ?? this);
-    }
-
     // xaml-lint: allow codebehind - keeps the viewport, which sits inside the FeedView template, for the Reset menu item.
     private void OnViewportLoaded(object sender, RoutedEventArgs e) => _viewport = sender as PlantViewport;
 

@@ -5,8 +5,16 @@ using PacConsole.Core.Telemetry;
 
 namespace PacConsole.Core.Console;
 
-/// <summary>The operator's view choices that shape the page: system, trend range, compared readings and cursor.</summary>
-public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor)
+/// <summary>The console theme the operator picked: the OS theme, or light or graphite regardless of it.</summary>
+public enum ThemeChoice
+{
+    System,
+    Light,
+    Graphite,
+}
+
+/// <summary>The operator's view choices that shape the page: system, trend range, compared readings, cursor and theme.</summary>
+public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor, ThemeChoice Theme = ThemeChoice.System)
 {
     public static readonly ViewInputs Default = new(PlantSystem.All, TrendRange.Minutes15, [], -1);
 }
@@ -152,6 +160,11 @@ public sealed partial record ConsoleView
     public bool IsRange1h => Range == TrendRange.Hour1;
     public bool IsRange8h => Range == TrendRange.Hours8;
 
+    public ThemeChoice Theme { get; init; }
+    public bool IsThemeSystem => Theme == ThemeChoice.System;
+    public bool IsThemeLight => Theme == ThemeChoice.Light;
+    public bool IsThemeGraphite => Theme == ThemeChoice.Graphite;
+
     private static T? At<T>(ImmutableArray<T> items, int i) where T : class => i < items.Length ? items[i] : null;
 
     private string ValueAtCursor(TrendSeries? s) => s is null ? "" : s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]);
@@ -249,6 +262,7 @@ public sealed partial record ConsoleView
 
             Trends = trends,
             Range = inputs.Range,
+            Theme = inputs.Theme,
             CursorTime = trends.Times[trends.Cursor].ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             CursorIsLatest = trends.Cursor == TrendSet.Samples - 1,
             TimeStart = trends.Times[0].ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),

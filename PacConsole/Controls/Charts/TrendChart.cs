@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Automation;
 using PacConsole.Core.Console;
+using PacConsole.Styles;
 using SkiaSharp;
 using Uno.WinUI.Graphics2DSK;
 using Windows.Foundation;
@@ -62,8 +63,8 @@ public sealed partial class TrendChart : UserControl
 
         Content = root;
         AutomationProperties.SetAccessibilityView(_canvas, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
-        Loaded += (_, _) => { Styles.ConsoleTheme.Changed += OnTheme; OnTheme(); };
-        Unloaded += (_, _) => Styles.ConsoleTheme.Changed -= OnTheme;
+        Loaded += (_, _) => OnTheme();
+        ActualThemeChanged += (_, _) => OnTheme();
     }
 
     private static TextBlock Label(VerticalAlignment v, HorizontalAlignment h = HorizontalAlignment.Stretch) => new()
@@ -143,7 +144,7 @@ public sealed partial class TrendChart : UserControl
 
     private void OnTheme()
     {
-        _canvas.ReadColors();
+        _canvas.ReadColors(ActualTheme);
         Update();
     }
 
@@ -173,11 +174,13 @@ public sealed partial class TrendChart : UserControl
         private double? _target, _limit;
         private int _cursor = -1, _event = -1;
 
-        public void ReadColors()
+        public void ReadColors(ElementTheme theme)
         {
-            static SKColor C(string key) => Application.Current.Resources[key] is SolidColorBrush b
-                ? new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A)
-                : SKColors.Magenta;
+            SKColor C(string key)
+            {
+                var c = ThemeBrushes.Color(key, theme);
+                return new SKColor(c.R, c.G, c.B, c.A);
+            }
             _accent = C("AccentBrush");
             _grid = C("HairlineBrush");
             _faint = C("FaintBrush");

@@ -2,6 +2,7 @@ using PacConsole.Core.Console;
 using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
+using Uno.Extensions.Toolkit;
 
 namespace PacConsole.Presentation;
 
@@ -15,11 +16,13 @@ public partial record ConsoleModel
 {
     private readonly ITelemetryService _telemetry;
     private readonly TimeProvider _time;
+    private readonly IThemeService _themes;
 
-    public ConsoleModel(ITelemetryService telemetry, TimeProvider time)
+    public ConsoleModel(ITelemetryService telemetry, TimeProvider time, IThemeService themes)
     {
         _telemetry = telemetry;
         _time = time;
+        _themes = themes;
     }
 
     /// <summary>
@@ -73,8 +76,16 @@ public partial record ConsoleModel
     /// <summary>The shared cursor's sample index; a double because the slider binds two-way to it.</summary>
     public IState<double> Cursor => State.Value(this, () => (double)(TrendSet.Samples - 1));
 
-    public IFeed<ViewInputs> Inputs => Feed.Combine(System, Range, Compared, Cursor)
-        .Select(t => new ViewInputs(t.Item1, t.Item2, t.Item3, (int)Math.Round(t.Item4)));
+    /// <summary>The theme the operator picked; IThemeService applies it to the window and saves it.</summary>
+    public IState<ThemeChoice> Theme => State.Value(this, () => _themes.Theme switch
+    {
+        AppTheme.Light => ThemeChoice.Light,
+        AppTheme.Dark => ThemeChoice.Graphite,
+        _ => ThemeChoice.System,
+    });
+
+    public IFeed<ViewInputs> Inputs => Feed.Combine(System, Range, Compared, Cursor, Theme)
+        .Select(t => new ViewInputs(t.Item1, t.Item2, t.Item3, (int)Math.Round(t.Item4), t.Item5));
 
     public IFeed<Setpoints> CurrentSetpoints => Feed.Combine(TargetMw, TurbineLimitBar, DamperPct)
         .Select(t => new Setpoints(t.Item1, t.Item2, t.Item3));
@@ -141,6 +152,19 @@ public partial record ConsoleModel
 
     public async ValueTask SetCursorLatest(CancellationToken ct) =>
         await Cursor.SetAsync(TrendSet.Samples - 1, ct);
+
+    /// <summary>The theme menu's choice (the menu passes the enum name).</summary>
+    public async ValueTask SetTheme(string theme, CancellationToken ct)
+    {
+        if (!Enum.TryParse<ThemeChoice>(theme, out var choice)) return;
+        await _themes.SetThemeAsync(choice switch
+        {
+            ThemeChoice.Light => AppTheme.Light,
+            ThemeChoice.Graphite => AppTheme.Dark,
+            _ => AppTheme.System,
+        });
+        await Theme.SetAsync(choice, ct);
+    }
 
     // ---------------------------------------------------------------- operations (SPEC-OPERATIONS.md)
 

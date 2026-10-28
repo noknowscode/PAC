@@ -38,16 +38,14 @@ public sealed partial class PlantCanvas : SKCanvasElement
         {
             _renderer ??= CreateRenderer();
             _leaderPaint.Color = _renderer.Palette.Leader;
-            Styles.ConsoleTheme.Changed -= OnThemeChanged;
-            Styles.ConsoleTheme.Changed += OnThemeChanged;
             Invalidate();
         };
         Unloaded += (_, _) =>
         {
-            Styles.ConsoleTheme.Changed -= OnThemeChanged;
             _renderer?.Dispose();
             _renderer = null;
         };
+        ActualThemeChanged += (_, _) => OnThemeChanged();
     }
 
     /// <summary>Snapshots the frame on the UI thread, then asks for a redraw.</summary>
@@ -67,7 +65,8 @@ public sealed partial class PlantCanvas : SKCanvasElement
 
     private void OnThemeChanged()
     {
-        _renderer?.Dispose();
+        if (_renderer is null) return;
+        _renderer.Dispose();
         _renderer = CreateRenderer();
         OnPaletteChanged(_renderer.Palette);
         Invalidate();
@@ -75,7 +74,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
 
     private SolidRenderer CreateRenderer()
     {
-        var renderer = new SolidRenderer { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        var renderer = new SolidRenderer { Palette = SolidPalette.For(ActualTheme) };
         var queue = DispatcherQueue;
         // Cached still layers arrive on a worker; one more frame puts them on screen.
         renderer.StillLayersReady += () => queue.TryEnqueue(() => { if (ReferenceEquals(_renderer, renderer)) Invalidate(); });
