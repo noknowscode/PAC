@@ -514,6 +514,11 @@ public sealed class SolidRenderer : IDisposable
     private int _layeredGeneration = -1;
     private Task? _layerTask;
     private readonly object _layerGate = new();
+
+    // Set once by Dispose. Workers are never waited for: WebAssembly has one thread and runs a worker
+    // only after the current call returns, so a Wait there could never finish. A worker that sees this
+    // stops rasterizing and disposes what it made instead of handing it over.
+    private volatile bool _disposed;
     private (int Generation, SKImage?[] Images, SKRect[] Dests)? _readyLayers;
     private readonly List<SKPicture> _retired = [];
 
@@ -566,16 +571,22 @@ public sealed class SolidRenderer : IDisposable
         var generation = _layeredGeneration = _generation;
         var scale = Scale;
         var pictures = _segments.Select(s => s.Picture).ToArray();
+        // Off the render thread where there are threads; on WebAssembly the same work runs queued on the one thread.
         _layerTask = Task.Run(() =>
         {
             var images = new SKImage?[pictures.Length];
             var dests = new SKRect[pictures.Length];
-            for (var i = 0; i < pictures.Length; i++)
+            for (var i = 0; i < pictures.Length && !_disposed; i++)
             {
                 if (pictures[i] is { } picture) (images[i], dests[i]) = Rasterize(picture, scale);
             }
             lock (_layerGate)
             {
+                if (_disposed)
+                {
+                    foreach (var image in images) image?.Dispose();
+                    return;
+                }
                 foreach (var stale in _readyLayers?.Images ?? []) stale?.Dispose();
                 _readyLayers = (generation, images, dests);
             }
@@ -799,13 +810,19 @@ public sealed class SolidRenderer : IDisposable
         {
             var images = new SKImage?[pictures.Count];
             var dests = new SKRect[pictures.Count];
+            // This worker owns these recordings: each is disposed here, rasterized or not.
             for (var k = 0; k < pictures.Count; k++)
             {
                 using var picture = pictures[k];
-                (images[k], dests[k]) = Rasterize(picture, scale);
+                if (!_disposed) (images[k], dests[k]) = Rasterize(picture, scale);
             }
             lock (_layerGate)
             {
+                if (_disposed)
+                {
+                    foreach (var image in images) image?.Dispose();
+                    return;
+                }
                 if (_readyParts is { } stale) foreach (var image in stale.Images) image?.Dispose();
                 _readyParts = (key, [.. indices], [.. looks], images, dests);
             }
@@ -1142,17 +1159,32 @@ public sealed class SolidRenderer : IDisposable
         _alarmBlur.Dispose();
         _wire.Dispose();
         ClearShapePaths();
-        _layerTask?.Wait();
-        _partTask?.Wait();
         ClearPartImages();
-        if (_readyParts is { } parts) foreach (var image in parts.Images) image?.Dispose();
-        ClearPictures();
-        DisposeRetired();
         lock (_layerGate)
         {
+            _disposed = true;
             foreach (var image in _readyLayers?.Images ?? []) image?.Dispose();
             _readyLayers = null;
+            foreach (var image in _readyParts?.Images ?? []) image?.Dispose();
+            _readyParts = null;
         }
+        // The still runs' recordings, and runs retired while a worker read them, go once the layer
+        // worker is done with them: now if it is idle, else when it finishes. Never a blocking wait.
+        var pictures = new List<SKPicture>(_retired);
+        _retired.Clear();
+        foreach (var (picture, image, _, _) in _segments)
+        {
+            if (picture is not null) pictures.Add(picture);
+            image?.Dispose();
+        }
+        _segments.Clear();
+        if (_layerTask is { IsCompleted: false } layers) layers.ContinueWith(_ => DisposeAll(pictures), TaskScheduler.Default);
+        else DisposeAll(pictures);
         _alertDash.Dispose();
+    }
+
+    private static void DisposeAll(List<SKPicture> pictures)
+    {
+        foreach (var picture in pictures) picture.Dispose();
     }
 }
