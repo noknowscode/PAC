@@ -9,7 +9,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 
 ## Architecture Brief
 
-- **Targets:** `net10.0-desktop` (Skia, Win32), Uno.Sdk 6.7.30. Unchanged.
+- **Targets:** `net10.0-desktop` (Skia, Win32), Uno.Sdk 6.7.30. Unchanged. *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 - **UnoFeatures:** unchanged (MVUX, Toolkit, Simple theme, SkiaSharp).
 - **MVUX stays.**
   - Decision: extend `ConsoleModel` and the pure `ConsoleView.Compose`.

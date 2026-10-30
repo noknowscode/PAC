@@ -4,13 +4,13 @@ Status: draft for approval · 2026-10-15 · reference figure `docs/anatomy/plant
 
 Goal: replace the console's wireframe plant (main viewport, three preset thumbnails, unit preview) with the solid, shaded, depth-ordered look of the reference figure, keep every current behaviour (orbit, drag, presets, tags, selection, alert), and turn the unit preview into a close-up with a live vibration gauge.
 
-Out of scope: new routes, new telemetry, theme switching (the app is dark-only, `RequestedTheme="Dark"`), WebAssembly/mobile heads (the app ships `net10.0-desktop` only today).
+Out of scope: new routes, new telemetry, theme switching (the app is dark-only, `RequestedTheme="Dark"`), WebAssembly/mobile heads (the app ships `net10.0-desktop` only today). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 
 > **Update 2026-10-28:** the app now has System, Light and Graphite themes (`docs/SPEC-THEME.md`). Phase 7 cleanup is done: the wireframe renderer, `PlantGeometry` and their projection helpers are deleted.
 
 ## Architecture Brief
 
-**Targets.** `net10.0-desktop` (Skia, Win32 host), Uno.Sdk **6.7.30** pinned in `global.json`. Bundled SkiaSharp 3.119.2; no opt-in to SkiaSharp 4 (nothing here needs a v4-only API).
+**Targets.** `net10.0-desktop` (Skia, Win32 host), Uno.Sdk **6.7.30** pinned in `global.json`. Bundled SkiaSharp 3.119.2; no opt-in to SkiaSharp 4 (nothing here needs a v4-only API). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 
 **UnoFeatures.** Unchanged: `SimpleTheme; Hosting; Toolkit; Logging; MVUX; Navigation; SkiaRenderer`. `SkiaRenderer` already brings `Uno.WinUI.Graphics2DSK` (`SKCanvasElement`).
 
@@ -190,7 +190,7 @@ Motion (constants in PlantCanvas, not resources): lift τ 0.28 s, needle τ 0.4 
 | Motion | PASS | each motion names duration and reduced-motion fallback | |
 | Type assets | PASS (n/a) | no fonts | |
 | UnoFeatures | PASS | SkiaRenderer present | |
-| Targets | PASS | desktop only, stated | |
+| Targets | PASS | desktop only, stated (superseded 2026-10-30: five heads) | |
 | Pending | PASS | none | |
 | Capabilities | PASS | substituted and omitted rows repeated below | |
 

@@ -6,7 +6,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 
 ## Architecture Brief
 
-- **Targets and features:** unchanged (Uno.Sdk 6.7.30, `net10.0-desktop`, MVUX, Simple + Toolkit, Skia).
+- **Targets and features:** unchanged (Uno.Sdk 6.7.30, `net10.0-desktop`, MVUX, Simple + Toolkit, Skia). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 - **MVUX stays.**
   - Decision: one new state, `IState<PlantOps> Ops`. It is the operator-side plant, and every operator action is a pure `PlantOps.Apply(command, tick, now)`.
   - Reason: actions, acknowledgements and the log are durable data; one record keeps them consistent and testable.

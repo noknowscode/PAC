@@ -4,7 +4,7 @@ Source: the user, 2026-10-28: "we need proper theme implementation". Today the g
 
 ## Architecture Brief
 
-- **Targets:** unchanged (Uno.Sdk 6.7.30, `net10.0-desktop`, SimpleTheme + Toolkit, MVUX, Skia).
+- **Targets:** unchanged (Uno.Sdk 6.7.30, `net10.0-desktop`, SimpleTheme + Toolkit, MVUX, Skia). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 - **Source of truth: ThemeDictionaries.**
   - Decision: every theme-varying token lives once per theme in `Styles/Palette.xaml`, under `ThemeDictionaries` keys `Light` and `Dark`. This covers the brushes and the Skia `Solid*` colours. `Palette.Dark.xaml` and `ConsoleTheme` go.
   - Reason: this is the WinUI theme model. `{ThemeResource}` follows the element theme with no app code, and the lint can see both values.
