@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using System.Windows.Input;
 using Microsoft.UI.Xaml.Input;
 using PacConsole.Core.Geometry;
@@ -37,9 +38,12 @@ public sealed partial class PlantViewport : UserControl
     private readonly Dictionary<UnitId, Button> _tags = [];
     private readonly bool _animationsEnabled = AnimationsEnabled();
 
-    // The view switcher's segments and thumbnails, read on every drawn frame.
-    private readonly RadioButton[] _views;
+    // The view switcher's segments and thumbnails, read on every drawn frame. The thumbnails are fixed; the
+    // switcher's segments and the auto-orbit toggle live in ResponsiveView templates, so they join as they load
+    // and leave as the window crosses a breakpoint.
+    private readonly List<RadioButton> _views = [];
     private readonly PlantThumb[] _thumbs;
+    private readonly List<ToggleButton> _orbitToggles = [];
 
     private CameraPose _pose = CameraPose.Iso;
     private bool _auto;
@@ -62,6 +66,7 @@ public sealed partial class PlantViewport : UserControl
     private Windows.Foundation.Point? _pressAt;
     private CameraPose _pressPose;
     private bool _dragging;
+    private bool _pressIsTouch;
 
     public PlantViewport()
     {
@@ -71,7 +76,6 @@ public sealed partial class PlantViewport : UserControl
         // Opens still: the full-detail drawing is cached while the camera holds, and fans and flow
         // keep moving. Orbiting is opt-in (the toggle) or a drag.
         _auto = false;
-        AutoOrbit.IsChecked = _auto;
 
         foreach (var unit in UnitCatalog.All)
         {
@@ -86,20 +90,9 @@ public sealed partial class PlantViewport : UserControl
             TagLayer.Children.Add(tag);
         }
 
-        _views = [ViewIso, ViewElevation, ViewPlan, ThumbIso, ThumbElevation, ThumbPlan];
+        _views.AddRange([ThumbIso, ThumbElevation, ThumbPlan]);
         _thumbs = [ThumbIsoDrawing, ThumbElevationDrawing, ThumbPlanDrawing];
-
-        RotateLeft.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
-        RotateRight.Click += (_, _) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
-        Reset.Click += (_, _) => GoTo(CameraPose.Iso);
-        foreach (var view in _views)
-        {
-            view.Click += (sender, _) =>
-            {
-                if (sender is RadioButton { Tag: string key } && CameraPresets.All.FirstOrDefault(p => p.Key == key) is { } preset) GoTo(preset.Pose);
-            };
-        }
-        AutoOrbit.Click += (_, _) => { _auto = AutoOrbit.IsChecked == true; _tweening = false; Refresh(); };
+        foreach (var view in _views) view.Click += OnViewClick;
 
         Root.PointerEntered += (_, _) => { _hover = true; Refresh(); };
         // Fallback: a pointer that arrives by warp (no enter event on some X11 setups) still pauses the orbit.
@@ -114,6 +107,8 @@ public sealed partial class PlantViewport : UserControl
         Surface.AddHandler(PointerMovedEvent, new PointerEventHandler(OnPointerMoved), handledEventsToo: true);
         Surface.AddHandler(PointerReleasedEvent, new PointerEventHandler(OnPointerReleased), handledEventsToo: true);
         Surface.PointerCaptureLost += (_, _) => EndDrag();
+        // A touch pan the page's ScrollViewer takes over cancels the press: it was a scroll, not an orbit.
+        Surface.PointerCanceled += (_, _) => EndDrag();
         KeyDown += OnKeyDown;
 
         SizeChanged += (_, _) => Draw();
@@ -140,6 +135,16 @@ public sealed partial class PlantViewport : UserControl
 
     public static readonly DependencyProperty TitleProperty =
         DependencyProperty.Register(nameof(Title), typeof(string), typeof(PlantViewport), new PropertyMetadata("", (d, e) => ((PlantViewport)d).TitleText.Text = e.NewValue as string ?? ""));
+
+    /// <summary>The auto-orbit toggle's label: "Auto orbit", or what the orbit is doing while it is on.</summary>
+    public string OrbitStatus
+    {
+        get => (string)GetValue(OrbitStatusProperty);
+        private set => SetValue(OrbitStatusProperty, value);
+    }
+
+    public static readonly DependencyProperty OrbitStatusProperty =
+        DependencyProperty.Register(nameof(OrbitStatus), typeof(string), typeof(PlantViewport), new PropertyMetadata("Auto orbit"));
 
     /// <summary>What the page puts at the left of the panel's footer bar (the equipment picker).</summary>
     public object? FooterContent
@@ -201,17 +206,80 @@ public sealed partial class PlantViewport : UserControl
     /// <summary>Eases the camera to <paramref name="pose"/> and switches auto-orbit off.</summary>
     private void GoTo(CameraPose pose)
     {
-        _auto = false;
-        AutoOrbit.IsChecked = false;
+        SetAuto(false);
         TweenTo(pose);
+    }
+
+    /// <summary>Auto orbit on or off, shown on whichever toggle the current layout has.</summary>
+    private void SetAuto(bool on)
+    {
+        _auto = on;
+        foreach (var toggle in _orbitToggles)
+        {
+            if (toggle.IsChecked != on) toggle.IsChecked = on;
+        }
+    }
+
+    // xaml-lint: allow codebehind - the camera tools live in ResponsiveView templates (no fields); camera moves are view state.
+    private void OnRotateLeftClick(object sender, RoutedEventArgs e) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
+
+    // xaml-lint: allow codebehind - see OnRotateLeftClick.
+    private void OnRotateRightClick(object sender, RoutedEventArgs e) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
+
+    // xaml-lint: allow codebehind - see OnRotateLeftClick.
+    private void OnResetClick(object sender, RoutedEventArgs e) => GoTo(CameraPose.Iso);
+
+    // xaml-lint: allow codebehind - a standard view (switcher segment or thumbnail) moves the camera to its preset.
+    private void OnViewClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton { Tag: string key } && CameraPresets.All.FirstOrDefault(p => p.Key == key) is { } preset) GoTo(preset.Pose);
+    }
+
+    // xaml-lint: allow codebehind - template-hosted switcher segments join the set Draw keeps in step with the camera.
+    private void OnViewLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton view && !_views.Contains(view))
+        {
+            _views.Add(view);
+            Draw();
+        }
+    }
+
+    // xaml-lint: allow codebehind - see OnViewLoaded.
+    private void OnViewUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton view) _views.Remove(view);
+    }
+
+    // xaml-lint: allow codebehind - the auto-orbit toggle lives in a ResponsiveView template; it joins on load.
+    private void OnOrbitToggleLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleButton toggle && !_orbitToggles.Contains(toggle))
+        {
+            _orbitToggles.Add(toggle);
+            toggle.IsChecked = _auto;
+        }
+    }
+
+    // xaml-lint: allow codebehind - see OnOrbitToggleLoaded.
+    private void OnOrbitToggleUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleButton toggle) _orbitToggles.Remove(toggle);
+    }
+
+    // xaml-lint: allow codebehind - see OnOrbitToggleLoaded.
+    private void OnOrbitToggleClick(object sender, RoutedEventArgs e)
+    {
+        SetAuto(sender is ToggleButton { IsChecked: true });
+        _tweening = false;
+        Refresh();
     }
 
     private CameraPose TargetOrCurrent() => _tweening ? _tweenTo : _pose;
 
     private void TweenTo(CameraPose target)
     {
-        _auto = false;
-        AutoOrbit.IsChecked = false;
+        SetAuto(false);
         target = target.Clamped();
         if (!_animationsEnabled)
         {
@@ -258,7 +326,8 @@ public sealed partial class PlantViewport : UserControl
             AmbientClock.Unsubscribe(_ambient);
         }
 
-        AutoOrbitLabel.Text = !_auto ? "Auto orbit" : _hover || _dragging ? "Orbit paused" : "Orbiting";
+        var status = !_auto ? "Auto orbit" : _hover || _dragging ? "Orbit paused" : "Orbiting";
+        if (OrbitStatus != status) OrbitStatus = status;
         Draw();
     }
 
@@ -407,6 +476,7 @@ public sealed partial class PlantViewport : UserControl
         _pressAt = e.GetCurrentPoint(Surface).Position;
         _pressPose = _pose;
         _pressOnTag = IsInTagLayer(e.OriginalSource as DependencyObject);
+        _pressIsTouch = e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch;
     }
 
     private bool IsInTagLayer(DependencyObject? d)
@@ -431,6 +501,8 @@ public sealed partial class PlantViewport : UserControl
         var p = e.GetCurrentPoint(Surface).Position;
         if (_pressAt is not { } start)
         {
+            // A finger has no hover; its moves after a press handed to the page scroll outline nothing.
+            if (e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch) return;
             // Hover: outline the unit under the pointer, so it is clear the drawing is clickable.
             var hovered = IsInTagLayer(e.OriginalSource as DependencyObject) ? null : UnitAt(p);
             if (hovered != _hovered)
@@ -445,14 +517,20 @@ public sealed partial class PlantViewport : UserControl
         if (!_dragging)
         {
             if (Math.Sqrt(dx * dx + dy * dy) < DragThresholdPx) return;
+            if (_pressIsTouch && Math.Abs(dy) >= Math.Abs(dx))
+            {
+                // The panel sits in the page's vertical ScrollViewer: a mostly vertical finger drag scrolls the page.
+                // Only a sideways drag orbits by touch (yaw only); mouse and pen orbit on both axes.
+                _pressAt = null;
+                return;
+            }
             Surface.CapturePointer(e.Pointer);
             _dragging = true;
-            _auto = false;
-            AutoOrbit.IsChecked = false;
+            SetAuto(false);
             _tweening = false;
         }
 
-        _pose = new CameraPose(_pressPose.Yaw + (float)dx * DragYawPerPx, _pressPose.Elevation + (float)dy * DragElevationPerPx).Clamped();
+        _pose = new CameraPose(_pressPose.Yaw + (float)dx * DragYawPerPx, _pressPose.Elevation + (_pressIsTouch ? 0 : (float)dy * DragElevationPerPx)).Clamped();
         Refresh();
     }
 
