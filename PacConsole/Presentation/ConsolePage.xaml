@@ -47,7 +47,7 @@
                 <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" MaxLines="2" />
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                   <TextBlock Text="{Binding Value}" Style="{StaticResource TypeValue}"
-                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=high=AlertTextBrush|normal=TextPrimaryBrush}" />
+                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='high=AlertTextBrush|normal=TextPrimaryBrush'}" />
                   <TextBlock Text="{Binding Unit}" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGapSm}" />
                 </StackPanel>
                 <controls:RangeBar Margin="{StaticResource GapTop4}" BandStart="{Binding BandStart}" BandEnd="{Binding BandEnd}"
@@ -96,7 +96,7 @@
     <DataTemplate x:Key="AlarmItemTemplate">
       <StackPanel Spacing="{StaticResource Space2}" AutomationProperties.Name="{Binding AutomationName}">
         <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush}">
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush'}">
           <Run Text="{Binding Priority}" /><Run Text=" · " /><Run Text="{Binding Time}" /><Run Text=" · " /><Run Text="{Binding State}" />
         </TextBlock>
         <Button Content="{Binding Title}" HorizontalAlignment="Left"
@@ -121,8 +121,8 @@
       <Grid ColumnDefinitions="10,*,Auto" ColumnSpacing="{StaticResource Space10}" MinHeight="{StaticResource ListRowMinHeight}">
         <!-- The state dot repeats the State word beside it; it never carries the state alone. -->
         <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" VerticalAlignment="Center" StrokeThickness="{StaticResource DeviceDotStroke}"
-                 Stroke="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=running=TextPrimaryBrush|moving=AccentBrush|stopped=FaintBrush}"
-                 Fill="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=running=TextPrimaryBrush|moving=AccentFillBrush|stopped=CardBrush}" />
+                 Stroke="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=TextPrimaryBrush|moving=AccentBrush|stopped=FaintBrush'}"
+                 Fill="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=TextPrimaryBrush|moving=AccentFillBrush|stopped=CardBrush'}" />
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
           <TextBlock Text="{Binding Name}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
           <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="{Binding State}" /><Run Text="   " /><Run Text="{Binding Detail}" /></TextBlock>
@@ -144,7 +144,7 @@
         </Grid.ColumnDefinitions>
         <TextBlock Text="{Binding Time}" Style="{StaticResource TypeMicro}" />
         <TextBlock Grid.Column="1" Text="{Binding Kind}" Style="{StaticResource TypeMicro}"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=alarm=AlertTextBrush|refused=AlertTextBrush|normal=MutedBrush|note=AccentBrush|action=TextPrimaryBrush|acknowledge=InkSoftBrush|shelve=InkSoftBrush}" />
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='alarm=AlertTextBrush|refused=AlertTextBrush|normal=MutedBrush|note=AccentBrush|action=TextPrimaryBrush|acknowledge=InkSoftBrush|shelve=InkSoftBrush'}" />
         <TextBlock Text="{Binding Text}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords"
                    Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=0}"
                    Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Normal=2}"
@@ -218,7 +218,7 @@
       <StackPanel VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
           <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
-                   Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=FaintBrush}" />
+                   Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=AccentBrush|False=FaintBrush'}" />
           <TextBlock Text="{Binding Data.ModeLine}" Style="{StaticResource TypeBody}" />
         </StackPanel>
         <TextBlock Text="{Binding Data.SnapshotText}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right" />
@@ -229,7 +229,7 @@
     <DataTemplate x:Key="HeaderStatusInlineTemplate">
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space8}">
         <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
-                 Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter=True=AccentBrush|False=FaintBrush}" />
+                 Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=AccentBrush|False=FaintBrush'}" />
         <TextBlock Grid.Column="1" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" VerticalAlignment="Center">
           <Run Text="{Binding Data.ModeLine}" Foreground="{ThemeResource TextPrimaryBrush}" /><Run Text=" · " /><Run Text="{Binding Data.SnapshotText}" />
         </TextBlock>
@@ -548,7 +548,7 @@
                       <TextBlock Text="{Binding Data.InspectorName}" Style="{StaticResource TypeDisplay}" TextWrapping="WrapWholeWords" />
                       <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{ThemeResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
                       <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords">
-                        <Run Text="{Binding Data.InspectorState}" Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter=True=AlertTextBrush|False=MutedBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
+                        <Run Text="{Binding Data.InspectorState}" Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter='True=AlertTextBrush|False=MutedBrush'}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
                       </TextBlock>
                     </StackPanel>
 
@@ -592,32 +592,32 @@
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Column="1" DataContext="{Binding Data.Overview1}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Row="1" DataContext="{Binding Data.Overview2}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Row="1" Grid.Column="1" DataContext="{Binding Data.Overview3}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Row="2" DataContext="{Binding Data.Overview4}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Row="2" Grid.Column="1" DataContext="{Binding Data.Overview5}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                       </Grid>
                       <TextBlock Text="Select a reading to compare it in the synchronized trends." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
                     </StackPanel>
@@ -629,17 +629,17 @@
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Column="1" DataContext="{Binding Data.Condition1}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                         <Button Grid.Row="1" DataContext="{Binding Data.Condition2}" Content="{Binding}" Style="{StaticResource TileButton}"
                                 Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
                                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
                                 AutomationProperties.Name="{Binding AutomationName}"
-                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter=compared=AccentFillBrush|normal=CardBrush}" />
+                                Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
                       </Grid>
                       <TextBlock Text="Vibration alarms above 4.5 mm/s." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
                     </StackPanel>
@@ -649,7 +649,7 @@
                     <StackPanel Spacing="{StaticResource Space16}" Visibility="{Binding IsChecked, ElementName=TabControl, Converter={StaticResource Visible}}">
                       <!-- xaml-lint: allow card - the select-before-operate confirm bar, not a content surface. -->
                       <Border DataContext="{Binding Data.Pending}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
-                              Background="{Binding IsRefused, Converter={StaticResource Tone}, ConverterParameter=True=AlertTintBrush|False=AccentFillBrush}"
+                              Background="{Binding IsRefused, Converter={StaticResource Tone}, ConverterParameter='True=AlertTintBrush|False=AccentFillBrush'}"
                               CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource CalloutInset}" AutomationProperties.Name="Pending command">
                         <StackPanel Spacing="{StaticResource Space8}">
                           <TextBlock Text="{Binding Text}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
@@ -775,39 +775,39 @@
                         </Grid>
                         <controls:FlowPanel HorizontalSpacing="{StaticResource Space8}" VerticalSpacing="{StaticResource Space8}">
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot1}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot2}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot3}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot4}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot5}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot6}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot7}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot8}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                           <Button ContentTemplate="{StaticResource ValveFace}" DataContext="{Binding Data.Slot9}" Style="{StaticResource ValveButton}"
-                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter=True=FillStrongBrush|False=CardBrush}" Content="{Binding}"
+                                  Visibility="{Binding IsHere, Converter={StaticResource Visible}}" Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}" Content="{Binding}"
                                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
                                   AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
                         </controls:FlowPanel>
