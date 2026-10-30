@@ -243,7 +243,7 @@
                   </Button.Flyout>
                 </Button>
 
-                <Button Grid.Column="8" Style="{StaticResource IconButton}" Click="OnFullScreenClick"
+                <Button Grid.Column="8" Style="{StaticResource IconButton}" Click="OnFullScreenClick" Loaded="OnFullScreenLoaded"
                         AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
                   <FontIcon Glyph="&#xE740;" FontSize="14" />
                 </Button>

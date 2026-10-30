@@ -24,6 +24,32 @@ public partial class App : Application
     [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // async void: an exception that escapes here ends the process with no trace (silently, in a browser).
+        // Log it and leave a readable message in the window instead.
+        try
+        {
+            await LaunchAsync(args);
+        }
+        catch (Exception ex)
+        {
+            if (Host?.Services.GetService<ILogger<App>>() is { } log) log.LogCritical(ex, "PAC Control Console failed to start");
+            else Console.Error.WriteLine($"PAC Control Console failed to start: {ex}");
+            if (MainWindow is { } window)
+            {
+                window.Content = new TextBlock
+                {
+                    Text = $"PAC Control Console could not start.\n\n{ex.Message}",
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(24),
+                };
+                window.Activate();
+            }
+        }
+    }
+
+    [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
+    private async Task LaunchAsync(LaunchActivatedEventArgs args)
+    {
         var builder = this.CreateBuilder(args)
             .UseToolkitNavigation()
             .Configure(host => host
@@ -67,8 +93,11 @@ public partial class App : Application
 #endif
         MainWindow.SetWindowIcon();
 
-        // The console is designed at 1440×900.
+#if __DESKTOP__ || WINDOWS
+        // The console is designed at 1440×900. Only a desktop window can be sized; on a phone, a tablet or in a
+        // browser the platform sets the size.
         MainWindow.AppWindow.Resize(new Windows.Graphics.SizeInt32 { Width = 1440, Height = 900 });
+#endif
 
         Host = builder.Build();
         await MainWindow.InitializeNavigationAsync(
