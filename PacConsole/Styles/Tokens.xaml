@@ -1,19 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:utu="using:Uno.Toolkit.UI">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- The console's breakpoints, shared by the page and the plant panel: below 960 px the inspector
-       stacks under the plant; from 1600 px it widens to 400. -->
-  <utu:ResponsiveLayout x:Key="ConsoleLayout" Normal="0" Wide="960" Widest="1600" />
-
-  <!-- The plant panel's header: the systems filter sits beside the title from 1280 px, where the panel has
-       room for every chip (about 900 px); below that it takes its own row under the title. -->
-  <utu:ResponsiveLayout x:Key="PlantHeaderLayout" Normal="0" Wide="1280" />
+  <!-- Breakpoints (ConsoleLayout, PlantHeaderLayout), spacing and sizes live in Layout.xaml. -->
 
   <!--
     Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Fonts, type, strokes and
     radii live here; every colour lives once per theme in Palette.xaml.
-    Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 6 type sizes.
+    Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 5 type sizes.
     Console v3 (SPEC-CONSOLE.md): selection is a deep slate-teal, alerts a burnt orange.
   -->
 
@@ -23,14 +16,13 @@
   <FontFamily x:Key="SansMediumFont">ms-appx:///Assets/Fonts/IBMPlexSans-Medium.ttf#IBM Plex Sans Medm</FontFamily>
   <FontFamily x:Key="SansStrongFont">ms-appx:///Assets/Fonts/IBMPlexSans-SemiBold.ttf#IBM Plex Sans SmBld</FontFamily>
 
-  <!-- Type ramp, closed: 12 / 13 / 16 / 22 / 28 / 56, weights 400 / 500 / 600, sentence case.
+  <!-- Type ramp, closed: 12 / 13 / 16 / 22 / 28, weights 400 / 500 / 600, sentence case.
        Every text size in the app is one of these keys. -->
   <x:Double x:Key="TypeSizeMicro">12</x:Double>
   <x:Double x:Key="TypeSizeBody">13</x:Double>
   <x:Double x:Key="TypeSizeTitle">16</x:Double>
   <x:Double x:Key="TypeSizeValue">22</x:Double>
   <x:Double x:Key="TypeSizeDisplay">28</x:Double>
-  <x:Double x:Key="TypeSizeHero">56</x:Double>
   <Style x:Key="TypeMicro" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
@@ -49,11 +41,6 @@
     <Setter Property="LineHeight" Value="20" />
     <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
-  <Style x:Key="TypeCode" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
-    <Setter Property="FontSize" Value="{StaticResource TypeSizeTitle}" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
-  </Style>
   <Style x:Key="TypeTitle" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeTitle}" />
@@ -64,19 +51,11 @@
     <Setter Property="FontSize" Value="{StaticResource TypeSizeValue}" />
     <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
-  <Style x:Key="TypeFigure" TargetType="TextBlock" BasedOn="{StaticResource TypeValue}" />
   <!-- Display: net output and the inspector's equipment name, 28 against 13 body. -->
   <Style x:Key="TypeDisplay" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeDisplay}" />
     <Setter Property="LineHeight" Value="34" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
-  </Style>
-  <!-- The one display figure on the page (net output): 56 against 13 body, 4.3x. -->
-  <Style x:Key="TypeHero" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
-    <Setter Property="FontSize" Value="{StaticResource TypeSizeHero}" />
-    <Setter Property="LineHeight" Value="60" />
     <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
   </Style>
 
@@ -87,9 +66,8 @@
   <!-- Radii: soft, one step per scale. Spacing follows a 4 px grid. -->
   <CornerRadius x:Key="RadiusTag">4</CornerRadius>
   <CornerRadius x:Key="RadiusControl">8</CornerRadius>
-  <CornerRadius x:Key="RadiusRail">8</CornerRadius>
-  <CornerRadius x:Key="RadiusCard">12</CornerRadius>
-  <CornerRadius x:Key="RadiusPanel">12</CornerRadius>
+  <!-- Pointer controls are 32 px; below 960 px (Narrow and Normal, where touch is likely) the touch variants in
+       Controls.xaml give every target 44 px (WCAG 2.5.5, Apple HIG). -->
   <x:Double x:Key="ControlHeight">32</x:Double>
-  <x:Double x:Key="ControlHeightLarge">44</x:Double>
+  <x:Double x:Key="TouchTarget">44</x:Double>
 </ResourceDictionary>

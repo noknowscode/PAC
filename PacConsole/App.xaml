@@ -23,6 +23,7 @@
 
         <ResourceDictionary Source="ms-appx:///Styles/Palette.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Tokens.xaml" />
+        <ResourceDictionary Source="ms-appx:///Styles/Layout.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Controls.xaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>

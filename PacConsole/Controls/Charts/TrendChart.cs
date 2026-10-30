@@ -33,13 +33,14 @@ public sealed partial class TrendChart : UserControl
 
     public TrendChart()
     {
-        var root = new Grid { ColumnSpacing = 8, RowSpacing = 2 };
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
+        // Layout values come from Layout.xaml, like the XAML pages'; only the Skia marks below are drawn in code.
+        var root = new Grid { ColumnSpacing = Token<double>("Space8"), RowSpacing = Token<double>("Space2") };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Token<double>("TrendAxisLabelWidth")) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var labels = new Grid { Margin = new Thickness(0, -6, 0, -6) };
+        var labels = new Grid { Margin = Token<Thickness>("TrendAxisLabelOverhang") };
         labels.Children.Add(_max);
         labels.Children.Add(_mid);
         labels.Children.Add(_min);
@@ -49,7 +50,7 @@ public sealed partial class TrendChart : UserControl
         var plot = new Grid();
         Grid.SetColumn(plot, 1);
         plot.Children.Add(_canvas);
-        _reference.Margin = new Thickness(0, -16, 0, 0);
+        _reference.Margin = Token<Thickness>("TrendReferenceLift");
         plot.Children.Add(_reference);
         root.Children.Add(plot);
 
@@ -66,6 +67,8 @@ public sealed partial class TrendChart : UserControl
         Loaded += (_, _) => OnTheme();
         ActualThemeChanged += (_, _) => OnTheme();
     }
+
+    private static T Token<T>(string key) => (T)Application.Current.Resources[key];
 
     private static TextBlock Label(VerticalAlignment v, HorizontalAlignment h = HorizontalAlignment.Stretch) => new()
     {
