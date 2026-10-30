@@ -83,7 +83,7 @@ public partial class App : Application
         Shell = MainWindow;
         MainWindow.Title = "PAC Control Console";
 
-#if DEBUG
+#if DEBUG && !NO_UNO_STUDIO
         // Hot Design needs a reachable DevServer; without one it can block a headless run.
         // APP_NO_HOTDESIGN=1 opts a verification run out.
         if (Environment.GetEnvironmentVariable("APP_NO_HOTDESIGN") != "1")

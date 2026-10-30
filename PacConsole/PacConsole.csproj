@@ -42,11 +42,13 @@
       SkiaRenderer;
     </UnoFeatures>
     <!--
-      Uno.Sdk 7.0.0-dev.115: the Debug-only Hot Design and App MCP clients load Uno.UI.Lottie at startup and crash
-      without it (FileNotFoundException in GlobalStaticResources). Debug builds carry Lottie until the dev tools stop
-      needing it; Release never references it.
+      Uno.Sdk 7.0.0-dev.115 bundles Hot Design 2.0.0-dev.31 and App MCP 2.0.0-dev.18, whose clients still reference
+      Uno.UI.Lottie, an assembly Uno 7 no longer ships: every Debug launch crashed in GlobalStaticResources. Both stay off
+      (Debug only; Release never had them) until a dev build drops the reference. Delete these three lines then.
     -->
-    <UnoFeatures Condition="'$(Configuration)' == 'Debug'">$(UnoFeatures);Lottie;</UnoFeatures>
+    <UnoDisableHotDesign>true</UnoDisableHotDesign>
+    <UnoDisableMCPSupport>true</UnoDisableMCPSupport>
+    <DefineConstants>$(DefineConstants);NO_UNO_STUDIO</DefineConstants>
   </PropertyGroup>
 
   <!--
