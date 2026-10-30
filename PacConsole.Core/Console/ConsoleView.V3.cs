@@ -57,6 +57,16 @@ public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere
     public string State { get; init; } = "";
 }
 
+/// <summary>
+/// One row of the synchronized trends: a series, its value at the shared cursor, and what every row shares (the
+/// cursor, the latest alert onset and the time axis), so one row template serves all four slots.
+/// </summary>
+public sealed record TrendRowView(TrendSeries Series, string Value, int Cursor, int EventIndex, string TimeStart, string TimeMid, string TimeEnd)
+{
+    public string Label => Series.Label;
+    public string Unit => Series.Unit;
+}
+
 /// <summary>The console page v3 (SPEC-CONSOLE.md): status strip, systems, inspector, synchronized trends.</summary>
 public sealed partial record ConsoleView
 {
@@ -129,6 +139,8 @@ public sealed partial record ConsoleView
     public ReadingTileView? Condition2 => At(ConditionTiles, 2);
     public ConnectionView? Connection0 => At(Connections, 0);
     public ConnectionView? Connection1 => At(Connections, 1);
+    /// <summary>False for equipment with no connections: the inspector then says so instead of an empty row.</summary>
+    public bool HasConnections => !Connections.IsEmpty;
     public ValveSlotView? Slot1 => At(ValveSlots, 0);
     public ValveSlotView? Slot2 => At(ValveSlots, 1);
     public ValveSlotView? Slot3 => At(ValveSlots, 2);
@@ -148,10 +160,10 @@ public sealed partial record ConsoleView
     public int CursorIndex => Trends?.Cursor ?? TrendSet.Samples - 1;
     public string CursorTime { get; init; } = "";
     public bool CursorIsLatest { get; init; } = true;
-    public string Trend0Value => ValueAtCursor(Trend0);
-    public string Trend1Value => ValueAtCursor(Trend1);
-    public string Trend2Value => ValueAtCursor(Trend2);
-    public string Trend3Value => ValueAtCursor(Trend3);
+    public TrendRowView? TrendRow0 => Row(Trend0);
+    public TrendRowView? TrendRow1 => Row(Trend1);
+    public TrendRowView? TrendRow2 => Row(Trend2);
+    public TrendRowView? TrendRow3 => Row(Trend3);
     public string TimeStart { get; init; } = "";
     public string TimeMid { get; init; } = "";
     public string TimeEnd { get; init; } = "";
@@ -173,7 +185,8 @@ public sealed partial record ConsoleView
 
     private static T? At<T>(ImmutableArray<T> items, int i) where T : class => i < items.Length ? items[i] : null;
 
-    private string ValueAtCursor(TrendSeries? s) => s is null ? "" : s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]);
+    private TrendRowView? Row(TrendSeries? s) =>
+        s is null ? null : new(s, s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]), CursorIndex, EventIndex, TimeStart, TimeMid, TimeEnd);
 
     /// <summary>Which valves sit on which equipment: steam admission, condensate, cooling water, fuel, damper bypass.</summary>
     public static UnitId? ValveOwner(int id) => id switch

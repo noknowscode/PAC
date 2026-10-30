@@ -41,7 +41,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 | Expand (full screen) | implemented | `AppWindow.SetPresenter(FullScreen)` toggle; verified on Win32 in the gotchas |
 | Status strip: net output, gap to target, mode, snapshot time | implemented | |
 | Systems filter | implemented | dims parts outside the system; titles the plant panel |
-| Plant panel: view switcher, legend, equipment picker, rotate, reset | implemented | live view thumbnails from 960 px, a segmented switcher below (thumbnails returned after the perf pass, 2026-10-19); the systems filter takes its own row below 1280 px |
+| Plant panel: view switcher, legend, equipment picker, rotate, reset | implemented | live view thumbnails from 960 px, a segmented switcher below (thumbnails returned after the perf pass, 2026-10-19); the systems filter takes its own row below 1280 px and wraps (2026-10-30) |
 | Callouts with code, name and state | implemented | |
 | Inspector: Overview, Condition, Control tabs | implemented | the Control tab is the user's decision |
 | Equipment-specific readings | implemented | simulated; the footer says so |
@@ -62,7 +62,13 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 - **Layout:**
   - The page fills the window edge to edge (the user, 2026-10-15); the plant panel takes the width beside the 340 inspector.
   - Main row: plant panel `*` and inspector 340.
-  - Below 960 px (`{utu:Responsive}`), the inspector stacks under the plant.
+  - One central layout, `ConsoleLayout` in `Styles/Layout.xaml` (Narrow 0, Normal 600, Wide 960, Widest 1600), revised 2026-10-30:
+    - Narrow (phone): header in three rows; plant, inspector, trends, log and footer stacked; the view switcher takes its own row; the systems filter and chips wrap; trend labels sit above their plots; the cursor row splits; 16 px insets; 44 px targets.
+    - Normal (600–959): two-row header; one column; switcher beside the plant title; footer tools on their own row; 44 px targets.
+    - Wide (960–1599): one-row header; plant 620 beside the 340 inspector; live view thumbnails; 32 px pointer controls.
+    - Widest (1600 up): inspector 400, plant 700, the operator named in the header.
+  - `utu:ResponsiveView` switches structure (header, view switcher, camera tools, trends header, shared cursor, footer); `{utu:Responsive}` switches placement, insets and the touch variants of the control styles.
+  - On touch, a sideways drag on the plant orbits (yaw only) and a vertical drag scrolls the page; mouse and pen orbit on both axes.
   - The page scrolls vertically; the trends sit below the fold, as in the mock.
 
 ## Interaction Brief

@@ -87,7 +87,7 @@ public class ConsoleV3Tests
         var view = Compose(UnitId.Clg);
         view.AlarmSummaryText.Should().Be("1 active · 1 unacknowledged");
         view.Alarm0!.Should().Match<AlarmRowView>(r => r.Key == "clg.vib" && r.Priority == "Medium" && r.State == "Unacknowledged" && r.CanAck);
-        view.Alarm0.Title.Should().Be("CLG-05 cooling fan vibration high");
+        view.Alarm0!.Title.Should().Be("CLG-05 cooling fan vibration high");
         view.Response!.Steps.Should().StartWith("1. Start the standby cell 6.").And.Contain("75 %");
         view.CanAckAll.Should().BeTrue();
     }
@@ -270,7 +270,30 @@ public class ConsoleV3Tests
         earlier.CursorIndex.Should().Be(10);
         earlier.CursorIsLatest.Should().BeFalse();
         earlier.CursorTime.Should().NotBe(latest.CursorTime);
-        earlier.Trend0Value.Should().Be(earlier.Trend0!.Format1(earlier.Trend0.Values[10]));
+        earlier.TrendRow0!.Value.Should().Be(earlier.Trend0!.Format1(earlier.Trend0.Values[10]));
+        earlier.TrendRow0.Cursor.Should().Be(10);
+    }
+
+    [Test]
+    public void Trend_rows_carry_the_shared_axis_and_end_with_the_series()
+    {
+        var view = Compose(UnitId.Gen, ViewInputs.Default with { Compared = ["gen.frequency"] });
+        view.TrendRow0!.Label.Should().Be(view.Trend0!.Label);
+        view.TrendRow1!.Series.Should().BeSameAs(view.Trend1);
+        view.TrendRow1.TimeStart.Should().Be(view.TimeStart);
+        view.TrendRow1.EventIndex.Should().Be(view.EventIndex);
+        view.TrendRow2.Should().BeNull();
+    }
+
+    [Test]
+    public void Every_equipment_has_connections_and_says_so()
+    {
+        foreach (var unit in Enum.GetValues<UnitId>())
+        {
+            var view = Compose(unit);
+            view.HasConnections.Should().Be(!view.Connections.IsEmpty, unit.ToString());
+        }
+        (Compose(UnitId.Gen) with { Connections = [] }).HasConnections.Should().BeFalse();
     }
 
     [TestCase(TrendRange.Minutes15, 15)]
