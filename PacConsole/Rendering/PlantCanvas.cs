@@ -21,7 +21,6 @@ public sealed partial class PlantCanvas : SKCanvasElement
     // thread, so a frame draws under _drawGate and the UI thread swaps the renderer under it (Swap).
     private SolidRenderer? _renderer;
     private readonly object _drawGate = new();
-    private readonly SKPath _leaders = new();
     private readonly SKPaint _leaderPaint = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
 
     private CameraPose _pose = CameraPose.Iso;
@@ -105,14 +104,15 @@ public sealed partial class PlantCanvas : SKCanvasElement
             var projection = PlantSolids.ViewProjection(_pose, (float)area.Width, (float)area.Height);
             _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered, System: _system, Motion: _motion));
 
-            _leaders.Rewind();
-            foreach (var t in _tags)
+            // Leaders follow the tags, which move every animation frame. Drawn as a line and a box per tag
+            // (opaque ink), so a frame builds no path (SkiaSharp 4 paths are immutable) and boxes no enumerator.
+            var tags = _tags;
+            for (var i = 0; i < tags.Count; i++)
             {
-                _leaders.MoveTo(t.Anchor.X, t.Anchor.Y);
-                _leaders.LineTo(t.CenterX, t.Bottom);
-                _leaders.AddRect(new SKRect(t.Anchor.X - 2, t.Anchor.Y - 2, t.Anchor.X + 2, t.Anchor.Y + 2));
+                var t = tags[i];
+                canvas.DrawLine(t.Anchor.X, t.Anchor.Y, t.CenterX, t.Bottom, _leaderPaint);
+                canvas.DrawRect(new SKRect(t.Anchor.X - 2, t.Anchor.Y - 2, t.Anchor.X + 2, t.Anchor.Y + 2), _leaderPaint);
             }
-            if (!_leaders.IsEmpty) canvas.DrawPath(_leaders, _leaderPaint);
         }
     }
 }

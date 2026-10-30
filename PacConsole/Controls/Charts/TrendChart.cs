@@ -155,7 +155,6 @@ public sealed partial class TrendChart : UserControl
         private readonly SKPaint _hair = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
         private readonly SKPaint _dot = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _area = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
-        private readonly SKPath _fill = new();
 
         // The fill's gradient depends only on the plot height and the accent, so it is rebuilt only
         // when one of those changes (a resize or a theme switch), never per frame.
@@ -166,7 +165,8 @@ public sealed partial class TrendChart : UserControl
         private const byte FillTopAlpha = 0x3D;
         private readonly SKPathEffect _dashed = SKPathEffect.CreateDash([4, 3], 0);
         private readonly SKPathEffect _dotted = SKPathEffect.CreateDash([1.5f, 2.5f], 0);
-        private readonly SKPath _path = new();
+        // The line and the area under it change with every reading: built per render and detached.
+        private readonly SKPathBuilder _pb = new();
 
         private SKColor _accent, _grid, _faint, _ink, _alert;
         private double[] _values = [];
@@ -211,20 +211,14 @@ public sealed partial class TrendChart : UserControl
             {
                 _hair.Color = color;
                 _hair.PathEffect = effect;
-                _path.Rewind();
-                _path.MoveTo(0, y);
-                _path.LineTo(w, y);
-                canvas.DrawPath(_path, _hair);
+                canvas.DrawLine(0, y, w, y, _hair);
             }
 
             void VLine(float x, SKColor color, SKPathEffect effect)
             {
                 _hair.Color = color;
                 _hair.PathEffect = effect;
-                _path.Rewind();
-                _path.MoveTo(x, 0);
-                _path.LineTo(x, h);
-                canvas.DrawPath(_path, _hair);
+                canvas.DrawLine(x, 0, x, h, _hair);
             }
 
             // Three gridlines, at the labelled values.
@@ -237,9 +231,9 @@ public sealed partial class TrendChart : UserControl
             if (_limit is { } l) HLine(Y(l), _alert.WithAlpha(0xB0), _dashed);
             if (_event >= 0 && _event < _values.Length) VLine(X(_event), _alert.WithAlpha(0xB0), _dashed);
 
-            _path.Rewind();
-            _path.MoveTo(X(0), Y(_values[0]));
-            for (var i = 1; i < _values.Length; i++) _path.LineTo(X(i), Y(_values[i]));
+            _pb.MoveTo(X(0), Y(_values[0]));
+            for (var i = 1; i < _values.Length; i++) _pb.LineTo(X(i), Y(_values[i]));
+            using var trend = _pb.Snapshot();
 
             // The area under the line, closed along the baseline, under a vertical fade.
             if (_gradient is null || _gradientKey != (h, _accent))
@@ -252,15 +246,13 @@ public sealed partial class TrendChart : UserControl
                 _gradientKey = (h, _accent);
                 _area.Shader = _gradient;
             }
-            _fill.Rewind();
-            _fill.AddPath(_path);
-            _fill.LineTo(X(_values.Length - 1), bottom);
-            _fill.LineTo(X(0), bottom);
-            _fill.Close();
-            canvas.DrawPath(_fill, _area);
+            _pb.LineTo(X(_values.Length - 1), bottom);
+            _pb.LineTo(X(0), bottom);
+            _pb.Close();
+            using (var under = _pb.Detach()) canvas.DrawPath(under, _area);
 
             _line.Color = _accent;
-            canvas.DrawPath(_path, _line);
+            canvas.DrawPath(trend, _line);
 
             var c = _cursor < 0 || _cursor >= _values.Length ? _values.Length - 1 : _cursor;
             VLine(X(c), _ink, _dotted);
