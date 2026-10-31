@@ -1,0 +1,5 @@
+<linker>
+  <!-- The app and its domain library: MVUX proxies and bindings reach their members by reflection. -->
+  <assembly fullname="PacConsole" />
+  <assembly fullname="PacConsole.Core" />
+</linker>

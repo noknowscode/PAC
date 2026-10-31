@@ -5,8 +5,16 @@ using PacConsole.Core.Telemetry;
 
 namespace PacConsole.Core.Console;
 
-/// <summary>The operator's view choices that shape the page: system, trend range, compared readings and cursor.</summary>
-public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor)
+/// <summary>The console theme the operator picked: the OS theme, or light or graphite regardless of it.</summary>
+public enum ThemeChoice
+{
+    System,
+    Light,
+    Graphite,
+}
+
+/// <summary>The operator's view choices that shape the page: system, trend range, compared readings, cursor and theme.</summary>
+public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor, ThemeChoice Theme = ThemeChoice.System)
 {
     public static readonly ViewInputs Default = new(PlantSystem.All, TrendRange.Minutes15, [], -1);
 }
@@ -49,6 +57,16 @@ public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere
     public string State { get; init; } = "";
 }
 
+/// <summary>
+/// One row of the synchronized trends: a series, its value at the shared cursor, and what every row shares (the
+/// cursor, the latest alert onset and the time axis), so one row template serves all four slots.
+/// </summary>
+public sealed record TrendRowView(TrendSeries Series, string Value, int Cursor, int EventIndex, string TimeStart, string TimeMid, string TimeEnd)
+{
+    public string Label => Series.Label;
+    public string Unit => Series.Unit;
+}
+
 /// <summary>The console page v3 (SPEC-CONSOLE.md): status strip, systems, inspector, synchronized trends.</summary>
 public sealed partial record ConsoleView
 {
@@ -79,14 +97,18 @@ public sealed partial record ConsoleView
         s => s,
         s => EquipmentCatalog.All.Where(e => PlantSystems.Contains(s, e.Id)).Select(e => new ConnectionView(e.Id, e.Title)).ToArray());
 
-    // Under Active alarms the choices are the units in alarm: one array per set of units, for the same reason.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> AlarmChoices = new();
+    // Under Active alarms the choices are the units in alarm, and any view adds the selected unit when it falls
+    // outside (Active alarms keeps the selection when its alarm clears), so the picker always names the unit
+    // the inspector shows. One array per combination, for the same reason.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> MixedChoices = new();
 
-    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting) =>
-        system != PlantSystem.Alarms
-            ? Choices[system]
-            : AlarmChoices.GetOrAdd(string.Join(",", alerting), _ =>
-                [.. EquipmentCatalog.All.Where(e => alerting.Contains(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting, UnitId selected)
+    {
+        bool Listed(UnitId u) => u == selected || PlantSystems.Contains(system, u, alerting);
+        if (system != PlantSystem.Alarms && PlantSystems.Contains(system, selected)) return Choices[system];
+        return MixedChoices.GetOrAdd($"{system}|{string.Join(",", alerting)}|{selected}", _ =>
+            [.. EquipmentCatalog.All.Where(e => Listed(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+    }
 
     /// <summary>The picker's choices: the equipment of the system in view.</summary>
     public IReadOnlyList<ConnectionView> EquipmentChoices { get; init; } = [];
@@ -117,6 +139,8 @@ public sealed partial record ConsoleView
     public ReadingTileView? Condition2 => At(ConditionTiles, 2);
     public ConnectionView? Connection0 => At(Connections, 0);
     public ConnectionView? Connection1 => At(Connections, 1);
+    /// <summary>False for equipment with no connections: the inspector then says so instead of an empty row.</summary>
+    public bool HasConnections => !Connections.IsEmpty;
     public ValveSlotView? Slot1 => At(ValveSlots, 0);
     public ValveSlotView? Slot2 => At(ValveSlots, 1);
     public ValveSlotView? Slot3 => At(ValveSlots, 2);
@@ -136,10 +160,10 @@ public sealed partial record ConsoleView
     public int CursorIndex => Trends?.Cursor ?? TrendSet.Samples - 1;
     public string CursorTime { get; init; } = "";
     public bool CursorIsLatest { get; init; } = true;
-    public string Trend0Value => ValueAtCursor(Trend0);
-    public string Trend1Value => ValueAtCursor(Trend1);
-    public string Trend2Value => ValueAtCursor(Trend2);
-    public string Trend3Value => ValueAtCursor(Trend3);
+    public TrendRowView? TrendRow0 => Row(Trend0);
+    public TrendRowView? TrendRow1 => Row(Trend1);
+    public TrendRowView? TrendRow2 => Row(Trend2);
+    public TrendRowView? TrendRow3 => Row(Trend3);
     public string TimeStart { get; init; } = "";
     public string TimeMid { get; init; } = "";
     public string TimeEnd { get; init; } = "";
@@ -147,14 +171,22 @@ public sealed partial record ConsoleView
 
     /// <summary>The sample index of the latest alert onset in the range, or -1: every trend marks it.</summary>
     public int EventIndex => Trends is { Events.IsEmpty: false } t ? t.Events[^1].Index : -1;
+    /// <summary>The shared cursor slider's maximum: the last sample index.</summary>
+    public int CursorMax => TrendSet.Samples - 1;
     public TrendRange Range { get; init; }
     public bool IsRange15 => Range == TrendRange.Minutes15;
     public bool IsRange1h => Range == TrendRange.Hour1;
     public bool IsRange8h => Range == TrendRange.Hours8;
 
+    public ThemeChoice Theme { get; init; }
+    public bool IsThemeSystem => Theme == ThemeChoice.System;
+    public bool IsThemeLight => Theme == ThemeChoice.Light;
+    public bool IsThemeGraphite => Theme == ThemeChoice.Graphite;
+
     private static T? At<T>(ImmutableArray<T> items, int i) where T : class => i < items.Length ? items[i] : null;
 
-    private string ValueAtCursor(TrendSeries? s) => s is null ? "" : s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]);
+    private TrendRowView? Row(TrendSeries? s) =>
+        s is null ? null : new(s, s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]), CursorIndex, EventIndex, TimeStart, TimeMid, TimeEnd);
 
     /// <summary>Which valves sit on which equipment: steam admission, condensate, cooling water, fuel, damper bypass.</summary>
     public static UnitId? ValveOwner(int id) => id switch
@@ -204,6 +236,7 @@ public sealed partial record ConsoleView
             };
         }
 
+        var choices = ChoicesFor(inputs.System, view.AlertingUnits, selected);
         var trends = TrendSet.Compose(tick, now, setpoints, ops, inputs.Range, compared, inputs.Cursor);
         var gap = (int)Math.Round(netMw - setpoints.TargetMw);
         var alarmCount = book.ActiveCount;
@@ -226,8 +259,8 @@ public sealed partial record ConsoleView
             SystemTitle = PlantSystems.Title(inputs.System),
 
             ActiveAlarmCount = alarmCount,
-            EquipmentChoices = ChoicesFor(inputs.System, view.AlertingUnits),
-            SelectedIndex = Array.FindIndex(ChoicesFor(inputs.System, view.AlertingUnits), c => c.Id == selected),
+            EquipmentChoices = choices,
+            SelectedIndex = Array.FindIndex(choices, c => c.Id == selected),
 
             InspectorCode = info.Code,
             InspectorName = info.Name,
@@ -249,6 +282,7 @@ public sealed partial record ConsoleView
 
             Trends = trends,
             Range = inputs.Range,
+            Theme = inputs.Theme,
             CursorTime = trends.Times[trends.Cursor].ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             CursorIsLatest = trends.Cursor == TrendSet.Samples - 1,
             TimeStart = trends.Times[0].ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),

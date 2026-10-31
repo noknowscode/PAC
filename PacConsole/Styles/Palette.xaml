@@ -1,0 +1,169 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    The console palette, once per theme (SPEC-THEME.md). XAML reads it with {ThemeResource}; code reads
+    it through ThemeBrushes and SolidPalette for an explicit theme, because a converter or an
+    Application.Current.Resources lookup only ever sees the app theme.
+    Light (the base): contrast on the ground (#F4F5F6) ink 14.2, soft ink 8.6, muted 5.6, accent 6.9, alert text 5.4.
+    Graphite: neutral greys with no blue cast, the same single orange; on the ground (#16181B) ink 14.9,
+    soft ink 10.2, muted 7.4, accent 8.1, alert text 6.6.
+  -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <!-- Ground and surfaces: the page is the ground; white is reserved for things you touch or read closely. -->
+      <SolidColorBrush x:Key="GroundBrush" Color="#F4F5F6" />
+      <SolidColorBrush x:Key="PanelBrush" Color="#F4F5F6" />
+      <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="OverlayBrush" Color="#EBF4F5F6" />
+
+      <!-- Text: ink, soft ink, muted, faint (faint is for non-text marks and placeholders only) -->
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1E2833" />
+      <SolidColorBrush x:Key="InkSoftBrush" Color="#3E4B5A" />
+      <SolidColorBrush x:Key="MutedBrush" Color="#5A6573" />
+      <SolidColorBrush x:Key="FaintBrush" Color="#8A939E" />
+
+      <!-- Lines and fills. Controls are filled, not outlined; the border keys serve focus rings and the valve ring. -->
+      <SolidColorBrush x:Key="HairlineBrush" Color="#D9DDE2" />
+      <!-- A view thumbnail's frame: the hairline's step from the panel ground, half again (on #F4F5F6). -->
+      <SolidColorBrush x:Key="ThumbFrameBrush" Color="#CCD1D8" />
+      <SolidColorBrush x:Key="BorderBrushDefault" Color="#8A939E" />
+      <SolidColorBrush x:Key="BorderBrushStrong" Color="#3E4B5A" />
+      <SolidColorBrush x:Key="FillBrush" Color="#E9ECEF" />
+      <SolidColorBrush x:Key="FillStrongBrush" Color="#D5DAE0" />
+
+      <!-- Accent: the one selection colour, a deep slate-teal. Selected, compared and plotted, nothing else. -->
+      <SolidColorBrush x:Key="AccentBrush" Color="#2F5D73" />
+      <SolidColorBrush x:Key="AccentFillBrush" Color="#1F2F5D73" />
+      <SolidColorBrush x:Key="AccentTintBrush" Color="#0D2F5D73" />
+      <SolidColorBrush x:Key="AccentBorderBrush" Color="#992F5D73" />
+      <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
+
+      <!-- Alert: burnt orange, always paired with the word (alert, above limit) or a dashed stroke.
+           The tint is an opaque amber, the alert pill's ground. -->
+      <SolidColorBrush x:Key="AlertBrush" Color="#C2410C" />
+      <SolidColorBrush x:Key="AlertTextBrush" Color="#AE3A0A" />
+      <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3C2410C" />
+      <SolidColorBrush x:Key="AlertTintBrush" Color="#FCEAD7" />
+
+      <!--
+        Plant drawings (hero, presets, unit preview): the Anatomy figure's solid look, drawn straight on
+        the ground. Paper is the ground colour, so the figure's silhouette sits on the page with no frame.
+        Shades step down from paper, tops step up; the selected unit is lit with a faint orange.
+      -->
+      <Color x:Key="SolidPaperColor">#F4F5F6</Color>
+      <Color x:Key="SolidShade0Color">#C9D4DE</Color>
+      <Color x:Key="SolidShade1Color">#D6DFE7</Color>
+      <Color x:Key="SolidShade2Color">#E2E9EF</Color>
+      <Color x:Key="SolidShade3Color">#ECF1F5</Color>
+      <Color x:Key="SolidTopColor">#FFFFFF</Color>
+      <Color x:Key="SolidLitFaceColor">#E3EEF3</Color>
+      <Color x:Key="SolidLitShadeColor">#CFE0E8</Color>
+      <Color x:Key="SolidLitTopColor">#F2F7F9</Color>
+      <Color x:Key="SolidLineHiColor">#1E2833</Color>
+      <Color x:Key="SolidLineMidColor">#5E6E80</Color>
+      <Color x:Key="SolidLineLoColor">#9AA9B8</Color>
+      <Color x:Key="SolidLineFaintColor">#C3CED8</Color>
+      <!-- The inked silhouette every piece of equipment carries (the reference's navy, kept in slate). -->
+      <Color x:Key="SolidSilhouetteColor">#2C3D50</Color>
+      <Color x:Key="SolidLeaderColor">#8A939E</Color>
+      <!-- Pipe circuits, muted so orange stays the only call to attention. The brush is the deep tone
+           (shades, outline, and the legend swatch); the colour is the base face. -->
+      <SolidColorBrush x:Key="CircuitSteamBrush" Color="#D4A3AF" />
+      <SolidColorBrush x:Key="CircuitWaterBrush" Color="#9EC1D8" />
+      <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#96C9C3" />
+      <SolidColorBrush x:Key="CircuitFuelBrush" Color="#B9A8D0" />
+      <!-- Electrical has no pipe; its swatch marks the system in the systems bar. -->
+      <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#C9B27A" />
+      <!-- System inks: a system's dot in the systems bar, and its outline, glow and motion when the plant
+           view isolates it. Stronger than the pipe tints, distinct from the slate-teal selection and the
+           burnt-orange alert. -->
+      <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="#B84D66" />
+      <SolidColorBrush x:Key="SystemCoolingBrush" Color="#1F8A7E" />
+      <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="#7457A8" />
+      <SolidColorBrush x:Key="SystemElectricalBrush" Color="#A87B12" />
+      <Color x:Key="SolidSteamColor">#F2D9DF</Color>
+      <Color x:Key="SolidWaterColor">#D6E7F2</Color>
+      <Color x:Key="SolidCoolingColor">#D3ECE9</Color>
+      <Color x:Key="SolidFuelColor">#E5DDEF</Color>
+      <!-- Flat ground shadow: one opaque tone, so overlapping shadows never darken. -->
+      <Color x:Key="SolidShadowColor">#D3DDE6</Color>
+
+      <!-- Slider lightweight styling: an ink value track on a soft fill, slate-teal thumb. -->
+      <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackground" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackFill" ResourceKey="FillStrongBrush" />
+      <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="FillStrongBrush" />
+      <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="FillStrongBrush" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="GroundBrush" Color="#16181B" />
+      <SolidColorBrush x:Key="PanelBrush" Color="#16181B" />
+      <SolidColorBrush x:Key="CardBrush" Color="#33373D" />
+      <SolidColorBrush x:Key="OverlayBrush" Color="#EB16181B" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E8EAEC" />
+      <SolidColorBrush x:Key="InkSoftBrush" Color="#C4C9CF" />
+      <SolidColorBrush x:Key="MutedBrush" Color="#A0A7AF" />
+      <SolidColorBrush x:Key="FaintBrush" Color="#6E767F" />
+      <SolidColorBrush x:Key="HairlineBrush" Color="#2E3237" />
+      <SolidColorBrush x:Key="ThumbFrameBrush" Color="#3A3F45" />
+      <SolidColorBrush x:Key="BorderBrushDefault" Color="#6E767F" />
+      <SolidColorBrush x:Key="BorderBrushStrong" Color="#C4C9CF" />
+      <SolidColorBrush x:Key="FillBrush" Color="#24282D" />
+      <SolidColorBrush x:Key="FillStrongBrush" Color="#353A40" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#7FB3C8" />
+      <SolidColorBrush x:Key="AccentFillBrush" Color="#247FB3C8" />
+      <SolidColorBrush x:Key="AccentTintBrush" Color="#107FB3C8" />
+      <SolidColorBrush x:Key="AccentBorderBrush" Color="#997FB3C8" />
+      <SolidColorBrush x:Key="OnAccentBrush" Color="#0E1A20" />
+      <SolidColorBrush x:Key="AlertBrush" Color="#F0793A" />
+      <SolidColorBrush x:Key="AlertTextBrush" Color="#F38B55" />
+      <SolidColorBrush x:Key="AlertBorderBrush" Color="#B3F0793A" />
+      <SolidColorBrush x:Key="AlertTintBrush" Color="#3A2617" />
+      <Color x:Key="SolidPaperColor">#16181B</Color>
+      <Color x:Key="SolidShade0Color">#0F1113</Color>
+      <Color x:Key="SolidShade1Color">#131518</Color>
+      <Color x:Key="SolidShade2Color">#1A1C20</Color>
+      <Color x:Key="SolidShade3Color">#1E2125</Color>
+      <Color x:Key="SolidTopColor">#262A2F</Color>
+      <Color x:Key="SolidLitFaceColor">#1A272D</Color>
+      <Color x:Key="SolidLitShadeColor">#152026</Color>
+      <Color x:Key="SolidLitTopColor">#22333B</Color>
+      <Color x:Key="SolidLineHiColor">#E8EAEC</Color>
+      <Color x:Key="SolidLineMidColor">#9AA1A9</Color>
+      <Color x:Key="SolidLineLoColor">#5A6168</Color>
+      <Color x:Key="SolidLineFaintColor">#33383E</Color>
+      <Color x:Key="SolidSilhouetteColor">#8E97A1</Color>
+      <Color x:Key="SolidLeaderColor">#6E767F</Color>
+      <SolidColorBrush x:Key="CircuitSteamBrush" Color="#7A4D58" />
+      <SolidColorBrush x:Key="CircuitWaterBrush" Color="#3F5F78" />
+      <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#3A6662" />
+      <SolidColorBrush x:Key="CircuitFuelBrush" Color="#5C4E70" />
+      <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#6E6040" />
+      <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="#E8899C" />
+      <SolidColorBrush x:Key="SystemCoolingBrush" Color="#56C4B6" />
+      <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="#AD90DB" />
+      <SolidColorBrush x:Key="SystemElectricalBrush" Color="#E2B652" />
+      <Color x:Key="SolidSteamColor">#4A3037</Color>
+      <Color x:Key="SolidWaterColor">#283B4B</Color>
+      <Color x:Key="SolidCoolingColor">#243F3D</Color>
+      <Color x:Key="SolidFuelColor">#3A3047</Color>
+      <Color x:Key="SolidShadowColor">#0E1012</Color>
+
+      <!-- Slider lightweight styling, as in Light. -->
+      <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackground" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackFill" ResourceKey="FillStrongBrush" />
+      <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="FillStrongBrush" />
+      <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="FillStrongBrush" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

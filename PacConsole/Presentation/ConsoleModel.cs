@@ -2,6 +2,7 @@ using PacConsole.Core.Console;
 using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
+using Uno.Extensions.Toolkit;
 
 namespace PacConsole.Presentation;
 
@@ -15,14 +16,23 @@ public partial record ConsoleModel
 {
     private readonly ITelemetryService _telemetry;
     private readonly TimeProvider _time;
+    private readonly IThemeService _themes;
 
-    public ConsoleModel(ITelemetryService telemetry, TimeProvider time)
+    public ConsoleModel(ITelemetryService telemetry, TimeProvider time, IThemeService themes)
     {
         _telemetry = telemetry;
         _time = time;
+        _themes = themes;
     }
 
-    public IFeed<PlantSnapshot> Snapshot => Feed.AsyncEnumerable(_telemetry.Stream);
+    /// <summary>
+    /// The telemetry stream. Built from messages because <c>Feed.AsyncEnumerable</c> ends for good on an
+    /// exception and ignores <c>FeedView.Refresh</c> (Uno.Extensions.Reactive 7.3.6), so its Retry could
+    /// never recover. Here a fault becomes the feed's error, and <see cref="RetryTelemetry"/> resubscribes.
+    /// </summary>
+    public IFeed<PlantSnapshot> Snapshot => Feed.Create(Telemetry);
+
+    private TaskCompletionSource _retry = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// The wall clock for the held-data age. It ticks each second only while the plant is held, the one
@@ -56,7 +66,6 @@ public partial record ConsoleModel
     /// </summary>
     public IState<UnitSelection> Selection => State.Value(this, () => new UnitSelection(UnitId.Clg));
 
-
     // Console v3 view inputs (SPEC-CONSOLE.md). Each has one writer: its command, or the cursor slider.
     public IState<PlantSystem> System => State.Value(this, () => PlantSystem.All);
     public IState<TrendRange> Range => State.Value(this, () => TrendRange.Minutes15);
@@ -67,8 +76,16 @@ public partial record ConsoleModel
     /// <summary>The shared cursor's sample index; a double because the slider binds two-way to it.</summary>
     public IState<double> Cursor => State.Value(this, () => (double)(TrendSet.Samples - 1));
 
-    public IFeed<ViewInputs> Inputs => Feed.Combine(System, Range, Compared, Cursor)
-        .Select(t => new ViewInputs(t.Item1, t.Item2, t.Item3, (int)Math.Round(t.Item4)));
+    /// <summary>The theme the operator picked; IThemeService applies it to the window and saves it.</summary>
+    public IState<ThemeChoice> Theme => State.Value(this, () => _themes.Theme switch
+    {
+        AppTheme.Light => ThemeChoice.Light,
+        AppTheme.Dark => ThemeChoice.Graphite,
+        _ => ThemeChoice.System,
+    });
+
+    public IFeed<ViewInputs> Inputs => Feed.Combine(System, Range, Compared, Cursor, Theme)
+        .Select(t => new ViewInputs(t.Item1, t.Item2, t.Item3, (int)Math.Round(t.Item4), t.Item5));
 
     public IFeed<Setpoints> CurrentSetpoints => Feed.Combine(TargetMw, TurbineLimitBar, DamperPct)
         .Select(t => new Setpoints(t.Item1, t.Item2, t.Item3));
@@ -136,11 +153,25 @@ public partial record ConsoleModel
     public async ValueTask SetCursorLatest(CancellationToken ct) =>
         await Cursor.SetAsync(TrendSet.Samples - 1, ct);
 
+    /// <summary>The theme menu's choice (the menu passes the enum name).</summary>
+    public async ValueTask SetTheme(string theme, CancellationToken ct)
+    {
+        if (!Enum.TryParse<ThemeChoice>(theme, out var choice)) return;
+        await _themes.SetThemeAsync(choice switch
+        {
+            ThemeChoice.Light => AppTheme.Light,
+            ThemeChoice.Graphite => AppTheme.Dark,
+            _ => AppTheme.System,
+        });
+        await Theme.SetAsync(choice, ct);
+    }
+
     // ---------------------------------------------------------------- operations (SPEC-OPERATIONS.md)
 
     /// <summary>Updates the ops state; MVUX hands a record state over as nullable, and none means the initial plant.</summary>
     private ValueTask Op(Func<PlantOps, PlantOps> change, CancellationToken ct) =>
         Ops.UpdateAsync(o => change(o ?? PlantOps.Initial), ct);
+
     // Commands read the latest snapshot as a feed parameter (MVUX injects the current value of a feed
     // named like the parameter) for the tick their effects start from.
 
@@ -235,6 +266,45 @@ public partial record ConsoleModel
         _telemetry.IsPaused = next == ControlMode.Hold;
         await Mode.SetAsync(next, ct);
         await Op(o => o.Logged(snapshot.Tick, _time.GetLocalNow(), LogKind.Action, null, $"Plant mode {current} → {next}"), ct);
+    }
+
+    /// <summary>Restarts a stopped or empty telemetry stream (the Retry on the error and none states).</summary>
+    public ValueTask RetryTelemetry()
+    {
+        _retry.TrySetResult();
+        return ValueTask.CompletedTask;
+    }
+
+    private async IAsyncEnumerable<Message<PlantSnapshot>> Telemetry([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        var message = Message<PlantSnapshot>.Initial;
+        while (!ct.IsCancellationRequested)
+        {
+            Exception? fault = null;
+            await using (var snapshots = _telemetry.Stream(ct).GetAsyncEnumerator(ct))
+            {
+                while (true)
+                {
+                    try
+                    {
+                        if (!await snapshots.MoveNextAsync()) break;
+                    }
+                    catch (Exception ex) when (!ct.IsCancellationRequested)
+                    {
+                        fault = ex;
+                        break;
+                    }
+                    yield return message = message.With().Data(snapshots.Current).Error(null);
+                }
+            }
+
+            // Armed before the state is shown, so a Retry pressed at once is not lost.
+            _retry = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            yield return message = fault is not null || message.Current.Data.IsSome(out _)
+                ? message.With().Error(fault ?? new TelemetryFaultException("The telemetry stream from plant 02 ended."))
+                : message.With().Data(Option<PlantSnapshot>.None());
+            await _retry.Task.WaitAsync(ct);
+        }
     }
 
     private async IAsyncEnumerable<DateTimeOffset> Ticks([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)

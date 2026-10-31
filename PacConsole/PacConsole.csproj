@@ -1,7 +1,15 @@
 <Project Sdk="Uno.Sdk">
   <PropertyGroup>
-    <!-- v1 targets desktop only (Skia renderer on Windows, macOS, Linux). -->
-    <TargetFrameworks>net10.0-desktop</TargetFrameworks>
+    <!--
+      Five heads: Android, iOS, WinAppSDK, WebAssembly and desktop (Skia on Windows, macOS, Linux).
+      Uno.Sdk skips the heads the build OS can't build (iOS on Linux, Windows off Windows).
+    -->
+    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-windows10.0.19041;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <!--
+      App-only override for single-head builds (CI, RID-specific publish): -p:PacTargetFrameworks=net10.0-desktop.
+      A global -p:TargetFrameworks would also retarget PacConsole.Core and the test project.
+    -->
+    <TargetFrameworks Condition="'$(PacTargetFrameworks)' != ''">$(PacTargetFrameworks)</TargetFrameworks>
 
     <OutputType>Exe</OutputType>
     <UnoSingleProject>true</UnoSingleProject>
@@ -33,6 +41,24 @@
       Navigation;
       SkiaRenderer;
     </UnoFeatures>
+    <!--
+      Uno.Sdk 7.0.0-dev.115 bundles Hot Design 2.0.0-dev.31 and App MCP 2.0.0-dev.18, whose clients still reference
+      Uno.UI.Lottie, an assembly Uno 7 no longer ships: every Debug launch crashed in GlobalStaticResources. Both stay off
+      (Debug only; Release never had them) until a dev build drops the reference. Delete these three lines then.
+    -->
+    <UnoDisableHotDesign>true</UnoDisableHotDesign>
+    <UnoDisableMCPSupport>true</UnoDisableMCPSupport>
+    <DefineConstants>$(DefineConstants);NO_UNO_STUDIO</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+    WinAppSDK: SKCanvasElement (the plant, its thumbnails and the trends) needs an x64 or ARM64 build, never AnyCPU.
+    Uno 7's WinUI libraries need WinRT.Runtime 2.3.1; the default 19041 projection brings 2.2.0 (CS1705).
+  -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+    <Platforms>x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <WindowsSdkPackageVersion>10.0.19041.87</WindowsSdkPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,37 +1,46 @@
-using Microsoft.UI.Windowing;
-using PacConsole.Controls;
-using PacConsole.Core.Geometry;
+using System.Windows.Input;
 
 namespace PacConsole.Presentation;
 
 public sealed partial class ConsolePage : Page
 {
-    private PlantViewport? _viewport;
-
     public ConsolePage()
     {
         InitializeComponent();
     }
 
-    // xaml-lint: allow codebehind - theme switch is view-only glue: it repaints app resources and the root element theme.
-    private void OnThemeClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleMenuFlyoutItem item) return;
-        Styles.ConsoleTheme.Apply(item.IsChecked, XamlRoot?.Content as FrameworkElement ?? this);
-    }
+    /// <summary>
+    /// Toggles the window between full screen and its normal presenter. It changes the window, which is view glue,
+    /// not console state, so it lives on the page; the header's templates reach it with an AncestorBinding.
+    /// </summary>
+    public ICommand ToggleFullScreen { get; } = new FullScreenCommand();
 
-    // xaml-lint: allow codebehind - keeps the viewport, which sits inside the FeedView template, for the Reset menu item.
-    private void OnViewportLoaded(object sender, RoutedEventArgs e) => _viewport = sender as PlantViewport;
-
-    // xaml-lint: allow codebehind - the camera is view state owned by PlantViewport, not domain data.
-    private void OnResetViewClick(object sender, RoutedEventArgs e) => _viewport?.GoTo(CameraPose.Iso);
+    /// <summary>
+    /// A desktop or Windows window can go full screen. A phone or tablet app already fills the screen, and a
+    /// browser tab has its own full-screen key, so there the button is not offered at all.
+    /// </summary>
+    public Visibility FullScreenVisibility =>
+#if __DESKTOP__ || WINDOWS
+        Visibility.Visible;
+#else
+        Visibility.Collapsed;
+#endif
 
     // xaml-lint: allow codebehind - full screen changes the window's presenter, which has no XAML surface.
-    private void OnFullScreenClick(object sender, RoutedEventArgs e)
+    private sealed class FullScreenCommand : ICommand
     {
-        if (App.Shell?.AppWindow is not { } window) return;
-        window.SetPresenter(window.Presenter.Kind == AppWindowPresenterKind.FullScreen
-            ? AppWindowPresenterKind.Default
-            : AppWindowPresenterKind.FullScreen);
+        public event EventHandler? CanExecuteChanged { add { } remove { } }
+
+        public bool CanExecute(object? parameter) => true;
+
+        public void Execute(object? parameter)
+        {
+#if __DESKTOP__ || WINDOWS
+            if (App.Shell?.AppWindow is not { } window) return;
+            window.SetPresenter(window.Presenter.Kind == Microsoft.UI.Windowing.AppWindowPresenterKind.FullScreen
+                ? Microsoft.UI.Windowing.AppWindowPresenterKind.Default
+                : Microsoft.UI.Windowing.AppWindowPresenterKind.FullScreen);
+#endif
+        }
     }
 }

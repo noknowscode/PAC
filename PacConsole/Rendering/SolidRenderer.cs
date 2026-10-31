@@ -1,6 +1,7 @@
 using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Solids;
+using PacConsole.Styles;
 using SkiaSharp;
 
 namespace PacConsole.Rendering;
@@ -32,16 +33,18 @@ public sealed record SolidPalette(
     /// <summary>Each process system's ink: its outline, glow and motion when the plant view isolates it.</summary>
     public IReadOnlyDictionary<PlantSystem, SKColor> Systems { get; init; } = new Dictionary<PlantSystem, SKColor>();
 
-    /// <summary>The console palette from <c>Styles/Tokens.xaml</c> (the Solid* colours), so every plant drawing matches its card.</summary>
-    public static SolidPalette FromResources(ResourceDictionary r)
+    /// <summary>
+    /// The console palette for one theme (the Solid* colours in <c>Styles/Palette.xaml</c>), so every plant
+    /// drawing matches its card. Stroke widths are theme-invariant and come from <c>Styles/Tokens.xaml</c>.
+    /// </summary>
+    public static SolidPalette For(ElementTheme theme)
     {
-        SKColor C(string key) => r[key] switch
+        SKColor C(string key)
         {
-            Windows.UI.Color c => new SKColor(c.R, c.G, c.B, c.A),
-            SolidColorBrush b => new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A),
-            _ => SKColors.Magenta,
-        };
-        float D(string key) => (float)(double)r[key];
+            var c = ThemeBrushes.Color(key, theme);
+            return new SKColor(c.R, c.G, c.B, c.A);
+        }
+        float D(string key) => (float)(double)Application.Current.Resources[key];
         return new(
             Paper: C("SolidPaperColor"),
             Shades: [C("SolidShade0Color"), C("SolidShade1Color"), C("SolidShade2Color"), C("SolidShade3Color")],
@@ -96,18 +99,21 @@ public readonly record struct SolidFrame(
 /// Paints solids back to front, the way a technical isometric is inked: the stand first, then one
 /// flat ground shadow for everything standing on it, then each part (fills, then fine interior lines,
 /// then a heavier silhouette). Shadows fall away from a light at the camera's upper left, so they
-/// read the same at every yaw; a lifted unit's shadow slides out from under it. Paints, path effects
-/// and paths are created once and reused.
+/// read the same at every yaw; a lifted unit's shadow slides out from under it. Paints and path
+/// effects are created once and reused. Paths are immutable (SkiaSharp 4): each part's are built once
+/// per camera and kept, and per-frame geometry goes through one reused <see cref="SKPathBuilder"/>.
 /// </summary>
 public sealed class SolidRenderer : IDisposable
 {
     /// <summary>Lift at which a unit is fully raised, in world units (the figure's LIFT).</summary>
     public const float FullLift = 10;
 
-    private readonly SKPath _path = new() { FillType = SKPathFillType.Winding };
+    // Every path is built here and detached (the builder is empty again after each Detach), so no
+    // draw allocates a builder. Winding, the builder's default, is the fill rule throughout.
+    private readonly SKPathBuilder _pb = new();
     private readonly SKPaint _fill = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
     private readonly SKPaint _line = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
-    private readonly SKPath _shadow = new() { FillType = SKPathFillType.Winding };
+    private SKPath? _shadow;
     private readonly SKPathEffect _alertDash = SKPathEffect.CreateDash([4, 3], 0);
 
     // System highlight: a soft halo behind each part of the isolated system, then its outline in the
@@ -120,7 +126,9 @@ public sealed class SolidRenderer : IDisposable
 
     // Active alarms: the halo round the equipment in alarm, and its breath.
     private readonly SKMaskFilter _alarmBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 4);
-    private readonly SKPath _alarmHalo = new();
+    // The halo's outline changes only with the camera, a lift or the units in alarm; the breath is paint.
+    private SKPath? _alarmHalo;
+    private (object? Shapes, object? Lifts, int Alerts) _alarmHaloKey;
     private const double AlarmBreathSeconds = 1.6;
 
     /// <summary>The isolated system's ink for the part being drawn, or null when it is not highlighted.</summary>
@@ -160,6 +168,9 @@ public sealed class SolidRenderer : IDisposable
             _cachedCamera = camera;
             _shapes = new SolidShape[parts.Count];
             _details = new DetailLine[]?[parts.Count];
+            ClearShapePaths();
+            _shapePaths = new ShapePaths?[parts.Count];
+            _detailPaths = new SKPath?[]?[parts.Count];
             _live = new bool[parts.Count];
             for (var i = 0; i < parts.Count; i++)
             {
@@ -193,6 +204,7 @@ public sealed class SolidRenderer : IDisposable
         {
             if (index < 0)
             {
+                if (_shadow is null) return;
                 _fill.Color = Palette.Shadow;
                 c.DrawPath(_shadow, _fill);
             }
@@ -316,7 +328,9 @@ public sealed class SolidRenderer : IDisposable
     // Electrical: each generator bushing pairs with a transformer bushing (west to east), joined by
     // an overhead conductor that only the electrical view draws.
     private (Emitter From, Emitter To)[] _conductors = [];
-    private readonly SKPath _arc = new();
+    // Each conductor's arch follows the camera and its two units' lifts; the beads move along it.
+    private SKPath?[] _arcs = [];
+    private (object? Shapes, object? Lifts, object? Conductors) _arcsKey;
     private readonly SKPaint _wire = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.2f, StrokeCap = SKStrokeCap.Round };
 
     /// <summary>How high a conductor arches above the straight line between its bushings, in world units.</summary>
@@ -364,19 +378,26 @@ public sealed class SolidRenderer : IDisposable
                 // The equipment in alarm breathes in the alert ink: one blurred halo round all of its
                 // parts, 1.6 s a breath (the status dots' rhythm), drawn live over the cached plant.
                 var breath = (float)(0.5 + 0.5 * Math.Cos(t / AlarmBreathSeconds * 2 * Math.PI));
-                _alarmHalo.Rewind();
-                for (var i = 0; i < parts.Count; i++)
+                // _shapes is replaced when the camera moves and _orderLift when a lift does.
+                var haloKey = ((object?)_shapes, (object?)_orderLift, AlertMask(frame.Alerting));
+                if (haloKey != _alarmHaloKey)
                 {
-                    if (parts[i].Unit is not { } unit || !frame.Alerting.Contains(unit) || IsStand(parts[i])) continue;
-                    var dy = projection.Rise(liftOf(unit));
-                    foreach (var line in _shapes[i].Outline)
+                    _alarmHaloKey = haloKey;
+                    for (var i = 0; i < parts.Count; i++)
                     {
-                        if (line.Length < 2) continue;
-                        _alarmHalo.MoveTo(line[0].X, line[0].Y + dy);
-                        for (var k = 1; k < line.Length; k++) _alarmHalo.LineTo(line[k].X, line[k].Y + dy);
+                        if (parts[i].Unit is not { } unit || !frame.Alerting.Contains(unit) || IsStand(parts[i])) continue;
+                        var dy = projection.Rise(liftOf(unit));
+                        foreach (var line in _shapes[i].Outline)
+                        {
+                            if (line.Length < 2) continue;
+                            _pb.MoveTo(line[0].X, line[0].Y + dy);
+                            for (var k = 1; k < line.Length; k++) _pb.LineTo(line[k].X, line[k].Y + dy);
+                        }
                     }
+                    _alarmHalo?.Dispose();
+                    _alarmHalo = _pb.Detach();
                 }
-                if (_alarmHalo.IsEmpty) break;
+                if (_alarmHalo is null || _alarmHalo.IsEmpty) break;
                 _glow.Color = ink.WithAlpha((byte)(0x28 + 0xA8 * breath));
                 _glow.StrokeWidth = 3 + 4 * breath;
                 _glow.MaskFilter = _alarmBlur;
@@ -404,19 +425,29 @@ public sealed class SolidRenderer : IDisposable
                     var y = a.Y + (b.Y - a.Y) * u + 0.5f + ConductorArch * 4 * u * (1 - u) + lift;
                     return projection.Project(new Vec3(a.X + (b.X - a.X) * u, y, a.Z + (b.Z - a.Z) * u));
                 }
+                var arcsKey = ((object?)_shapes, (object?)_orderLift, (object?)_conductors);
+                if (arcsKey != _arcsKey)
+                {
+                    _arcsKey = arcsKey;
+                    foreach (var old in _arcs) old?.Dispose();
+                    _arcs = new SKPath?[_conductors.Length];
+                    for (var i = 0; i < _conductors.Length; i++)
+                    {
+                        var start = Along(_conductors[i], 0);
+                        _pb.MoveTo(start.X, start.Y);
+                        for (var j = 1; j <= 16; j++)
+                        {
+                            var q = Along(_conductors[i], j / 16f);
+                            _pb.LineTo(q.X, q.Y);
+                        }
+                        _arcs[i] = _pb.Detach();
+                    }
+                }
                 for (var i = 0; i < _conductors.Length; i++)
                 {
                     var c = _conductors[i];
-                    _arc.Rewind();
-                    var start = Along(c, 0);
-                    _arc.MoveTo(start.X, start.Y);
-                    for (var j = 1; j <= 16; j++)
-                    {
-                        var q = Along(c, j / 16f);
-                        _arc.LineTo(q.X, q.Y);
-                    }
                     _wire.Color = ink.WithAlpha(0x99);
-                    canvas.DrawPath(_arc, _wire);
+                    canvas.DrawPath(_arcs[i]!, _wire);
                     for (var k = 0; k < 2; k++)
                     {
                         var u = (float)Frac(t / 1.1 + k / 2.0 + i * 0.15);
@@ -483,6 +514,11 @@ public sealed class SolidRenderer : IDisposable
     private int _layeredGeneration = -1;
     private Task? _layerTask;
     private readonly object _layerGate = new();
+
+    // Set once by Dispose. Workers are never waited for: WebAssembly has one thread and runs a worker
+    // only after the current call returns, so a Wait there could never finish. A worker that sees this
+    // stops rasterizing and disposes what it made instead of handing it over.
+    private volatile bool _disposed;
     private (int Generation, SKImage?[] Images, SKRect[] Dests)? _readyLayers;
     private readonly List<SKPicture> _retired = [];
 
@@ -535,16 +571,22 @@ public sealed class SolidRenderer : IDisposable
         var generation = _layeredGeneration = _generation;
         var scale = Scale;
         var pictures = _segments.Select(s => s.Picture).ToArray();
+        // Off the render thread where there are threads; on WebAssembly the same work runs queued on the one thread.
         _layerTask = Task.Run(() =>
         {
             var images = new SKImage?[pictures.Length];
             var dests = new SKRect[pictures.Length];
-            for (var i = 0; i < pictures.Length; i++)
+            for (var i = 0; i < pictures.Length && !_disposed; i++)
             {
                 if (pictures[i] is { } picture) (images[i], dests[i]) = Rasterize(picture, scale);
             }
             lock (_layerGate)
             {
+                if (_disposed)
+                {
+                    foreach (var image in images) image?.Dispose();
+                    return;
+                }
                 foreach (var stale in _readyLayers?.Images ?? []) stale?.Dispose();
                 _readyLayers = (generation, images, dests);
             }
@@ -600,7 +642,6 @@ public sealed class SolidRenderer : IDisposable
     private void BuildShadows(IReadOnlyList<SolidPart> parts, float[] lifts, OrbitProjection p, bool cameraChanged)
     {
         _shadowLift = lifts;
-        _shadow.Rewind();
         if (cameraChanged || _shadowPolygons.Length != parts.Count)
         {
             _shadowPolygons = new Vec2[]?[parts.Count];
@@ -642,11 +683,11 @@ public sealed class SolidRenderer : IDisposable
                 for (var k = 0; k < hull.Length; k++) screen[k] = p.Project(new(hull[k].X, ground, hull[k].Y));
                 _shadowPolygons[i] = screen;
             }
-            if (_shadowPolygons[i] is not { } polygon) continue;
-            _shadow.MoveTo(polygon[0].X, polygon[0].Y);
-            for (var k = 1; k < polygon.Length; k++) _shadow.LineTo(polygon[k].X, polygon[k].Y);
-            _shadow.Close();
+            if (_shadowPolygons[i] is { } polygon) AddPolygon(polygon);
         }
+        // A picture recorded with the old path keeps its own copy, so it can go now.
+        _shadow?.Dispose();
+        _shadow = _pb.Detach();
     }
 
     private static (float X, float Z) Unit(float x, float z)
@@ -669,10 +710,12 @@ public sealed class SolidRenderer : IDisposable
             canvas.Save();
             canvas.Translate(0, projection.Rise(lift));
         }
-        if (_pass != PartPass.Motion) DrawShape(canvas, _shapes[index], part.Edge, part.Crease, look.Lit, look.Alert, look.Hovered, part.Circuit);
+        if (_pass != PartPass.Motion) DrawShape(canvas, PathsOf(index, part.Crease), part.Edge, part.Crease, look.Lit, look.Alert, look.Hovered, part.Circuit);
         if (frame.Details && part.Details is { } details)
         {
-            DrawDetails(canvas, _details[index] ?? details(projection, frame.Seconds), frame.Seconds, part.AnimatedDetails);
+            // A still part's lines keep their paths for the camera's life; a moving part's are built per draw.
+            if (_details[index] is { } still) DrawDetails(canvas, still, _detailPaths[index] ??= new SKPath?[still.Length], frame.Seconds, part.AnimatedDetails);
+            else DrawDetails(canvas, details(projection, frame.Seconds), null, frame.Seconds, part.AnimatedDetails);
         }
         if (lift > 0) canvas.Restore();
         _fade = 0;
@@ -767,13 +810,19 @@ public sealed class SolidRenderer : IDisposable
         {
             var images = new SKImage?[pictures.Count];
             var dests = new SKRect[pictures.Count];
+            // This worker owns these recordings: each is disposed here, rasterized or not.
             for (var k = 0; k < pictures.Count; k++)
             {
                 using var picture = pictures[k];
-                (images[k], dests[k]) = Rasterize(picture, scale);
+                if (!_disposed) (images[k], dests[k]) = Rasterize(picture, scale);
             }
             lock (_layerGate)
             {
+                if (_disposed)
+                {
+                    foreach (var image in images) image?.Dispose();
+                    return;
+                }
                 if (_readyParts is { } stale) foreach (var image in stale.Images) image?.Dispose();
                 _readyParts = (key, [.. indices], [.. looks], images, dests);
             }
@@ -846,10 +895,13 @@ public sealed class SolidRenderer : IDisposable
 
     private PartPass _pass;
 
-    private void DrawDetails(SKCanvas canvas, IEnumerable<DetailLine> details, double seconds, bool animated)
+    /// <param name="paths">The cache for a still part's lines (one slot per line, filled on first draw), or null to build each line for this draw.</param>
+    private void DrawDetails(SKCanvas canvas, IEnumerable<DetailLine> details, SKPath?[]? paths, double seconds, bool animated)
     {
+        var k = -1;
         foreach (var d in details)
         {
+            k++;
             // Flow marks move, and every line of an animated part (a fan's blades) does.
             var moves = animated || d.Kind == DetailKind.Flow;
             if (_pass == PartPass.Body && moves || _pass == PartPass.Motion && !moves) continue;
@@ -864,11 +916,11 @@ public sealed class SolidRenderer : IDisposable
                     // Isolated, a circuit's flow runs in the system's ink at 24 px/s.
                     var fast = _systemInk is not null;
                     _line.PathEffect = fast ? FastFlowDash(seconds) : FlowDash(seconds);
-                    StrokeLine(canvas, d.Points, _systemInk ?? Palette.Leader, fast ? 1.4f : 1);
+                    StrokeLine(canvas, d.Points, paths, k, _systemInk ?? Palette.Leader, fast ? 1.4f : 1);
                     _line.PathEffect = null;
                     break;
                 default:
-                    StrokeLine(canvas, d.Points, ToneColor(d.Tone), Palette.Hairline);
+                    StrokeLine(canvas, d.Points, paths, k, ToneColor(d.Tone), Palette.Hairline);
                     break;
             }
         }
@@ -909,26 +961,34 @@ public sealed class SolidRenderer : IDisposable
         _ => Palette.Mid,
     };
 
-    private void StrokeLine(SKCanvas canvas, Vec2[] points, SKColor color, float width)
+    private void StrokeLine(SKCanvas canvas, Vec2[] points, SKPath?[]? paths, int index, SKColor color, float width)
     {
         if (points.Length < 2) return;
-        _path.Rewind();
-        _path.MoveTo(points[0].X, points[0].Y);
-        for (var i = 1; i < points.Length; i++) _path.LineTo(points[i].X, points[i].Y);
         _line.Color = Ink(color);
         _line.StrokeWidth = width;
-        canvas.DrawPath(_path, _line);
+        if (paths is not null)
+        {
+            canvas.DrawPath(paths[index] ??= LinePath(points), _line);
+            return;
+        }
+        using var path = LinePath(points);
+        canvas.DrawPath(path, _line);
     }
 
-    private void DrawShape(SKCanvas canvas, SolidShape shape, EdgeTone edge, bool crease, bool lit, bool alert, bool hovered = false, Circuit circuit = Circuit.None)
+    private SKPath LinePath(Vec2[] points)
+    {
+        AddLine(points);
+        return _pb.Detach();
+    }
+
+    private void DrawShape(SKCanvas canvas, ShapePaths shape, EdgeTone edge, bool crease, bool lit, bool alert, bool hovered = false, Circuit circuit = Circuit.None)
     {
         var pal = Palette;
-        if (_systemInk is { } halo)
+        if (_systemInk is { } halo && shape.Outline is { } outline)
         {
             _glow.Color = halo.WithAlpha(0x73);
             _glow.MaskFilter = _glowBlur;
-            AddOutline(shape.Outline);
-            canvas.DrawPath(_path, _glow);
+            canvas.DrawPath(outline, _glow);
             _glow.MaskFilter = null;
         }
         if (circuit != Circuit.None && pal.Circuits.TryGetValue(circuit, out var tint))
@@ -936,13 +996,13 @@ public sealed class SolidRenderer : IDisposable
             // A circuit's pipe: shades run from its deep tone to its base, the top a step lighter than
             // the base, and the outline in the circuit's own ink, so a run reads end to end.
             Fill(canvas, shape.Fill, tint.Base);
-            for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.ShadeFaces[s], Lerp(tint.Deep, tint.Base, s / 3f));
+            for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.Shades[s], Lerp(tint.Deep, tint.Base, s / 3f));
             Fill(canvas, shape.Top, Lerp(tint.Base, tint.Deep, -0.35f));
             Stroke(canvas, shape.Outline, _systemInk ?? Lerp(tint.Deep, pal.Silhouette, 0.5f), _systemInk is null ? pal.SilhouetteStroke : pal.LitStroke);
             return;
         }
         Fill(canvas, shape.Fill, lit ? pal.LitFace : pal.Paper);
-        for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.ShadeFaces[s], lit ? pal.LitShade : pal.Shades[s]);
+        for (var s = 0; s < SolidShape.Shades; s++) Fill(canvas, shape.Shades[s], lit ? pal.LitShade : pal.Shades[s]);
         Fill(canvas, shape.Top, lit ? pal.LitTop : pal.Top);
         if (crease)
         {
@@ -978,63 +1038,115 @@ public sealed class SolidRenderer : IDisposable
         return new(Mix(a.Red, b.Red, t), Mix(a.Green, b.Green, t), Mix(a.Blue, b.Blue, t), Mix(a.Alpha, b.Alpha, t));
     }
 
-    private void Fill(SKCanvas canvas, Vec2[] polygon, SKColor color)
+    private void Fill(SKCanvas canvas, SKPath? path, SKColor color)
     {
-        if (polygon.Length < 3) return;
-        _path.Rewind();
-        AddPolygon(polygon);
+        if (path is null) return;
         _fill.Color = Ink(color);
-        canvas.DrawPath(_path, _fill);
+        canvas.DrawPath(path, _fill);
     }
 
-    private void Fill(SKCanvas canvas, List<Vec2[]> polygons, SKColor color)
+    private void Stroke(SKCanvas canvas, SKPath? path, SKColor color, float? width = null)
     {
-        if (polygons.Count == 0) return;
-        _path.Rewind();
-        foreach (var polygon in polygons) AddPolygon(polygon);
-        _fill.Color = Ink(color);
-        canvas.DrawPath(_path, _fill);
-    }
-
-    private void Stroke(SKCanvas canvas, List<Vec2[]> lines, SKColor color, float? width = null)
-    {
-        if (lines.Count == 0) return;
-        _path.Rewind();
-        foreach (var line in lines)
-        {
-            if (line.Length < 2) continue;
-            _path.MoveTo(line[0].X, line[0].Y);
-            for (var i = 1; i < line.Length; i++) _path.LineTo(line[i].X, line[i].Y);
-        }
+        if (path is null) return;
         _line.Color = Ink(color);
         _line.StrokeWidth = width ?? Palette.Hairline;
-        canvas.DrawPath(_path, _line);
+        canvas.DrawPath(path, _line);
     }
 
-    private void AddOutline(List<Vec2[]> lines)
+    /// <summary>
+    /// One part's shape as paths at the current camera. Built on the part's first draw, then reused by
+    /// every later draw at that camera (the still recording, each hover or selection re-recording, part
+    /// images and lift frames) until the camera moves. Null stands for nothing to draw.
+    /// </summary>
+    private sealed class ShapePaths : IDisposable
     {
-        _path.Rewind();
-        foreach (var line in lines)
+        public required SKPath? Fill { get; init; }
+        public required SKPath?[] Shades { get; init; }
+        public required SKPath? Top { get; init; }
+        public required SKPath? Outline { get; init; }
+        public SKPath? Crease { get; init; }
+        public SKPath? Bevel { get; init; }
+
+        public void Dispose()
         {
-            if (line.Length < 2) continue;
-            _path.MoveTo(line[0].X, line[0].Y);
-            for (var i = 1; i < line.Length; i++) _path.LineTo(line[i].X, line[i].Y);
+            Fill?.Dispose();
+            foreach (var shade in Shades) shade?.Dispose();
+            Top?.Dispose();
+            Outline?.Dispose();
+            Crease?.Dispose();
+            Bevel?.Dispose();
         }
+    }
+
+    private ShapePaths?[] _shapePaths = [];
+    private SKPath?[]?[] _detailPaths = [];
+
+    private ShapePaths PathsOf(int index, bool crease)
+    {
+        if (_shapePaths[index] is { } built) return built;
+        var shape = _shapes[index];
+        var shades = new SKPath?[SolidShape.Shades];
+        for (var s = 0; s < shades.Length; s++) shades[s] = Polygons(shape.ShadeFaces[s]);
+        return _shapePaths[index] = new ShapePaths
+        {
+            Fill = Polygons(shape.Fill),
+            Shades = shades,
+            Top = Polygons(shape.Top),
+            Outline = Lines(shape.Outline),
+            Crease = crease ? Lines(shape.Crease) : null,
+            Bevel = crease ? Lines(shape.Bevel) : null,
+        };
+    }
+
+    private void ClearShapePaths()
+    {
+        foreach (var paths in _shapePaths) paths?.Dispose();
+        foreach (var lines in _detailPaths) foreach (var path in lines ?? []) path?.Dispose();
+        _shapePaths = [];
+        _detailPaths = [];
+    }
+
+    private SKPath? Polygons(Vec2[] polygon)
+    {
+        if (polygon.Length < 3) return null;
+        AddPolygon(polygon);
+        return _pb.Detach();
+    }
+
+    private SKPath? Polygons(List<Vec2[]> polygons)
+    {
+        if (polygons.Count == 0) return null;
+        foreach (var polygon in polygons) AddPolygon(polygon);
+        return _pb.Detach();
+    }
+
+    private SKPath? Lines(List<Vec2[]> lines)
+    {
+        if (lines.Count == 0) return null;
+        foreach (var line in lines) AddLine(line);
+        return _pb.Detach();
+    }
+
+    private void AddLine(Vec2[] line)
+    {
+        if (line.Length < 2) return;
+        _pb.MoveTo(line[0].X, line[0].Y);
+        for (var i = 1; i < line.Length; i++) _pb.LineTo(line[i].X, line[i].Y);
     }
 
     private void AddPolygon(Vec2[] polygon)
     {
-        _path.MoveTo(polygon[0].X, polygon[0].Y);
-        for (var i = 1; i < polygon.Length; i++) _path.LineTo(polygon[i].X, polygon[i].Y);
-        _path.Close();
+        _pb.MoveTo(polygon[0].X, polygon[0].Y);
+        for (var i = 1; i < polygon.Length; i++) _pb.LineTo(polygon[i].X, polygon[i].Y);
+        _pb.Close();
     }
 
     public void Dispose()
     {
-        _path.Dispose();
+        _pb.Dispose();
         _fill.Dispose();
         _line.Dispose();
-        _shadow.Dispose();
+        _shadow?.Dispose();
         _flowDash?.Dispose();
         _fastFlowDash?.Dispose();
         _glow.Dispose();
@@ -1042,21 +1154,37 @@ public sealed class SolidRenderer : IDisposable
         _puff.Dispose();
         _puffBlur.Dispose();
         _ring.Dispose();
-        _arc.Dispose();
-        _alarmHalo.Dispose();
+        foreach (var arc in _arcs) arc?.Dispose();
+        _alarmHalo?.Dispose();
         _alarmBlur.Dispose();
         _wire.Dispose();
-        _layerTask?.Wait();
-        _partTask?.Wait();
+        ClearShapePaths();
         ClearPartImages();
-        if (_readyParts is { } parts) foreach (var image in parts.Images) image?.Dispose();
-        ClearPictures();
-        DisposeRetired();
         lock (_layerGate)
         {
+            _disposed = true;
             foreach (var image in _readyLayers?.Images ?? []) image?.Dispose();
             _readyLayers = null;
+            foreach (var image in _readyParts?.Images ?? []) image?.Dispose();
+            _readyParts = null;
         }
+        // The still runs' recordings, and runs retired while a worker read them, go once the layer
+        // worker is done with them: now if it is idle, else when it finishes. Never a blocking wait.
+        var pictures = new List<SKPicture>(_retired);
+        _retired.Clear();
+        foreach (var (picture, image, _, _) in _segments)
+        {
+            if (picture is not null) pictures.Add(picture);
+            image?.Dispose();
+        }
+        _segments.Clear();
+        if (_layerTask is { IsCompleted: false } layers) layers.ContinueWith(_ => DisposeAll(pictures), TaskScheduler.Default);
+        else DisposeAll(pictures);
         _alertDash.Dispose();
+    }
+
+    private static void DisposeAll(List<SKPicture> pictures)
+    {
+        foreach (var picture in pictures) picture.Dispose();
     }
 }

@@ -9,7 +9,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 
 ## Architecture Brief
 
-- **Targets:** `net10.0-desktop` (Skia, Win32), Uno.Sdk 6.7.30. Unchanged.
+- **Targets:** `net10.0-desktop` (Skia, Win32), Uno.Sdk 6.7.30. Unchanged. *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 - **UnoFeatures:** unchanged (MVUX, Toolkit, Simple theme, SkiaSharp).
 - **MVUX stays.**
   - Decision: extend `ConsoleModel` and the pure `ConsoleView.Compose`.
@@ -24,7 +24,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
   - `IState<PlantSystem> System`
   - `IState<TrendRange> Range` (15 min, 1 h, 8 h)
   - `IState<ImmutableArray<string>> Compared` (reading keys in the trends, at most 3)
-  - `IState<int> Cursor` (-1 means latest)
+  - `IState<double> Cursor`: the slider binds two-way to it; `SetCursorLatest` moves it to the last sample. *(Updated 2026-10-28; first drafted as `IState<int>` with -1 for latest.)*
   - Commands: `SelectSystem`, `SelectRange`, `ToggleCompare`, `SetCursorLatest`; existing `SelectUnit`, `SetMode`, `ToggleValve` and the setpoints stay.
 - **Testing:**
   - Core tests: catalog, every reading has a spec and a simulated value, alerts, systems membership, trend sampling, cursor, events.
@@ -36,12 +36,12 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 | Capability (from the mock) | Status | Note |
 |---|---|---|
 | Header: product mark, plant, station type | implemented | |
-| Alert pill selects the first alerting unit | implemented | existing command |
-| Overflow menu (…) | implemented | MenuFlyout: theme switch, Reset view |
+| Alert pill selects the first alerting unit | superseded | the Active alarms system chip (2026-10-19) isolates the units in alarm and lists them in the inspector |
+| Overflow menu (…) | implemented | MenuFlyout: System / Light / Graphite theme (2026-10-28; Reset view lives on the plant panel only) |
 | Expand (full screen) | implemented | `AppWindow.SetPresenter(FullScreen)` toggle; verified on Win32 in the gotchas |
 | Status strip: net output, gap to target, mode, snapshot time | implemented | |
 | Systems filter | implemented | dims parts outside the system; titles the plant panel |
-| Plant panel: view switcher, legend, equipment picker, rotate, reset | implemented | the view switcher replaces the three view thumbnails (they were the largest per-frame cost) |
+| Plant panel: view switcher, legend, equipment picker, rotate, reset | implemented | live view thumbnails from 960 px, a segmented switcher below (thumbnails returned after the perf pass, 2026-10-19); the systems filter takes its own row below 1280 px and wraps (2026-10-30) |
 | Callouts with code, name and state | implemented | |
 | Inspector: Overview, Condition, Control tabs | implemented | the Control tab is the user's decision |
 | Equipment-specific readings | implemented | simulated; the footer says so |
@@ -62,7 +62,13 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 - **Layout:**
   - The page fills the window edge to edge (the user, 2026-10-15); the plant panel takes the width beside the 340 inspector.
   - Main row: plant panel `*` and inspector 340.
-  - Below 960 px (`{utu:Responsive}`), the inspector stacks under the plant.
+  - One central layout, `ConsoleLayout` in `Styles/Layout.xaml` (Narrow 0, Normal 600, Wide 960, Widest 1600), revised 2026-10-30:
+    - Narrow (phone): header in three rows; plant, inspector, trends, log and footer stacked; the view switcher takes its own row; the systems filter and chips wrap; trend labels sit above their plots; the cursor row splits; 16 px insets; 44 px targets.
+    - Normal (600–959): two-row header; one column; switcher beside the plant title; footer tools on their own row; 44 px targets.
+    - Wide (960–1599): one-row header; plant 620 beside the 340 inspector; live view thumbnails; 32 px pointer controls.
+    - Widest (1600 up): inspector 400, plant 700, the operator named in the header.
+  - `utu:ResponsiveView` switches structure (header, view switcher, camera tools, trends header, shared cursor, footer); `{utu:Responsive}` switches placement, insets and the touch variants of the control styles.
+  - On touch, a sideways drag on the plant orbits (yaw only) and a vertical drag scrolls the page; mouse and pen orbit on both axes.
   - The page scrolls vertically; the trends sit below the fold, as in the mock.
 
 ## Interaction Brief

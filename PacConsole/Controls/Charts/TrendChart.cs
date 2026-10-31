@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Automation;
 using PacConsole.Core.Console;
+using PacConsole.Styles;
 using SkiaSharp;
 using Uno.WinUI.Graphics2DSK;
 using Windows.Foundation;
@@ -32,13 +33,14 @@ public sealed partial class TrendChart : UserControl
 
     public TrendChart()
     {
-        var root = new Grid { ColumnSpacing = 8, RowSpacing = 2 };
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
+        // Layout values come from Layout.xaml, like the XAML pages'; only the Skia marks below are drawn in code.
+        var root = new Grid { ColumnSpacing = Token<double>("Space8"), RowSpacing = Token<double>("Space2") };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Token<double>("TrendAxisLabelWidth")) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var labels = new Grid { Margin = new Thickness(0, -6, 0, -6) };
+        var labels = new Grid { Margin = Token<Thickness>("TrendAxisLabelOverhang") };
         labels.Children.Add(_max);
         labels.Children.Add(_mid);
         labels.Children.Add(_min);
@@ -48,7 +50,7 @@ public sealed partial class TrendChart : UserControl
         var plot = new Grid();
         Grid.SetColumn(plot, 1);
         plot.Children.Add(_canvas);
-        _reference.Margin = new Thickness(0, -16, 0, 0);
+        _reference.Margin = Token<Thickness>("TrendReferenceLift");
         plot.Children.Add(_reference);
         root.Children.Add(plot);
 
@@ -62,9 +64,11 @@ public sealed partial class TrendChart : UserControl
 
         Content = root;
         AutomationProperties.SetAccessibilityView(_canvas, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
-        Loaded += (_, _) => { Styles.ConsoleTheme.Changed += OnTheme; OnTheme(); };
-        Unloaded += (_, _) => Styles.ConsoleTheme.Changed -= OnTheme;
+        Loaded += (_, _) => OnTheme();
+        ActualThemeChanged += (_, _) => OnTheme();
     }
+
+    private static T Token<T>(string key) => (T)Application.Current.Resources[key];
 
     private static TextBlock Label(VerticalAlignment v, HorizontalAlignment h = HorizontalAlignment.Stretch) => new()
     {
@@ -143,7 +147,7 @@ public sealed partial class TrendChart : UserControl
 
     private void OnTheme()
     {
-        _canvas.ReadColors();
+        _canvas.ReadColors(ActualTheme);
         Update();
     }
 
@@ -154,7 +158,6 @@ public sealed partial class TrendChart : UserControl
         private readonly SKPaint _hair = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
         private readonly SKPaint _dot = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _area = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
-        private readonly SKPath _fill = new();
 
         // The fill's gradient depends only on the plot height and the accent, so it is rebuilt only
         // when one of those changes (a resize or a theme switch), never per frame.
@@ -165,7 +168,8 @@ public sealed partial class TrendChart : UserControl
         private const byte FillTopAlpha = 0x3D;
         private readonly SKPathEffect _dashed = SKPathEffect.CreateDash([4, 3], 0);
         private readonly SKPathEffect _dotted = SKPathEffect.CreateDash([1.5f, 2.5f], 0);
-        private readonly SKPath _path = new();
+        // The line and the area under it change with every reading: built per render and detached.
+        private readonly SKPathBuilder _pb = new();
 
         private SKColor _accent, _grid, _faint, _ink, _alert;
         private double[] _values = [];
@@ -173,11 +177,13 @@ public sealed partial class TrendChart : UserControl
         private double? _target, _limit;
         private int _cursor = -1, _event = -1;
 
-        public void ReadColors()
+        public void ReadColors(ElementTheme theme)
         {
-            static SKColor C(string key) => Application.Current.Resources[key] is SolidColorBrush b
-                ? new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A)
-                : SKColors.Magenta;
+            SKColor C(string key)
+            {
+                var c = ThemeBrushes.Color(key, theme);
+                return new SKColor(c.R, c.G, c.B, c.A);
+            }
             _accent = C("AccentBrush");
             _grid = C("HairlineBrush");
             _faint = C("FaintBrush");
@@ -208,20 +214,14 @@ public sealed partial class TrendChart : UserControl
             {
                 _hair.Color = color;
                 _hair.PathEffect = effect;
-                _path.Rewind();
-                _path.MoveTo(0, y);
-                _path.LineTo(w, y);
-                canvas.DrawPath(_path, _hair);
+                canvas.DrawLine(0, y, w, y, _hair);
             }
 
             void VLine(float x, SKColor color, SKPathEffect effect)
             {
                 _hair.Color = color;
                 _hair.PathEffect = effect;
-                _path.Rewind();
-                _path.MoveTo(x, 0);
-                _path.LineTo(x, h);
-                canvas.DrawPath(_path, _hair);
+                canvas.DrawLine(x, 0, x, h, _hair);
             }
 
             // Three gridlines, at the labelled values.
@@ -234,9 +234,9 @@ public sealed partial class TrendChart : UserControl
             if (_limit is { } l) HLine(Y(l), _alert.WithAlpha(0xB0), _dashed);
             if (_event >= 0 && _event < _values.Length) VLine(X(_event), _alert.WithAlpha(0xB0), _dashed);
 
-            _path.Rewind();
-            _path.MoveTo(X(0), Y(_values[0]));
-            for (var i = 1; i < _values.Length; i++) _path.LineTo(X(i), Y(_values[i]));
+            _pb.MoveTo(X(0), Y(_values[0]));
+            for (var i = 1; i < _values.Length; i++) _pb.LineTo(X(i), Y(_values[i]));
+            using var trend = _pb.Snapshot();
 
             // The area under the line, closed along the baseline, under a vertical fade.
             if (_gradient is null || _gradientKey != (h, _accent))
@@ -249,15 +249,13 @@ public sealed partial class TrendChart : UserControl
                 _gradientKey = (h, _accent);
                 _area.Shader = _gradient;
             }
-            _fill.Rewind();
-            _fill.AddPath(_path);
-            _fill.LineTo(X(_values.Length - 1), bottom);
-            _fill.LineTo(X(0), bottom);
-            _fill.Close();
-            canvas.DrawPath(_fill, _area);
+            _pb.LineTo(X(_values.Length - 1), bottom);
+            _pb.LineTo(X(0), bottom);
+            _pb.Close();
+            using (var under = _pb.Detach()) canvas.DrawPath(under, _area);
 
             _line.Color = _accent;
-            canvas.DrawPath(_path, _line);
+            canvas.DrawPath(trend, _line);
 
             var c = _cursor < 0 || _cursor >= _values.Length ? _values.Length - 1 : _cursor;
             VLine(X(c), _ink, _dotted);

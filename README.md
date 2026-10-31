@@ -9,16 +9,29 @@ An operator console for a simulated steam-cycle power plant, built with [Uno Pla
 - **Control**: per-unit faceplates. Every command is selected, then confirmed.
 - **Trends**: synchronized trends with a shared cursor.
 - **Log**: an operator log of every step.
+- **Themes**: System, Light or Graphite from the … menu. The choice is kept between launches.
 
 ## Run it
 
-Requires the .NET 10 SDK.
+Requires the .NET 10 SDK. The app has five heads: desktop (Skia on Windows, macOS and Linux), WebAssembly, Android, iOS and WinAppSDK. It is designed for a 1440×900 window.
 
 ```powershell
-dotnet run --project PacConsole -f net10.0-desktop
+dotnet run --project PacConsole -f net10.0-desktop -p:PacTargetFrameworks=net10.0-desktop
+dotnet run --project PacConsole -f net10.0-browserwasm -p:PacTargetFrameworks=net10.0-browserwasm   # wasm-tools workload
+```
+
+`-p:PacTargetFrameworks=<tfm>` builds that head alone, so the other heads' workloads are not needed. The WinAppSDK head builds as x64 or ARM64 (the plant's `SKCanvasElement` needs one), and full screen is offered on desktop and WinAppSDK only. CI (`.github/workflows/ci.yml`) runs the tests and builds every head.
+
+Tests: `dotnet test PacConsole.Tests`.
+
+To see the telemetry-fault state and Retry, set `PAC_TELEMETRY_FAULT` in a Debug run. The stream drops once, after that many snapshots:
+
+```powershell
+$env:PAC_TELEMETRY_FAULT = "5"; dotnet run --project PacConsole -f net10.0-desktop -p:PacTargetFrameworks=net10.0-desktop
 ```
 
 ## More
 
-- `SPEC-CONSOLE.md` and `SPEC-OPERATIONS.md` describe the console and the alarm-to-resolution workflow.
+- `SPEC-CONSOLE.md` and `SPEC-OPERATIONS.md` describe the console and the alarm-to-resolution workflow. `docs/SPEC-THEME.md` describes the theme.
+- `docs/COMPLETENESS.md` is the current completeness verdict, with runtime evidence in `docs/audit/`.
 - `media/art/` holds the launch prints. `media/_source/README.md` explains how they were made.
