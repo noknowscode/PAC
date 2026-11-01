@@ -5,10 +5,10 @@ namespace PacConsole.Core.Geometry;
 public readonly record struct TagRequest(UnitId Unit, Vec2 Anchor, float Width);
 
 /// <summary>Where a tag lands: its horizontal centre and its bottom edge, plus the anchor its leader line starts from.</summary>
-public readonly record struct TagPlacement(UnitId Unit, Vec2 Anchor, float CenterX, float Bottom, float Width)
+public readonly record struct TagPlacement(UnitId Unit, Vec2 Anchor, float CenterX, float Bottom, float Width, float Height)
 {
     public float Left => CenterX - Width / 2;
-    public float Top => Bottom - TagLayout.Height;
+    public float Top => Bottom - Height;
 }
 
 /// <summary>
@@ -22,16 +22,15 @@ public static class TagLayout
     /// <summary>Tags never rise above this line; the viewport caption and toolbar live above it.</summary>
     public const float TopBand = 58;
 
+    /// <summary>A pointer-sized tag's height; the viewport passes its measured height (44 px touch tags on phones).</summary>
     public const float Height = 24;
     public const float Gap = 4;
 
     /// <summary>Default distance between a unit's anchor and the bottom of its tag.</summary>
     public const float LeaderLength = 16;
 
-    /// <summary>Width estimate for a monospace 10 px tag with 0.1em tracking and 7 px side padding.</summary>
-    public static float EstimateWidth(string text) => text.Length * 7f + 16f;
-
-    public static ImmutableArray<TagPlacement> Solve(IReadOnlyList<TagRequest> requests, float viewportWidth)
+    /// <summary>Places tags of the widths requested, all <paramref name="height"/> tall.</summary>
+    public static ImmutableArray<TagPlacement> Solve(IReadOnlyList<TagRequest> requests, float viewportWidth, float height = Height)
     {
         var tags = requests
             .Select(r => new Mutable(r.Unit, r.Anchor, r.Anchor.X, r.Anchor.Y - LeaderLength, r.Width))
@@ -42,18 +41,18 @@ public static class TagLayout
         {
             for (var k = 0; k < 12; k++)
             {
-                var o = placed.FirstOrDefault(q => Overlaps(c, q));
+                var o = placed.FirstOrDefault(q => Overlaps(c, q, height));
                 if (o is null) break;
-                var up = o.Bottom - Height - Gap;
-                if (up - Height >= TopBand) c.Bottom = up;
+                var up = o.Bottom - height - Gap;
+                if (up - height >= TopBand) c.Bottom = up;
                 else Slide(c, o);
             }
 
-            if (c.Bottom - Height < TopBand) c.Bottom = TopBand + Height;
+            if (c.Bottom - height < TopBand) c.Bottom = TopBand + height;
 
             for (var k = 0; k < 12; k++)
             {
-                var o = placed.FirstOrDefault(q => Overlaps(c, q));
+                var o = placed.FirstOrDefault(q => Overlaps(c, q, height));
                 if (o is null) break;
                 Slide(c, o);
             }
@@ -62,13 +61,13 @@ public static class TagLayout
             placed.Add(c);
         }
 
-        return [.. tags.Select(t => new TagPlacement(t.Unit, t.Anchor, t.CenterX, t.Bottom, t.Width))];
+        return [.. tags.Select(t => new TagPlacement(t.Unit, t.Anchor, t.CenterX, t.Bottom, t.Width, height))];
     }
 
-    private static bool Overlaps(Mutable c, Mutable o) =>
+    private static bool Overlaps(Mutable c, Mutable o, float height) =>
         MathF.Abs(c.CenterX - o.CenterX) < (c.Width + o.Width) / 2 + Gap
-        && c.Bottom - Height < o.Bottom + Gap
-        && o.Bottom - Height < c.Bottom + Gap;
+        && c.Bottom - height < o.Bottom + Gap
+        && o.Bottom - height < c.Bottom + Gap;
 
     private static void Slide(Mutable c, Mutable o) =>
         c.CenterX = o.CenterX + (c.CenterX >= o.CenterX ? 1 : -1) * ((c.Width + o.Width) / 2 + Gap);

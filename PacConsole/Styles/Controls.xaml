@@ -496,12 +496,12 @@
     <Setter Property="Background" Value="{ThemeResource HairlineBrush}" />
   </Style>
 
-  <!-- Figure callout in the plant view: a quiet label plate at the end of a hairline leader, 24 px tall
-       (the WCAG 2.2 minimum target). Brushes are set per state in code; the selected plate turns orange. -->
+  <!-- Figure callout in the plant view: a quiet label plate at the end of a hairline leader, at least 24 px tall
+       (the WCAG 2.2 minimum target) and taller when the system text size is. Its size is measured, not set, and the
+       tag layout spaces the plates by it. Brushes are set per state in code; the selected plate turns orange. -->
   <Style x:Key="TagButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinHeight" Value="24" />
     <Setter Property="MinWidth" Value="0" />
-    <Setter Property="Height" Value="24" />
     <Setter Property="Padding" Value="6,0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusTag}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />

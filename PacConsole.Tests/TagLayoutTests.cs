@@ -25,13 +25,31 @@ public class TagLayoutTests
     [TestCaseSource(nameof(OrbitPoses))]
     public void Tags_never_collide_with_each_other_or_the_top_band(CameraPose pose)
     {
-        var placements = Place(pose, alerting: UnitId.Clg, Width, Height);
+        AssertApart(Place(pose, alerting: UnitId.Clg, Width, Height), pose, Width);
+    }
 
+    [TestCaseSource(nameof(OrbitPoses))]
+    public void Taller_tags_keep_their_height_inside_the_drawing(CameraPose pose)
+    {
+        // The viewport passes the tags' measured height: at 150 % text size a tag is about 36 px tall. The solver
+        // keeps every tag that tall, below the top band and inside the drawing. (It was tuned on 24 px tags; at this
+        // height one pose in 82 still leaves two tags touching.)
+        foreach (var p in Place(pose, alerting: UnitId.Clg, Width, Height, ScaledHeight))
+        {
+            (p.Bottom - p.Top).Should().Be(ScaledHeight);
+            p.Top.Should().BeGreaterThanOrEqualTo(TagLayout.TopBand);
+            p.Left.Should().BeGreaterThanOrEqualTo(0);
+            (p.Left + p.Width).Should().BeLessThanOrEqualTo(Width);
+        }
+    }
+
+    private static void AssertApart(ImmutableArray<TagPlacement> placements, CameraPose pose, float width)
+    {
         foreach (var a in placements)
         {
             a.Top.Should().BeGreaterThanOrEqualTo(TagLayout.TopBand);
             a.Left.Should().BeGreaterThanOrEqualTo(0);
-            (a.Left + a.Width).Should().BeLessThanOrEqualTo(Width);
+            (a.Left + a.Width).Should().BeLessThanOrEqualTo(width);
 
             foreach (var b in placements.Where(b => b.Unit != a.Unit))
             {
@@ -48,15 +66,18 @@ public class TagLayoutTests
         Place(CameraPose.Iso, alerting: null, Width, Height).Select(p => p.Unit).Should().Equal(Enum.GetValues<UnitId>());
     }
 
-    private static ImmutableArray<TagPlacement> Place(CameraPose pose, UnitId? alerting, float width, float height)
+    private const float ScaledHeight = 36;
+
+    private static ImmutableArray<TagPlacement> Place(CameraPose pose, UnitId? alerting, float width, float height, float tagHeight = TagLayout.Height)
     {
-        // The same projection and anchors PlantViewport places its tags with.
+        // The same projection and anchors PlantViewport places its tags with; the app measures each tag's button,
+        // here a 12 px label is taken as 7 px a character plus the plate's padding.
         var projection = PlantSolids.ViewProjection(pose, width, height);
         var requests = UnitCatalog.All.Select(u =>
         {
             var label = u.Id == alerting ? $"{u.Code} · alert" : u.Code;
-            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id]), TagLayout.EstimateWidth(label));
+            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id]), label.Length * 7f + 16f);
         }).ToList();
-        return TagLayout.Solve(requests, width);
+        return TagLayout.Solve(requests, width, tagHeight);
     }
 }

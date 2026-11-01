@@ -432,24 +432,26 @@ public sealed partial class PlantViewport : UserControl
         // One projection for the drawing and the tags, so leaders land on their units at any pose.
         var projection = PlantSolids.ViewProjection(_pose, width, height);
 
+        // Each tag is laid out at the size its button measures with its label, in the font it draws with and at the
+        // system's text size. Only touch what changed: a new Content string re-measures and re-shapes the label's
+        // text, and this runs every animation frame (an unchanged button's Measure returns at once).
+        var tagHeight = 0f;
         var requests = UnitCatalog.All.Select(u =>
         {
+            var tag = _tags[u.Id];
             var label = TagLabel(u, selected == u.Id, alerting.Contains(u.Id));
-            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id] with { Y = PlantSolids.Default.Anchors[u.Id].Y + _lift[u.Id] }), TagLayout.EstimateWidth(label));
+            if (!Equals(tag.Content, label)) tag.Content = label;
+            tag.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+            tagHeight = Math.Max(tagHeight, (float)tag.DesiredSize.Height);
+            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id] with { Y = PlantSolids.Default.Anchors[u.Id].Y + _lift[u.Id] }), (float)tag.DesiredSize.Width);
         }).ToList();
-        var placements = TagLayout.Solve(requests, width);
+        var placements = TagLayout.Solve(requests, width, Math.Max(tagHeight, TagLayout.Height));
 
         foreach (var p in placements)
         {
             var tag = _tags[p.Unit];
-            var info = UnitCatalog.Get(p.Unit);
             var isAlert = alerting.Contains(p.Unit);
             var isSelected = selected == p.Unit;
-            // Only touch what changed: a new Content string re-measures and re-shapes the label's
-            // text, and this runs every animation frame.
-            var label = TagLabel(info, isSelected, isAlert);
-            if (!Equals(tag.Content, label)) tag.Content = label;
-            if (tag.Width != p.Width) tag.Width = p.Width;
             Canvas.SetLeft(tag, p.Left);
             Canvas.SetTop(tag, p.Top);
             ApplyTagState(tag, isSelected, isAlert);
