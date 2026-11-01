@@ -54,8 +54,10 @@ public sealed partial class PlantViewport : UserControl
     private bool _inView = true;
     private readonly Action _onHostVisibility;
 
-    // Plant motion: per-unit lift toward its target, and a clock for fans and pipe flow.
-    private readonly Dictionary<UnitId, float> _lift = UnitCatalog.All.ToDictionary(u => u.Id, _ => 0f);
+    // Plant motion: per-unit lift toward its target, and a clock for fans and pipe flow. The lift table goes to the
+    // render thread with each frame, so it is replaced, never changed in place (SetItem returns the same table
+    // when nothing moved).
+    private ImmutableDictionary<UnitId, float> _lift = UnitCatalog.All.ToImmutableDictionary(u => u.Id, _ => 0f);
 
     // The unit under the pointer (outlined), and whether the current press began on a tag button.
     private UnitId? _hovered;
@@ -324,7 +326,7 @@ public sealed partial class PlantViewport : UserControl
     {
         if (!_animationsEnabled)
         {
-            foreach (var unit in UnitCatalog.All) _lift[unit.Id] = LiftTarget(unit.Id);
+            foreach (var unit in UnitCatalog.All) _lift = _lift.SetItem(unit.Id, LiftTarget(unit.Id));
         }
         // Display-rate frames only while the camera or a lift moves. Fans and pipe flow keep turning
         // on the shared 20 fps ambient clock (the same tick as the status-dot pulse), not on a held
@@ -398,7 +400,7 @@ public sealed partial class PlantViewport : UserControl
             var id = unit.Id;
             var target = LiftTarget(id);
             var next = _lift[id] + (target - _lift[id]) * follow;
-            _lift[id] = Math.Abs(target - next) < 0.02f ? target : next;
+            _lift = _lift.SetItem(id, Math.Abs(target - next) < 0.02f ? target : next);
         }
 
         if (_tweening)

@@ -16,13 +16,14 @@ public sealed partial class PlantThumb : SKCanvasElement
 {
     private static readonly ImmutableArray<SolidPart> Parts = PlantSolids.Default.All;
 
-    // RenderOverride runs on the desktop host's render thread: frames draw under _drawGate, Swap replaces the renderer under it.
+    // RenderOverride runs on the desktop host's render thread: frames draw under _drawGate, and Swap and Set replace
+    // the renderer and the view under it.
     private SolidRenderer? _renderer;
     private readonly object _drawGate = new();
-    private CameraPose _pose = CameraPose.Iso;
-    private UnitId? _selected;
-    private ImmutableArray<UnitId> _alerting = [];
-    private PlantSystem _system;
+    private View _view = new(CameraPose.Iso, null, [], PlantSystem.All);
+
+    /// <summary>What the thumbnail shows, replaced whole so a frame never mixes an old field with a new one.</summary>
+    private sealed record View(CameraPose Pose, UnitId? Selected, ImmutableArray<UnitId> Alerting, PlantSystem System);
 
     public PlantThumb()
     {
@@ -46,17 +47,20 @@ public sealed partial class PlantThumb : SKCanvasElement
         DependencyProperty.Register(nameof(PresetKey), typeof(string), typeof(PlantThumb), new PropertyMetadata(null, (d, e) =>
         {
             var thumb = (PlantThumb)d;
-            if (CameraPresets.All.FirstOrDefault(p => p.Key == e.NewValue as string) is { } preset) thumb._pose = preset.Pose;
-            thumb.Invalidate();
+            if (CameraPresets.All.FirstOrDefault(p => p.Key == e.NewValue as string) is { } preset) thumb.Set(thumb._view with { Pose = preset.Pose });
         }));
 
     /// <summary>Takes the main view's selection, alerts and system; redraws only when one changed.</summary>
     public void Show(UnitId? selected, ImmutableArray<UnitId> alerting, PlantSystem system)
     {
-        if (selected == _selected && system == _system && alerting.SequenceEqual(_alerting)) return;
-        _selected = selected;
-        _alerting = alerting;
-        _system = system;
+        var view = _view;
+        if (selected == view.Selected && system == view.System && alerting.SequenceEqual(view.Alerting)) return;
+        Set(view with { Selected = selected, Alerting = alerting, System = system });
+    }
+
+    private void Set(View view)
+    {
+        lock (_drawGate) _view = view;
         Invalidate();
     }
 
@@ -87,8 +91,9 @@ public sealed partial class PlantThumb : SKCanvasElement
             _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
             // A thumbnail's camera never moves, so it fits the plant tightly at its own yaw (the main view's
             // framing holds every yaw, which leaves a fixed view half empty at this size).
-            var projection = PlantSolids.Fit(_pose, Parts, (float)area.Width, (float)area.Height, 6);
-            _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, Details: false, System: _system, Motion: false));
+            var v = _view;
+            var projection = PlantSolids.Fit(v.Pose, Parts, (float)area.Width, (float)area.Height, 6);
+            _renderer.Draw(canvas, Parts, projection, new SolidFrame(v.Selected, v.Alerting, Details: false, System: v.System, Motion: false));
         }
     }
 }

@@ -18,20 +18,28 @@ public sealed partial class PlantCanvas : SKCanvasElement
 
     // Created on Loaded, disposed on Unloaded: an element can be unloaded and loaded again, and a
     // render after Dispose touches a freed native path. RenderOverride runs on the desktop host's render
-    // thread, so a frame draws under _drawGate and the UI thread swaps the renderer under it (Swap).
+    // thread, so a frame draws under _drawGate and the UI thread swaps the renderer, the leader paint and
+    // the frame under it.
     private SolidRenderer? _renderer;
+    private SKPaint? _leaderPaint;
     private readonly object _drawGate = new();
-    private readonly SKPaint _leaderPaint = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
+    private Frame _frame = new(CameraPose.Iso, null, ImmutableArray<UnitId>.Empty, ImmutableArray<TagPlacement>.Empty,
+        ImmutableDictionary<UnitId, float>.Empty, 0, null, PlantSystem.All, true);
 
-    private CameraPose _pose = CameraPose.Iso;
-    private UnitId? _selected;
-    private IReadOnlyCollection<UnitId> _alerting = [];
-    private IReadOnlyList<TagPlacement> _tags = [];
-    private IReadOnlyDictionary<UnitId, float>? _lift;
-    private double _seconds;
-    private UnitId? _hovered;
-    private PlantSystem _system;
-    private bool _motion = true;
+    /// <summary>
+    /// Everything one frame draws. Built on the UI thread from immutable values and handed over whole, so the
+    /// render thread never reads a field the UI thread is writing.
+    /// </summary>
+    private sealed record Frame(
+        CameraPose Pose,
+        UnitId? Selected,
+        IReadOnlyCollection<UnitId> Alerting,
+        IReadOnlyList<TagPlacement> Tags,
+        IReadOnlyDictionary<UnitId, float> Lift,
+        double Seconds,
+        UnitId? Hovered,
+        PlantSystem System,
+        bool Motion);
 
     public PlantCanvas()
     {
@@ -45,18 +53,12 @@ public sealed partial class PlantCanvas : SKCanvasElement
         ActualThemeChanged += (_, _) => OnThemeChanged();
     }
 
-    /// <summary>Snapshots the frame on the UI thread, then asks for a redraw.</summary>
-    public void Show(CameraPose pose, UnitId? selected, IReadOnlyCollection<UnitId> alerting, IReadOnlyList<TagPlacement> tags, IReadOnlyDictionary<UnitId, float> lift, double seconds, UnitId? hovered, PlantSystem system, bool motion)
+    /// <summary>Hands the next frame to the render thread, then asks for a redraw.</summary>
+    public void Show(CameraPose pose, UnitId? selected, ImmutableArray<UnitId> alerting, ImmutableArray<TagPlacement> tags,
+        ImmutableDictionary<UnitId, float> lift, double seconds, UnitId? hovered, PlantSystem system, bool motion)
     {
-        _system = system;
-        _motion = motion;
-        _pose = pose;
-        _selected = selected;
-        _alerting = alerting;
-        _tags = tags;
-        _lift = lift;
-        _seconds = seconds;
-        _hovered = hovered;
+        var frame = new Frame(pose, selected, alerting, tags, lift, seconds, hovered, system, motion);
+        lock (_drawGate) _frame = frame;
         Invalidate();
     }
 
@@ -69,16 +71,23 @@ public sealed partial class PlantCanvas : SKCanvasElement
         Invalidate();
     }
 
-    /// <summary>Replaces the renderer once no frame is drawing with it, then frees the old one.</summary>
+    /// <summary>
+    /// Replaces the renderer once no frame is drawing with it, then frees the old one. With no renderer (Unloaded)
+    /// the leader paint goes too; the next renderer brings a new one.
+    /// </summary>
     private void Swap(SolidRenderer? next)
     {
         SolidRenderer? old;
+        SKPaint? oldPaint = null;
         lock (_drawGate)
         {
             old = _renderer;
             _renderer = next;
+            if (next is null) (oldPaint, _leaderPaint) = (_leaderPaint, null);
+            else _leaderPaint ??= new SKPaint { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
         }
         old?.Dispose();
+        oldPaint?.Dispose();
     }
 
     private SolidRenderer CreateRenderer()
@@ -92,21 +101,25 @@ public sealed partial class PlantCanvas : SKCanvasElement
 
     private void OnPaletteChanged(SolidPalette palette)
     {
-        lock (_drawGate) _leaderPaint.Color = palette.Leader;
+        lock (_drawGate)
+        {
+            if (_leaderPaint is not null) _leaderPaint.Color = palette.Leader;
+        }
     }
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {
         lock (_drawGate)
         {
-            if (_renderer is null) return;
+            if (_renderer is null || _leaderPaint is null) return;
+            var f = _frame;
             _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
-            var projection = PlantSolids.ViewProjection(_pose, (float)area.Width, (float)area.Height);
-            _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, _lift, _seconds, Hovered: _hovered, System: _system, Motion: _motion));
+            var projection = PlantSolids.ViewProjection(f.Pose, (float)area.Width, (float)area.Height);
+            _renderer.Draw(canvas, Parts, projection, new SolidFrame(f.Selected, f.Alerting, f.Lift, f.Seconds, Hovered: f.Hovered, System: f.System, Motion: f.Motion));
 
             // Leaders follow the tags, which move every animation frame. Drawn as a line and a box per tag
             // (opaque ink), so a frame builds no path (SkiaSharp 4 paths are immutable) and boxes no enumerator.
-            var tags = _tags;
+            var tags = f.Tags;
             for (var i = 0; i < tags.Count; i++)
             {
                 var t = tags[i];

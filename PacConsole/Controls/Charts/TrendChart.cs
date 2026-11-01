@@ -151,31 +151,70 @@ public sealed partial class TrendChart : UserControl
         Update();
     }
 
-    /// <summary>The plot itself. State is snapshotted on the UI thread; RenderOverride only reads it.</summary>
+    /// <summary>
+    /// The plot itself. RenderOverride runs on the desktop host's render thread, so the UI thread builds each plot and
+    /// its inks as immutable values and swaps them in under _drawGate. The Skia objects live from Loaded to Unloaded
+    /// (an element can be loaded again) and are freed under the same lock, so no frame draws with a freed paint.
+    /// </summary>
     private sealed partial class TrendCanvas : SKCanvasElement
     {
-        private readonly SKPaint _line = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.6f, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round };
-        private readonly SKPaint _hair = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
-        private readonly SKPaint _dot = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
-        private readonly SKPaint _area = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
-
-        // The fill's gradient depends only on the plot height and the accent, so it is rebuilt only
-        // when one of those changes (a resize or a theme switch), never per frame.
-        private SKShader? _gradient;
-        private (float, SKColor) _gradientKey;
-
         /// <summary>Alpha of the fill at the top of the plot: 0x3D is 24%.</summary>
         private const byte FillTopAlpha = 0x3D;
-        private readonly SKPathEffect _dashed = SKPathEffect.CreateDash([4, 3], 0);
-        private readonly SKPathEffect _dotted = SKPathEffect.CreateDash([1.5f, 2.5f], 0);
-        // The line and the area under it change with every reading: built per render and detached.
-        private readonly SKPathBuilder _pb = new();
 
-        private SKColor _accent, _grid, _faint, _ink, _alert;
-        private double[] _values = [];
-        private double _min, _max;
-        private double? _target, _limit;
-        private int _cursor = -1, _event = -1;
+        private readonly object _drawGate = new();
+        private Paints? _paints;
+        private Plot _plot = new([], 0, 1, null, null, -1, -1);
+        private Inks _inks = new(default, default, default, default, default);
+
+        private sealed record Plot(double[] Values, double Min, double Max, double? Target, double? Limit, int Cursor, int Event);
+
+        private sealed record Inks(SKColor Accent, SKColor Grid, SKColor Faint, SKColor Ink, SKColor Alert);
+
+        /// <summary>The Skia objects a plot draws with, made once per load.</summary>
+        private sealed class Paints : IDisposable
+        {
+            public SKPaint Line { get; } = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1.6f, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round };
+            public SKPaint Hair { get; } = new() { Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeWidth = 1 };
+            public SKPaint Dot { get; } = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
+            public SKPaint Area { get; } = new() { Style = SKPaintStyle.Fill, IsAntialias = true };
+            public SKPathEffect Dashed { get; } = SKPathEffect.CreateDash([4, 3], 0);
+            public SKPathEffect Dotted { get; } = SKPathEffect.CreateDash([1.5f, 2.5f], 0);
+
+            // The line and the area under it change with every reading: built per render and detached.
+            public SKPathBuilder Builder { get; } = new();
+
+            // The fill's gradient depends only on the plot height and the accent, so it is rebuilt only
+            // when one of those changes (a resize or a theme switch), never per frame.
+            public SKShader? Gradient { get; set; }
+            public (float, SKColor) GradientKey { get; set; }
+
+            public void Dispose()
+            {
+                Line.Dispose();
+                Hair.Dispose();
+                Dot.Dispose();
+                Area.Dispose();
+                Dashed.Dispose();
+                Dotted.Dispose();
+                Builder.Dispose();
+                Gradient?.Dispose();
+            }
+        }
+
+        public TrendCanvas()
+        {
+            Loaded += (_, _) =>
+            {
+                lock (_drawGate) _paints ??= new Paints();
+                Invalidate();
+            };
+            Unloaded += (_, _) =>
+            {
+                Paints? old;
+                lock (_drawGate) (old, _paints) = (_paints, null);
+                old?.Dispose();
+            };
+        }
 
         public void ReadColors(ElementTheme theme)
         {
@@ -184,83 +223,90 @@ public sealed partial class TrendChart : UserControl
                 var c = ThemeBrushes.Color(key, theme);
                 return new SKColor(c.R, c.G, c.B, c.A);
             }
-            _accent = C("AccentBrush");
-            _grid = C("HairlineBrush");
-            _faint = C("FaintBrush");
-            _ink = C("InkSoftBrush");
-            _alert = C("AlertBrush");
+            var inks = new Inks(C("AccentBrush"), C("HairlineBrush"), C("FaintBrush"), C("InkSoftBrush"), C("AlertBrush"));
+            lock (_drawGate) _inks = inks;
         }
 
         public void Show(TrendSeries? s, int cursor, int eventIndex)
         {
-            _values = s is null ? [] : [.. s.Values];
-            (_min, _max, _target, _limit) = s is null ? (0, 1, null, null) : (s.Min, s.Max, s.Target, s.Limit);
-            _cursor = cursor;
-            _event = eventIndex;
+            var plot = s is null
+                ? new Plot([], 0, 1, null, null, cursor, eventIndex)
+                : new Plot([.. s.Values], s.Min, s.Max, s.Target, s.Limit, cursor, eventIndex);
+            lock (_drawGate) _plot = plot;
             Invalidate();
         }
 
         protected override void RenderOverride(SKCanvas canvas, Size area)
+        {
+            lock (_drawGate)
+            {
+                if (_paints is { } paints) Draw(canvas, area, paints, _plot, _inks);
+            }
+        }
+
+        private static void Draw(SKCanvas canvas, Size area, Paints p, Plot plot, Inks inks)
         {
             var (w, h) = ((float)area.Width, (float)area.Height);
             if (w <= 0 || h <= 0) return;
             const float inset = 3; // room for the line's stroke and the cursor dot at the edges
             var top = inset;
             var bottom = h - inset;
-            float Y(double v) => (float)(bottom - (v - _min) / Math.Max(_max - _min, 1e-9) * (bottom - top));
-            float X(int i) => _values.Length < 2 ? 0 : w * i / (_values.Length - 1);
+            var values = plot.Values;
+            float Y(double v) => (float)(bottom - (v - plot.Min) / Math.Max(plot.Max - plot.Min, 1e-9) * (bottom - top));
+            float X(int i) => values.Length < 2 ? 0 : w * i / (values.Length - 1);
 
             void HLine(float y, SKColor color, SKPathEffect? effect)
             {
-                _hair.Color = color;
-                _hair.PathEffect = effect;
-                canvas.DrawLine(0, y, w, y, _hair);
+                p.Hair.Color = color;
+                p.Hair.PathEffect = effect;
+                canvas.DrawLine(0, y, w, y, p.Hair);
             }
 
             void VLine(float x, SKColor color, SKPathEffect effect)
             {
-                _hair.Color = color;
-                _hair.PathEffect = effect;
-                canvas.DrawLine(x, 0, x, h, _hair);
+                p.Hair.Color = color;
+                p.Hair.PathEffect = effect;
+                canvas.DrawLine(x, 0, x, h, p.Hair);
             }
 
             // Three gridlines, at the labelled values.
-            HLine(top, _grid, null);
-            HLine((top + bottom) / 2, _grid, null);
-            HLine(bottom, _grid, null);
-            if (_values.Length < 2) return;
+            HLine(top, inks.Grid, null);
+            HLine((top + bottom) / 2, inks.Grid, null);
+            HLine(bottom, inks.Grid, null);
+            if (values.Length < 2) return;
 
-            if (_target is { } t) HLine(Y(t), _faint, _dashed);
-            if (_limit is { } l) HLine(Y(l), _alert.WithAlpha(0xB0), _dashed);
-            if (_event >= 0 && _event < _values.Length) VLine(X(_event), _alert.WithAlpha(0xB0), _dashed);
+            if (plot.Target is { } t) HLine(Y(t), inks.Faint, p.Dashed);
+            if (plot.Limit is { } l) HLine(Y(l), inks.Alert.WithAlpha(0xB0), p.Dashed);
+            if (plot.Event >= 0 && plot.Event < values.Length) VLine(X(plot.Event), inks.Alert.WithAlpha(0xB0), p.Dashed);
 
-            _pb.MoveTo(X(0), Y(_values[0]));
-            for (var i = 1; i < _values.Length; i++) _pb.LineTo(X(i), Y(_values[i]));
-            using var trend = _pb.Snapshot();
+            var pb = p.Builder;
+            pb.MoveTo(X(0), Y(values[0]));
+            for (var i = 1; i < values.Length; i++) pb.LineTo(X(i), Y(values[i]));
+            using var trend = pb.Snapshot();
 
             // The area under the line, closed along the baseline, under a vertical fade.
-            if (_gradient is null || _gradientKey != (h, _accent))
+            if (p.Gradient is null || p.GradientKey != (h, inks.Accent))
             {
-                _gradient?.Dispose();
-                _gradient = SKShader.CreateLinearGradient(
+                p.Gradient?.Dispose();
+                p.Gradient = SKShader.CreateLinearGradient(
                     new SKPoint(0, top), new SKPoint(0, bottom),
-                    [_accent.WithAlpha(FillTopAlpha), _accent.WithAlpha(0)],
+                    [inks.Accent.WithAlpha(FillTopAlpha), inks.Accent.WithAlpha(0)],
                     SKShaderTileMode.Clamp);
-                _gradientKey = (h, _accent);
-                _area.Shader = _gradient;
+                p.GradientKey = (h, inks.Accent);
+                p.Area.Shader = p.Gradient;
             }
-            _pb.LineTo(X(_values.Length - 1), bottom);
-            _pb.LineTo(X(0), bottom);
-            _pb.Close();
-            using (var under = _pb.Detach()) canvas.DrawPath(under, _area);
+            pb.LineTo(X(values.Length - 1), bottom);
+            pb.LineTo(X(0), bottom);
+            pb.Close();
+            using (var under = pb.Detach()) canvas.DrawPath(under, p.Area);
 
-            _line.Color = _accent;
-            canvas.DrawPath(trend, _line);
+            p.Line.Color = inks.Accent;
+            canvas.DrawPath(trend, p.Line);
 
-            var c = _cursor < 0 || _cursor >= _values.Length ? _values.Length - 1 : _cursor;
-            VLine(X(c), _ink, _dotted);
-            _dot.Color = _accent;
-            canvas.DrawCircle(X(c), Y(_values[c]), 3, _dot);
+            var c = plot.Cursor < 0 || plot.Cursor >= values.Length ? values.Length - 1 : plot.Cursor;
+            VLine(X(c), inks.Ink, p.Dotted);
+            p.Dot.Color = inks.Accent;
+            canvas.DrawCircle(X(c), Y(values[c]), 3, p.Dot);
         }
     }
 }
