@@ -217,7 +217,7 @@
     <DataTemplate x:Key="HeaderStatusTemplate">
       <StackPanel VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
-          <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
+          <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="{Binding Data.DataIsLive}" VerticalAlignment="Center"
                    Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=AccentBrush|False=FaintBrush'}" />
           <TextBlock Text="{Binding Data.ModeLine}" Style="{StaticResource TypeBody}" />
         </StackPanel>
@@ -228,7 +228,7 @@
     <!-- The same on one wrapping line (phones). -->
     <DataTemplate x:Key="HeaderStatusInlineTemplate">
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space8}">
-        <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="True" VerticalAlignment="Center"
+        <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="{Binding Data.DataIsLive}" VerticalAlignment="Center"
                  Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=AccentBrush|False=FaintBrush'}" />
         <TextBlock Grid.Column="1" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" VerticalAlignment="Center">
           <Run Text="{Binding Data.ModeLine}" Foreground="{ThemeResource TextPrimaryBrush}" /><Run Text=" · " /><Run Text="{Binding Data.SnapshotText}" />

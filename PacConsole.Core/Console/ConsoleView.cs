@@ -64,7 +64,7 @@ public sealed partial record ConsoleView
             Mode = mode,
             OutputNow = Math.Round(outputNow).ToString("0", Inv),
         };
-        view = WithV3(view, snapshot, setpoints, ops, mode, readings, book, outputNow, now, age, inputs ?? ViewInputs.Default);
+        view = WithV3(view, snapshot, setpoints, ops, mode, readings, book, outputNow, age, inputs ?? ViewInputs.Default);
         return WithOps(view, snapshot, setpoints, ops, book);
     }
 }

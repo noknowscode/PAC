@@ -50,6 +50,17 @@ public class ConsoleViewTests
     }
 
     [Test]
+    public void Held_data_keeps_the_snapshots_times_everywhere()
+    {
+        // Held for 30 s: the wall clock moves on, the snapshot does not, and neither do the times shown.
+        var held = Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(30));
+        held.Trends!.Times[^1].Should().Be(T0, "the newest sample is the snapshot");
+        held.CursorTime.Should().Be(T0.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
+        held.SnapshotText.Should().EndWith(held.CursorTime);
+        held.Trends.Times.Should().Equal(Compose().Trends!.Times, "trends while held are the trends at the snapshot");
+    }
+
+    [Test]
     public void Low_turbine_limit_raises_a_second_alert()
     {
         var view = Compose(setpoints: Setpoints.Default with { TurbineLimitBar = 150 }, selected: UnitId.Trb);

@@ -201,7 +201,7 @@ public sealed partial record ConsoleView
 
     /// <summary>Adds the v3 page's fields to a composed view.</summary>
     private static ConsoleView WithV3(ConsoleView view, PlantSnapshot snapshot, Setpoints setpoints, PlantOps ops,
-        ControlMode mode, ImmutableArray<UnitReading> readings, AlarmBook book, double netMw, DateTimeOffset now, int age, ViewInputs inputs)
+        ControlMode mode, ImmutableArray<UnitReading> readings, AlarmBook book, double netMw, int age, ViewInputs inputs)
     {
         var selected = view.Selected;
         var equipment = EquipmentCatalog.Get(selected);
@@ -237,7 +237,7 @@ public sealed partial record ConsoleView
         }
 
         var choices = ChoicesFor(inputs.System, view.AlertingUnits, selected);
-        var trends = TrendSet.Compose(tick, now, setpoints, ops, inputs.Range, compared, inputs.Cursor);
+        var trends = TrendSet.Compose(tick, snapshot.At, setpoints, ops, inputs.Range, compared, inputs.Cursor);
         var gap = (int)Math.Round(netMw - setpoints.TargetMw);
         var alarmCount = book.ActiveCount;
         var here = ops.Valves.Where(v => ValveOwner(v.Id) == selected).ToList();
