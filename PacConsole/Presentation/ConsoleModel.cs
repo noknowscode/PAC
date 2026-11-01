@@ -231,20 +231,22 @@ public partial record ConsoleModel
         await Op(o => o.SetReactive(mvar, snapshot.Tick, _time.GetLocalNow()), ct);
     }
 
-    public async ValueTask ApplyLimit(double limitDraft, double turbineLimitBar, PlantSnapshot snapshot, CancellationToken ct)
+    // The limit and the damper apply at once. Ops first: it keeps the setpoints they replace from this tick, so the
+    // alarm replay never reads the new value into the past, even for the moment between the two updates.
+    public async ValueTask ApplyLimit(double limitDraft, Setpoints currentSetpoints, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (double.IsNaN(limitDraft)) return;
         var bar = Math.Clamp(Math.Round(limitDraft), 140, 180);
+        await Op(o => o.SetTurbineLimit(bar, currentSetpoints, snapshot.Tick, _time.GetLocalNow()), ct);
         await TurbineLimitBar.SetAsync(bar, ct);
-        await Op(o => o.Noted(UnitId.Trb, $"Inlet pressure alarm limit {turbineLimitBar:0} → {bar:0} bar", snapshot.Tick, _time.GetLocalNow()), ct);
     }
 
-    public async ValueTask ApplyDamper(double damperDraft, double damperPct, PlantSnapshot snapshot, CancellationToken ct)
+    public async ValueTask ApplyDamper(double damperDraft, Setpoints currentSetpoints, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (double.IsNaN(damperDraft)) return;
         var pct = Math.Clamp(Math.Round(damperDraft), 0, 100);
+        await Op(o => o.SetDamper(pct, currentSetpoints, snapshot.Tick, _time.GetLocalNow()), ct);
         await DamperPct.SetAsync(pct, ct);
-        await Op(o => o.Noted(UnitId.Stk, $"Stack damper {damperPct:0} → {pct:0} %", snapshot.Tick, _time.GetLocalNow()), ct);
     }
 
     public async ValueTask AddNote(string noteDraft, PlantSnapshot snapshot, CancellationToken ct)

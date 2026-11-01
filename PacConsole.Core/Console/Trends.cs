@@ -86,7 +86,7 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
                 for (var i = 0; i < specs.Count; i++)
                 {
                     var unit = units[i];
-                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, setpoints, ops)) / sub;
+                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, point.Setpoints, ops)) / sub;
                 }
             }
         }

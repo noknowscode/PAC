@@ -157,14 +157,60 @@ public class OperationsTests
     }
 
     [Test]
-    public void An_alarm_that_returns_unacknowledged_stays_until_acknowledged()
+    public void An_alarm_that_returns_unacknowledged_stays_until_acknowledged_or_out_of_the_window()
     {
         var ops = Do(Do(PlantOps.Initial, Start("clg.cell6"), 122), Stop("clg.cell3"), 130);
-        var book = AlarmBook.Compose(200, Setpoints.Default, ops);
-        book.Entries.Single(e => e.Key == "clg.vib").State.Should().Be(AlarmState.ReturnedUnacknowledged);
+        AlarmBook.Compose(200, Setpoints.Default, ops).Entries.Single(e => e.Key == "clg.vib").State.Should().Be(AlarmState.ReturnedUnacknowledged);
 
         var acked = ops.Acknowledge("clg.vib", "x", UnitId.Clg, 201, Now);
         AlarmBook.Compose(201, Setpoints.Default, acked).Entries.Should().NotContain(e => e.Key == "clg.vib");
+
+        // The book replays 15 minutes, so it is no historian: unacknowledged, the alarm stays listed while its onset is
+        // inside the window and drops off once the window has moved past it (it never comes back in this run).
+        AlarmBook.Compose(200 + AlarmBook.WindowTicks / 2, Setpoints.Default, ops).Entries
+            .Should().Contain(e => e.Key == "clg.vib" && e.State == AlarmState.ReturnedUnacknowledged);
+        AlarmBook.Compose(200 + AlarmBook.WindowTicks, Setpoints.Default, ops).Entries.Should().NotContain(e => e.Key == "clg.vib");
+    }
+
+    [Test]
+    public void A_new_alarm_limit_applies_from_its_tick_and_leaves_the_past_alone()
+    {
+        // TRB-04's inlet pressure sits near 165 bar: under a 150 bar limit it alarms, under 170 it never does.
+        const long tick = 600;
+        var lowered = Setpoints.Default with { TurbineLimitBar = 150 };
+        var ops = PlantOps.Initial.SetTurbineLimit(150, Setpoints.Default, tick, Now);
+
+        var book = AlarmBook.Compose(tick, lowered, ops);
+        book.Entries.Single(e => e.Key == "trb.press").Should().Match<AlarmEntry>(e => e.OnsetTick == tick && !e.OnsetBeforeWindow);
+        book.Transitions.Should().ContainSingle(t => t.Key == "trb.press" && t.Raised && t.Tick == tick);
+        AlarmRules.At(tick - 1, lowered, ops).Should().NotContain(a => a.Key == "trb.press", "the old limit was in force");
+        ops.Log.Single().Text.Should().Be("Inlet pressure alarm limit 170 → 150 bar");
+
+        // Without the change on record, the same setpoints read as if the limit had always been 150.
+        AlarmBook.Compose(tick, lowered, PlantOps.Initial).Entries.Single(e => e.Key == "trb.press").OnsetBeforeWindow.Should().BeTrue();
+    }
+
+    [Test]
+    public void A_damper_move_reads_from_its_tick_on_and_each_change_keeps_what_it_replaced()
+    {
+        var first = Setpoints.Default with { DamperPct = 80 };
+        var second = first with { DamperPct = 50 };
+        var ops = PlantOps.Initial.SetDamper(80, Setpoints.Default, 500, Now).SetDamper(50, first, 520, Now);
+
+        SampleMemo.At(499, second, ops).Setpoints.DamperPct.Should().Be(65);
+        SampleMemo.At(500, second, ops).Setpoints.DamperPct.Should().Be(80);
+        SampleMemo.At(520, second, ops).Setpoints.DamperPct.Should().Be(50);
+        SampleMemo.At(499, second, ops).Readings.Should().Equal(Simulation.Readings(499, 65, ops), "flue gas flow follows the damper in force");
+        SampleMemo.At(500, second, ops).Readings.Should().Equal(Simulation.Readings(500, 80, ops));
+        ops.Log.Select(e => e.Text).Should().Equal("Stack damper 65 → 80 %", "Stack damper 80 → 50 %");
+    }
+
+    [Test]
+    public void Setpoint_changes_older_than_the_longest_trend_are_let_go()
+    {
+        var ops = PlantOps.Initial.SetDamper(80, Setpoints.Default, 100, Now);
+        ops = ops.SetDamper(70, Setpoints.Default with { DamperPct = 80 }, 100 + PlantOps.HistoryTicks + 1, Now);
+        ops.SetpointChanges.Should().ContainSingle().Which.Tick.Should().Be(100 + PlantOps.HistoryTicks + 1);
     }
 
     [Test]

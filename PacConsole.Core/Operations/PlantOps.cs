@@ -39,6 +39,12 @@ public sealed record Ramp(double From, double To, long Tick, double PerTick)
     public int MinutesLeft(long tick) => (int)Math.Ceiling(Math.Abs(To - ValueAt(tick)) / PerTick * 2 / 60);
 }
 
+/// <summary>
+/// A setpoint that applied at once (the turbine's alarm limit, the stack damper) from <see cref="Tick"/>, with the
+/// setpoints in force until then.
+/// </summary>
+public sealed record SetpointChange(long Tick, Setpoints Before);
+
 /// <summary>The ash silo's level at a known tick, and whether it was unloading from then on.</summary>
 public sealed record SiloMark(long Tick, double Level, bool Unloading);
 
@@ -108,6 +114,25 @@ public sealed record PlantOps(
     public const int ShelveTicks = 1800;
 
     public const int MinRunningCells = 4;
+
+    /// <summary>How far back setpoint changes are kept: the longest trend range, 8 h of ticks.</summary>
+    public const int HistoryTicks = 14_400;
+
+    /// <summary>
+    /// The setpoints that applied at once, oldest first, each with the values it replaced, so a replay of past ticks
+    /// (the alarm book, trends, events) reads the limit and damper in force then, not the ones set since.
+    /// </summary>
+    public ImmutableList<SetpointChange> SetpointChanges { get; init; } = [];
+
+    /// <summary>The setpoints in force at <paramref name="tick"/>: <paramref name="current"/>, unless a change came after it.</summary>
+    public Setpoints SetpointsAt(long tick, Setpoints current)
+    {
+        foreach (var change in SetpointChanges)
+        {
+            if (change.Tick > tick) return change.Before;
+        }
+        return current;
+    }
 
     public static readonly PlantOps Initial = new(
         Devices: new Device[]
@@ -226,8 +251,23 @@ public sealed record PlantOps(
         (this with { Reactive = new Ramp(Reactive.ValueAt(tick), mvar, tick, ReactivePerTick) })
             .Logged(tick, now, LogKind.Action, UnitId.Gen, $"Reactive power setpoint {Reactive.ValueAt(tick).ToString("0", Inv)} → {mvar.ToString("0", Inv)} MVAr");
 
-    /// <summary>Records a setpoint that applies at once (the turbine limit, the damper).</summary>
-    public PlantOps Noted(UnitId unit, string text, long tick, DateTimeOffset now) => Logged(tick, now, LogKind.Action, unit, text);
+    /// <summary>
+    /// The turbine inlet pressure alarm limit applies at once from <paramref name="tick"/>. The new value lives in the
+    /// console's setpoints; this keeps <paramref name="current"/> for the ticks before it and logs the change.
+    /// </summary>
+    public PlantOps SetTurbineLimit(double bar, Setpoints current, long tick, DateTimeOffset now) =>
+        Changed(current, tick).Logged(tick, now, LogKind.Action, UnitId.Trb,
+            $"Inlet pressure alarm limit {current.TurbineLimitBar.ToString("0", Inv)} → {bar.ToString("0", Inv)} bar");
+
+    /// <summary>The stack damper moves at once from <paramref name="tick"/>; as <see cref="SetTurbineLimit"/>.</summary>
+    public PlantOps SetDamper(double pct, Setpoints current, long tick, DateTimeOffset now) =>
+        Changed(current, tick).Logged(tick, now, LogKind.Action, UnitId.Stk,
+            $"Stack damper {current.DamperPct.ToString("0", Inv)} → {pct.ToString("0", Inv)} %");
+
+    private PlantOps Changed(Setpoints before, long tick) => this with
+    {
+        SetpointChanges = SetpointChanges.RemoveAll(c => c.Tick < tick - HistoryTicks).Add(new SetpointChange(tick, before)),
+    };
 
     // ---------------------------------------------------------------- alarms and notes
 
