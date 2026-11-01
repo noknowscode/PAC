@@ -19,6 +19,8 @@
       208 on WinAppSDK and 3,082 on iOS).
     -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- NuGet audit stays a warning: a newly published advisory, or an unreachable audit source, must not fail a build of unchanged code. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
