@@ -17,6 +17,25 @@ public enum ThemeChoice
 public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor, ThemeChoice Theme = ThemeChoice.System)
 {
     public static readonly ViewInputs Default = new(PlantSystem.All, TrendRange.Minutes15, [], -1);
+
+    /// <summary>The trends compare at most this many readings under net generation.</summary>
+    public const int MaxCompared = 3;
+
+    /// <summary>
+    /// Adds a reading to the compared ones or takes it out. The trends show one item of equipment at a time, so
+    /// readings of another unit are dropped; when nothing was picked for this unit, its first reading (shown by
+    /// default) counts as picked. At most <see cref="MaxCompared"/>: the oldest gives way. An unknown key changes nothing.
+    /// </summary>
+    public static ImmutableArray<string> ToggleCompared(ImmutableArray<string> compared, string key)
+    {
+        if (EquipmentCatalog.Find(key) is null) return compared;
+        var unit = EquipmentCatalog.UnitOf(key);
+        var keys = compared.Where(k => EquipmentCatalog.Find(k) is not null && EquipmentCatalog.UnitOf(k) == unit).ToList();
+        if (keys.Count == 0) keys.Add(EquipmentCatalog.Get(unit).Readings[0].Key);
+        if (!keys.Remove(key)) keys.Add(key);
+        while (keys.Count > MaxCompared) keys.RemoveAt(0);
+        return [.. keys];
+    }
 }
 
 /// <summary>One reading in the inspector: a button that adds it to, or removes it from, the trends.</summary>

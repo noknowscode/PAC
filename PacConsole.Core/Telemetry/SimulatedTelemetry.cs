@@ -52,4 +52,13 @@ public sealed class SimulatedTelemetry(TimeProvider time) : ITelemetryService
 }
 
 /// <summary>The telemetry stream failed; the console shows it as a stopped stream with Retry.</summary>
-public sealed class TelemetryFaultException(string message) : Exception(message);
+public sealed class TelemetryFaultException(string message) : Exception(message)
+{
+    /// <summary>
+    /// What the console shows once a stream has stopped, until Retry: its fault; a fault saying it ended, when it
+    /// ended after sending data (the last values are no longer current); or null when it never sent a snapshot,
+    /// which is the "no telemetry" state rather than an error.
+    /// </summary>
+    public static Exception? ForStop(Exception? fault, bool sentData) =>
+        fault ?? (sentData ? new TelemetryFaultException("The telemetry stream from plant 02 ended.") : null);
+}

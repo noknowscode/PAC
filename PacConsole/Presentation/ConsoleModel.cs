@@ -133,22 +133,9 @@ public partial record ConsoleModel
         if (Enum.TryParse<TrendRange>(range, out var value)) await Range.SetAsync(value, ct);
     }
 
-    /// <summary>
-    /// Adds a reading to the trends or takes it out. The trends show one item of equipment at a time,
-    /// so readings of another unit are dropped; when nothing was picked for this unit, its first
-    /// reading (shown by default) counts as picked. At most three: the oldest gives way.
-    /// </summary>
+    /// <summary>Adds a reading to the trends or takes it out (the rule is <see cref="ViewInputs.ToggleCompared"/>).</summary>
     public async ValueTask ToggleCompare(string key, CancellationToken ct) =>
-        await Compared.UpdateAsync(current =>
-        {
-            if (EquipmentCatalog.Find(key) is null) return current;
-            var unit = EquipmentCatalog.UnitOf(key);
-            var keys = current.Where(k => EquipmentCatalog.Find(k) is not null && EquipmentCatalog.UnitOf(k) == unit).ToList();
-            if (keys.Count == 0) keys.Add(EquipmentCatalog.Get(unit).Readings[0].Key);
-            if (!keys.Remove(key)) keys.Add(key);
-            while (keys.Count > 3) keys.RemoveAt(0);
-            return [.. keys];
-        }, ct);
+        await Compared.UpdateAsync(current => ViewInputs.ToggleCompared(current, key), ct);
 
     public async ValueTask SetCursorLatest(CancellationToken ct) =>
         await Cursor.SetAsync(TrendSet.Samples - 1, ct);
@@ -209,25 +196,24 @@ public partial record ConsoleModel
         await Op(o => view.AlarmRows.Where(r => r.CanAck)
             .Aggregate(o, (ops, r) => ops.Acknowledge(r.Key, r.Title, r.Unit, snapshot.Tick, _time.GetLocalNow())), ct);
 
+    // Apply: a typed draft is rounded and kept in its range (SetpointRange); an empty field applies nothing.
+
     public async ValueTask ApplyLoad(double loadDraft, PlantSnapshot snapshot, CancellationToken ct)
     {
-        if (double.IsNaN(loadDraft)) return;
-        var mw = Math.Clamp(Math.Round(loadDraft), 400, 700);
+        if (SetpointRange.Load.Apply(loadDraft) is not { } mw) return;
         await Op(o => o.SetLoad(mw, snapshot.Tick, _time.GetLocalNow()), ct);
         await TargetMw.SetAsync(mw, ct);
     }
 
     public async ValueTask ApplyFanSpeed(double fanSpeedDraft, PlantSnapshot snapshot, CancellationToken ct)
     {
-        if (double.IsNaN(fanSpeedDraft)) return;
-        var pct = Math.Clamp(Math.Round(fanSpeedDraft), 60, 100);
+        if (SetpointRange.FanSpeed.Apply(fanSpeedDraft) is not { } pct) return;
         await Op(o => o.SetFanSpeed(pct, snapshot.Tick, _time.GetLocalNow()), ct);
     }
 
     public async ValueTask ApplyReactive(double reactiveDraft, PlantSnapshot snapshot, CancellationToken ct)
     {
-        if (double.IsNaN(reactiveDraft)) return;
-        var mvar = Math.Clamp(Math.Round(reactiveDraft), 0, 200);
+        if (SetpointRange.Reactive.Apply(reactiveDraft) is not { } mvar) return;
         await Op(o => o.SetReactive(mvar, snapshot.Tick, _time.GetLocalNow()), ct);
     }
 
@@ -235,16 +221,14 @@ public partial record ConsoleModel
     // alarm replay never reads the new value into the past, even for the moment between the two updates.
     public async ValueTask ApplyLimit(double limitDraft, Setpoints currentSetpoints, PlantSnapshot snapshot, CancellationToken ct)
     {
-        if (double.IsNaN(limitDraft)) return;
-        var bar = Math.Clamp(Math.Round(limitDraft), 140, 180);
+        if (SetpointRange.TurbineLimit.Apply(limitDraft) is not { } bar) return;
         await Op(o => o.SetTurbineLimit(bar, currentSetpoints, snapshot.Tick, _time.GetLocalNow()), ct);
         await TurbineLimitBar.SetAsync(bar, ct);
     }
 
     public async ValueTask ApplyDamper(double damperDraft, Setpoints currentSetpoints, PlantSnapshot snapshot, CancellationToken ct)
     {
-        if (double.IsNaN(damperDraft)) return;
-        var pct = Math.Clamp(Math.Round(damperDraft), 0, 100);
+        if (SetpointRange.Damper.Apply(damperDraft) is not { } pct) return;
         await Op(o => o.SetDamper(pct, currentSetpoints, snapshot.Tick, _time.GetLocalNow()), ct);
         await DamperPct.SetAsync(pct, ct);
     }
@@ -302,8 +286,8 @@ public partial record ConsoleModel
 
             // Armed before the state is shown, so a Retry pressed at once is not lost.
             _retry = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            yield return message = fault is not null || message.Current.Data.IsSome(out _)
-                ? message.With().Error(fault ?? new TelemetryFaultException("The telemetry stream from plant 02 ended."))
+            yield return message = TelemetryFaultException.ForStop(fault, message.Current.Data.IsSome(out _)) is { } error
+                ? message.With().Error(error)
                 : message.With().Data(Option<PlantSnapshot>.None());
             await _retry.Task.WaitAsync(ct);
         }
