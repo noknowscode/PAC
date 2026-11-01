@@ -90,7 +90,8 @@ public sealed partial class PlantViewport : UserControl
             TagLayer.Children.Add(tag);
         }
 
-        _views.AddRange([ThumbIso, ThumbElevation, ThumbPlan]);
+        // An array, not a collection expression: CsWinRT gives a collection expression aimed at IEnumerable no concrete type (CsWinRT1032).
+        _views.AddRange(new[] { ThumbIso, ThumbElevation, ThumbPlan });
         _thumbs = [ThumbIsoDrawing, ThumbElevationDrawing, ThumbPlanDrawing];
         foreach (var view in _views) view.Click += OnViewClick;
 
