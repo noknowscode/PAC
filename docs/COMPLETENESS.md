@@ -10,7 +10,7 @@ Revision 3, the same day. Revision 4, 2026-11-01 (code review), below.
 - **Logic:** the operator log is newest first within a tick; held data keeps the snapshot's times; limit and damper changes no longer rewrite the alarm history. 294/294 Core tests.
 - **Performance:** the plant pauses off screen (R) and while the window is hidden (X: Xvfb's X11 host never reported the window hidden).
 - **Visual quality:** the page is split into section controls with the screenshot matrix unchanged (360 to 1440 px, Light and Graphite).
-- **Still open:** tags are 24 px on phones (44 px tags do not fit; owner decision), and Apply clicked while the NumberBox has focus applies the previous draft.
+- **Still open:** tags are 24 px on phones (44 px tags do not fit; owner decision). Apply clicked while the NumberBox has focus works at human click speed; only a zero-gap scripted click applies the previous draft (HANDOFF).
 
 - Revision 2 fixed Retry (with a Debug fault switch), removed the dead wireframe code and made the theme platform-native.
 - Revision 3 fixes:

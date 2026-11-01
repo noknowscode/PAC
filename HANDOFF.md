@@ -12,7 +12,7 @@ From `CODE-REVIEW-2026-11-01` (uno-lab). Done:
 
 Open (owner decisions):
 - **Phone tags:** 44 px tags do not fit seven to a 360 px drawing (the layout test shows 80 of 82 orbit poses touching; 36 of 82 even at 24 px). Fewer tags on phones, or the picker as the touch route?
-- **Apply right after typing:** clicking Apply while the NumberBox still has focus applies the previous draft (the two-way binding commits on lost focus, after the command has read its parameter). Seen at runtime under Xvfb; Tab or Enter first works. Not fixed here.
+- **Apply right after typing (not a bug):** a person's click applies the typed value: 620 → 655 with a 150 ms press and 620 → 665 with 400 ms, checked under Xvfb on 2026-11-01. Only xdotool's instant click, press and release in the same frame, runs Apply before the NumberBox commits on losing focus, so scripted checks should press Tab or Enter (or hold the click) before Apply.
 - **Window hidden:** `Window.VisibilityChanged` stops the ambient clock, but Uno's X11 host under Xvfb (no window manager) never raised it, so that path is unverified.
 
 ## Where we are
