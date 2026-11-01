@@ -15,7 +15,8 @@ namespace PacConsole.Controls;
 /// The orbiting 3D plant plus its floating unit tags and toolbar.
 /// Owns the camera state machine (Orbiting, Paused, Idle, Tweening, Dragging) because the
 /// camera changes every frame and is view state, not domain data. The render loop runs only
-/// while something moves; Idle and Paused redraw only when a bound property changes.
+/// while something moves; Idle and Paused redraw only when a bound property changes. Nothing moves
+/// while nobody can see it: the plant scrolled out of the page, or the window hidden.
 /// </summary>
 public sealed partial class PlantViewport : UserControl
 {
@@ -49,6 +50,10 @@ public sealed partial class PlantViewport : UserControl
     private bool _auto;
     private bool _hover;
 
+    // Whether any of the plant is inside the page's scroll viewport (EffectiveViewportChanged).
+    private bool _inView = true;
+    private readonly Action _onHostVisibility;
+
     // Plant motion: per-unit lift toward its target, and a clock for fans and pipe flow.
     private readonly Dictionary<UnitId, float> _lift = UnitCatalog.All.ToDictionary(u => u.Id, _ => 0f);
 
@@ -72,6 +77,7 @@ public sealed partial class PlantViewport : UserControl
     {
         InitializeComponent();
         _ambient = OnFrame;
+        _onHostVisibility = Refresh;
 
         // Opens still: the full-detail drawing is cached while the camera holds, and fans and flow
         // keep moving. Orbiting is opt-in (the toggle) or a drag.
@@ -113,8 +119,18 @@ public sealed partial class PlantViewport : UserControl
         KeyDown += OnKeyDown;
 
         SizeChanged += (_, _) => Draw();
-        Loaded += (_, _) => Refresh();
-        Unloaded += (_, _) => { StopLoop(); AmbientClock.Unsubscribe(_ambient); };
+        EffectiveViewportChanged += OnEffectiveViewportChanged;
+        Loaded += (_, _) =>
+        {
+            AmbientClock.HostVisibilityChanged += _onHostVisibility;
+            Refresh();
+        };
+        Unloaded += (_, _) =>
+        {
+            StopLoop();
+            AmbientClock.Unsubscribe(_ambient);
+            AmbientClock.HostVisibilityChanged -= _onHostVisibility;
+        };
     }
 
     /// <summary>The selected unit (a <see cref="UnitId"/>), drawn in the accent.</summary>
@@ -312,10 +328,12 @@ public sealed partial class PlantViewport : UserControl
         }
         // Display-rate frames only while the camera or a lift moves. Fans and pipe flow keep turning
         // on the shared 20 fps ambient clock (the same tick as the status-dot pulse), not on a held
-        // Rendering subscription, which would force frames at display rate forever.
-        var moving = IsOrbiting || _tweening || !LiftSettled;
+        // Rendering subscription, which would force frames at display rate forever. Out of sight,
+        // neither runs; a tween or a lift picks up where it is when the plant shows again.
+        var seen = _inView && AmbientClock.HostVisible;
+        var moving = seen && (IsOrbiting || _tweening || !LiftSettled);
         if (moving) StartLoop(); else StopLoop();
-        if (!moving && _animationsEnabled && IsLoaded)
+        if (!moving && seen && _animationsEnabled && IsLoaded)
         {
             if (!_ambientOn) _lastFrameSeconds = _clock.Elapsed.TotalSeconds;
             _ambientOn = true;
@@ -349,6 +367,17 @@ public sealed partial class PlantViewport : UserControl
 
     // xaml-lint: allow codebehind - the frame loop of a Skia viewport; it has no XAML surface.
     private void OnRendering(object? sender, object e) => OnFrame();
+
+    // xaml-lint: allow codebehind - whether the plant is on screen decides whether its motion runs; it has no XAML surface.
+    private void OnEffectiveViewportChanged(FrameworkElement sender, EffectiveViewportChangedEventArgs e)
+    {
+        // The viewport arrives in this control's coordinates (empty once it is scrolled out): in view while they overlap.
+        var v = e.EffectiveViewport;
+        var inView = v.Width > 0 && v.Height > 0 && v.X < ActualWidth && v.Y < ActualHeight && v.Right > 0 && v.Bottom > 0;
+        if (inView == _inView) return;
+        _inView = inView;
+        Refresh();
+    }
 
     private readonly Action _ambient;
     private bool _ambientOn;

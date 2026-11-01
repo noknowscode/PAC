@@ -82,6 +82,8 @@ public partial class App : Application
         MainWindow = builder.Window;
         Shell = MainWindow;
         MainWindow.Title = "PAC Control Console";
+        // Decorative motion (the plant's fans and flow, the live dot) stops while the window is hidden or minimized.
+        MainWindow.VisibilityChanged += (_, e) => Controls.AmbientClock.HostVisible = e.Visible;
 
 #if DEBUG && !NO_UNO_STUDIO
         // Hot Design needs a reachable DevServer; without one it can block a headless run.
