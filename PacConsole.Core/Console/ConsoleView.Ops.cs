@@ -67,7 +67,8 @@ public sealed partial record ConsoleView
     public string ReactiveText { get; init; } = "";
     public string DamperText { get; init; } = "";
 
-    // Operator log
+    // Operator log: the latest lines, newest first (the model keeps 200).
+    public const int LogRowsShown = 8;
     public ImmutableArray<LogRowView> LogRows { get; init; } = [];
     public LogRowView? Log0 => At(LogRows, 0);
     public LogRowView? Log1 => At(LogRows, 1);
@@ -141,10 +142,15 @@ public sealed partial record ConsoleView
             ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
             : $"{r.To.ToString(format, Inv)} {unit}";
 
-        var log = ops.Log.Select(e => (e.Tick, Row: new LogRowView(e.At.ToLocalTime().ToString("HH:mm:ss", Inv), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant())))
-            .Concat(book.Transitions.Select(t => (t.Tick, Row: new LogRowView(TimeOf(t.Tick), t.Raised ? "Alarm" : "Normal", t.Text, t.Raised ? "alarm" : "normal"))))
+        // Newest first, by tick and then by the order the lines were written: lines often share a tick (Acknowledge
+        // all writes one per alarm, and under HOLD the tick stands still), and the latest of them must lead. The
+        // operator acts on a snapshot after its alarms came in, so a tick's own lines follow its alarm transitions.
+        var log = book.Transitions.Select(t => (t.Tick, Row: new LogRowView(TimeOf(t.Tick), t.Raised ? "Alarm" : "Normal", t.Text, t.Raised ? "alarm" : "normal")))
+            .Concat(ops.Log.Select(e => (e.Tick, Row: new LogRowView(e.At.ToLocalTime().ToString("HH:mm:ss", Inv), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant()))))
+            .Select((x, written) => (x.Tick, x.Row, Written: written))
             .OrderByDescending(x => x.Tick)
-            .Take(8)
+            .ThenByDescending(x => x.Written)
+            .Take(LogRowsShown)
             .Select(x => x.Row)
             .ToImmutableArray();
 

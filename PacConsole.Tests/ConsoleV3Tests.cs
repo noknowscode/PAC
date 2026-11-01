@@ -117,6 +117,18 @@ public class ConsoleV3Tests
     }
 
     [Test]
+    public void The_log_leads_with_the_latest_line_even_when_lines_share_a_tick()
+    {
+        // Under HOLD the tick stands still, and Acknowledge all writes a line per alarm at one tick: the last written leads.
+        var ops = Enumerable.Range(1, 10).Aggregate(PlantOps.Initial, (o, i) => o.AddNote($"Note {i}", Simulation.StartTick, T0));
+        ops = ops.Acknowledge("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, Simulation.StartTick, T0);
+        var log = ComposeWith(ops, UnitId.Clg).LogRows;
+        log.Should().HaveCount(ConsoleView.LogRowsShown);
+        log[0].Text.Should().Be("Acknowledged: CLG-05 cooling fan vibration high");
+        log.Skip(1).Select(r => r.Text).Should().Equal("Note 10", "Note 9", "Note 8", "Note 7", "Note 6", "Note 5", "Note 4");
+    }
+
+    [Test]
     public void Reading_tiles_carry_their_range_bar()
     {
         var tile = Compose(UnitId.Clg).Condition1!;
