@@ -21,19 +21,39 @@ public sealed record Device(string Id, UnitId Unit, string Name, bool Running, l
     }
 }
 
-/// <summary>A setpoint moving from <see cref="From"/> to <see cref="To"/> at a fixed rate from <see cref="Tick"/>.</summary>
+/// <summary>
+/// A setpoint moving from <see cref="From"/> to <see cref="To"/> at a fixed rate from <see cref="Tick"/>. Paused (Manual
+/// mode) it holds the value it had at <see cref="PausedAt"/> and keeps its target for when Auto resumes it.
+/// </summary>
 public sealed record Ramp(double From, double To, long Tick, double PerTick)
 {
+    /// <summary>The tick Manual paused the ramp at, or null while it runs.</summary>
+    public long? PausedAt { get; init; }
+
     public static Ramp Hold(double value) => new(value, value, 0, 1);
+
+    /// <summary>A setpoint applied at once (Manual): <paramref name="from"/> before <paramref name="tick"/>, <paramref name="to"/> from it on.</summary>
+    public static Ramp Step(double from, double to, long tick) => new(from, to, tick - 1, double.PositiveInfinity);
 
     public double ValueAt(long tick)
     {
+        if (PausedAt is { } paused && tick > paused) tick = paused;
         if (tick <= Tick) return From;
         var step = PerTick * (tick - Tick);
         return To >= From ? Math.Min(To, From + step) : Math.Max(To, From - step);
     }
 
-    public bool IsMoving(long tick) => ValueAt(tick) != To;
+    /// <summary>True while it moves toward its target; a paused ramp does not.</summary>
+    public bool IsMoving(long tick) => PausedAt is null && ValueAt(tick) != To;
+
+    /// <summary>True while Manual holds it short of its target.</summary>
+    public bool IsHeld(long tick) => PausedAt is not null && ValueAt(tick) != To;
+
+    /// <summary>Stops where it is at <paramref name="tick"/> (Manual); earlier ticks keep the values it had.</summary>
+    public Ramp Pause(long tick) => PausedAt is null ? this with { PausedAt = tick } : this;
+
+    /// <summary>Carries on toward the target from where it was held (Auto).</summary>
+    public Ramp Resume(long tick) => PausedAt is null ? this : new(ValueAt(tick), To, tick, PerTick);
 
     /// <summary>Whole minutes left until the ramp reaches its target (one tick is 2 s).</summary>
     public int MinutesLeft(long tick) => (int)Math.Ceiling(Math.Abs(To - ValueAt(tick)) / PerTick * 2 / 60);
@@ -48,7 +68,7 @@ public sealed record SetpointChange(long Tick, Setpoints Before);
 /// <summary>The ash silo's level at a known tick, and whether it was unloading from then on.</summary>
 public sealed record SiloMark(long Tick, double Level, bool Unloading);
 
-public enum LogKind { Alarm, Action, Acknowledge, Shelve, Note, Refused }
+public enum LogKind { Alarm, Action, Acknowledge, Shelve, Note, Refused, Unshelve }
 
 /// <summary>One line of the operator log.</summary>
 public sealed record LogEntry(long Tick, DateTimeOffset At, LogKind Kind, UnitId? Unit, string Text, string By);
@@ -239,17 +259,42 @@ public sealed record PlantOps(
 
     // ---------------------------------------------------------------- setpoints
 
-    public PlantOps SetLoad(double mw, long tick, DateTimeOffset now) =>
-        (this with { Load = new Ramp(Load.ValueAt(tick), mw, tick, LoadPerTick) })
-            .Logged(tick, now, LogKind.Action, UnitId.Trb, $"Load setpoint {Load.ValueAt(tick).ToString("0", Inv)} → {mw.ToString("0", Inv)} MW (5 MW/min)");
+    // In Auto (and while data is held) a setpoint ramps at its rate; in Manual the operator's value applies at once.
 
-    public PlantOps SetFanSpeed(double pct, long tick, DateTimeOffset now) =>
-        (this with { FanSpeed = new Ramp(FanSpeed.ValueAt(tick), pct, tick, FanPerTick) })
-            .Logged(tick, now, LogKind.Action, UnitId.Clg, $"Fan speed setpoint {FanSpeed.ValueAt(tick).ToString("0", Inv)} → {pct.ToString("0", Inv)} %");
+    public PlantOps SetLoad(double mw, long tick, DateTimeOffset now, ControlMode mode = ControlMode.Auto) =>
+        (this with { Load = Retarget(Load, mw, LoadPerTick, tick, mode) })
+            .Logged(tick, now, LogKind.Action, UnitId.Trb, $"Load setpoint {Load.ValueAt(tick).ToString("0", Inv)} → {mw.ToString("0", Inv)} MW{How(mode, "5 MW/min")}");
 
-    public PlantOps SetReactive(double mvar, long tick, DateTimeOffset now) =>
-        (this with { Reactive = new Ramp(Reactive.ValueAt(tick), mvar, tick, ReactivePerTick) })
-            .Logged(tick, now, LogKind.Action, UnitId.Gen, $"Reactive power setpoint {Reactive.ValueAt(tick).ToString("0", Inv)} → {mvar.ToString("0", Inv)} MVAr");
+    public PlantOps SetFanSpeed(double pct, long tick, DateTimeOffset now, ControlMode mode = ControlMode.Auto) =>
+        (this with { FanSpeed = Retarget(FanSpeed, pct, FanPerTick, tick, mode) })
+            .Logged(tick, now, LogKind.Action, UnitId.Clg, $"Fan speed setpoint {FanSpeed.ValueAt(tick).ToString("0", Inv)} → {pct.ToString("0", Inv)} %{How(mode)}");
+
+    public PlantOps SetReactive(double mvar, long tick, DateTimeOffset now, ControlMode mode = ControlMode.Auto) =>
+        (this with { Reactive = Retarget(Reactive, mvar, ReactivePerTick, tick, mode) })
+            .Logged(tick, now, LogKind.Action, UnitId.Gen, $"Reactive power setpoint {Reactive.ValueAt(tick).ToString("0", Inv)} → {mvar.ToString("0", Inv)} MVAr{How(mode)}");
+
+    private static Ramp Retarget(Ramp ramp, double to, double perTick, long tick, ControlMode mode) =>
+        mode == ControlMode.Manual ? Ramp.Step(ramp.ValueAt(tick), to, tick) : new Ramp(ramp.ValueAt(tick), to, tick, perTick);
+
+    private static string How(ControlMode mode, string? rate = null) =>
+        mode == ControlMode.Manual ? " (at once, Manual)" : rate is null ? "" : $" ({rate})";
+
+    /// <summary>
+    /// The plant mode changes, and the log says so. Manual stops the automatic ramps where they are (load, fan speed,
+    /// reactive power), and a setpoint the operator applies then takes effect at once; Auto carries the ramps on toward
+    /// their targets. Hold freezes the console's data, not the ramps, so it leaves them as they are.
+    /// </summary>
+    public PlantOps ModeChanged(ControlMode from, ControlMode to, long tick, DateTimeOffset now)
+    {
+        if (from == to) return this;
+        var next = to switch
+        {
+            ControlMode.Manual => this with { Load = Load.Pause(tick), FanSpeed = FanSpeed.Pause(tick), Reactive = Reactive.Pause(tick) },
+            ControlMode.Auto => this with { Load = Load.Resume(tick), FanSpeed = FanSpeed.Resume(tick), Reactive = Reactive.Resume(tick) },
+            _ => this,
+        };
+        return next.Logged(tick, now, LogKind.Action, null, $"Plant mode {from} → {to}");
+    }
 
     /// <summary>
     /// The turbine inlet pressure alarm limit applies at once from <paramref name="tick"/>. The new value lives in the
@@ -277,6 +322,10 @@ public sealed record PlantOps(
     public PlantOps Shelve(string key, string description, UnitId unit, long tick, DateTimeOffset now) =>
         (this with { Shelves = Shelves.SetItem(key, tick + ShelveTicks), Acks = Acks.SetItem(key, tick) })
             .Logged(tick, now, LogKind.Shelve, unit, $"Shelved for 1 h: {description}");
+
+    /// <summary>Takes an alarm off the shelf before its hour is up; it lists again as it stands now.</summary>
+    public PlantOps Unshelve(string key, string description, UnitId unit, long tick, DateTimeOffset now) =>
+        !IsShelved(key, tick) ? this : (this with { Shelves = Shelves.Remove(key) }).Logged(tick, now, LogKind.Unshelve, unit, $"Unshelved: {description}");
 
     public PlantOps AddNote(string text, long tick, DateTimeOffset now) =>
         string.IsNullOrWhiteSpace(text) ? this : Logged(tick, now, LogKind.Note, null, text.Trim());

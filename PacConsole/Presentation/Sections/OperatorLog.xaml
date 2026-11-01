@@ -20,7 +20,7 @@
         </Grid.ColumnDefinitions>
         <TextBlock Text="{Binding Time}" Style="{StaticResource TypeMicro}" />
         <TextBlock Grid.Column="1" Text="{Binding Kind}" Style="{StaticResource TypeMicro}"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='alarm=AlertTextBrush|refused=AlertTextBrush|normal=MutedBrush|note=AccentBrush|action=TextPrimaryBrush|acknowledge=InkSoftBrush|shelve=InkSoftBrush'}" />
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='alarm=AlertTextBrush|refused=AlertTextBrush|normal=MutedBrush|note=AccentBrush|action=TextPrimaryBrush|acknowledge=InkSoftBrush|shelve=InkSoftBrush|unshelve=InkSoftBrush'}" />
         <TextBlock Text="{Binding Text}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords"
                    Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=0}"
                    Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Normal=2}"

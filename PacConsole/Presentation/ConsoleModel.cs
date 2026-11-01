@@ -191,30 +191,34 @@ public partial record ConsoleModel
     public async ValueTask Shelve(string key, PlantSnapshot snapshot, CancellationToken ct) =>
         await Op(o => o.Shelve(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), ct);
 
+    public async ValueTask Unshelve(string key, PlantSnapshot snapshot, CancellationToken ct) =>
+        await Op(o => o.Unshelve(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), ct);
+
     /// <summary>Acknowledges every alarm waiting for it (the view arrives as a feed parameter).</summary>
     public async ValueTask AcknowledgeAll(ConsoleView view, PlantSnapshot snapshot, CancellationToken ct) =>
         await Op(o => view.AlarmRows.Where(r => r.CanAck)
             .Aggregate(o, (ops, r) => ops.Acknowledge(r.Key, r.Title, r.Unit, snapshot.Tick, _time.GetLocalNow())), ct);
 
-    // Apply: a typed draft is rounded and kept in its range (SetpointRange); an empty field applies nothing.
+    // Apply: a typed draft is rounded and kept in its range (SetpointRange); an empty field applies nothing. The ramped
+    // setpoints ramp in Auto and apply at once in Manual (PlantOps.ModeChanged).
 
-    public async ValueTask ApplyLoad(double loadDraft, PlantSnapshot snapshot, CancellationToken ct)
+    public async ValueTask ApplyLoad(double loadDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.Load.Apply(loadDraft) is not { } mw) return;
-        await Op(o => o.SetLoad(mw, snapshot.Tick, _time.GetLocalNow()), ct);
+        await Op(o => o.SetLoad(mw, snapshot.Tick, _time.GetLocalNow(), mode), ct);
         await TargetMw.SetAsync(mw, ct);
     }
 
-    public async ValueTask ApplyFanSpeed(double fanSpeedDraft, PlantSnapshot snapshot, CancellationToken ct)
+    public async ValueTask ApplyFanSpeed(double fanSpeedDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.FanSpeed.Apply(fanSpeedDraft) is not { } pct) return;
-        await Op(o => o.SetFanSpeed(pct, snapshot.Tick, _time.GetLocalNow()), ct);
+        await Op(o => o.SetFanSpeed(pct, snapshot.Tick, _time.GetLocalNow(), mode), ct);
     }
 
-    public async ValueTask ApplyReactive(double reactiveDraft, PlantSnapshot snapshot, CancellationToken ct)
+    public async ValueTask ApplyReactive(double reactiveDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.Reactive.Apply(reactiveDraft) is not { } mvar) return;
-        await Op(o => o.SetReactive(mvar, snapshot.Tick, _time.GetLocalNow()), ct);
+        await Op(o => o.SetReactive(mvar, snapshot.Tick, _time.GetLocalNow(), mode), ct);
     }
 
     // The limit and the damper apply at once. Ops first: it keeps the setpoints they replace from this tick, so the
@@ -248,10 +252,10 @@ public partial record ConsoleModel
     private async ValueTask SetMode(ControlMode next, ControlMode current, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (next == current) return;
-        // HOLD pauses the stream at the source, so the last snapshot stays current and ages.
+        // HOLD pauses the stream at the source, so the last snapshot stays current and ages. Manual pauses the ramps.
         _telemetry.IsPaused = next == ControlMode.Hold;
         await Mode.SetAsync(next, ct);
-        await Op(o => o.Logged(snapshot.Tick, _time.GetLocalNow(), LogKind.Action, null, $"Plant mode {current} → {next}"), ct);
+        await Op(o => o.ModeChanged(current, next, snapshot.Tick, _time.GetLocalNow()), ct);
     }
 
     /// <summary>Restarts a stopped or empty telemetry stream (the Retry on the error and none states).</summary>

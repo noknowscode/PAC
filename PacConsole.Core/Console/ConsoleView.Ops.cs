@@ -4,10 +4,13 @@ using PacConsole.Core.Telemetry;
 
 namespace PacConsole.Core.Console;
 
-/// <summary>One row of the alarm summary.</summary>
+/// <summary>One row of the alarm summary, or of the shelved alarms (<see cref="IsShelved"/>: Time then reads "until …").</summary>
 public sealed record AlarmRowView(string Key, UnitId Unit, string Priority, string Time, string Title, string Detail, string State, string Tone, bool CanAck)
 {
-    public string AutomationName => $"{Priority} priority, {State}, {Title}, {Detail}, since {Time}";
+    /// <summary>On the shelf: the row offers Unshelve instead of Shelve.</summary>
+    public bool IsShelved { get; init; }
+
+    public string AutomationName => $"{Priority} priority, {State}, {Title}, {Detail}, {(IsShelved ? Time : "since " + Time)}";
 }
 
 /// <summary>The response to the selected unit's alarm: cause, numbered steps, consequence.</summary>
@@ -30,14 +33,19 @@ public sealed partial record ConsoleView
 {
     public long Tick { get; init; }
 
-    // Alarm summary: the first rows, then a count of the rest.
+    // Alarm summary: the first rows; "Show all" opens the rest below them.
     public const int AlarmRowsShown = 4;
     public string AlarmSummaryText { get; init; } = "";
     public bool HasAlarmRows => !AlarmRows.IsEmpty;
     public ImmutableArray<AlarmRowView> AlarmRows { get; init; } = [];
     public ImmutableArray<AlarmRowView> ShownAlarmRows => [.. AlarmRows.Take(AlarmRowsShown)];
-    public string AlarmMoreText { get; init; } = "";
-    public bool HasMoreAlarms => AlarmMoreText.Length > 0;
+    public ImmutableArray<AlarmRowView> MoreAlarmRows => [.. AlarmRows.Skip(AlarmRowsShown)];
+    public bool HasMoreAlarms => AlarmRows.Length > AlarmRowsShown;
+    public string ShowAllAlarmsText => $"Show all {AlarmRows.Length}";
+
+    /// <summary>Alarms on the shelf, soonest back first; each can be unshelved before its hour is up.</summary>
+    public ImmutableArray<AlarmRowView> ShelvedRows { get; init; } = [];
+    public bool HasShelvedRows => !ShelvedRows.IsEmpty;
     public bool CanAckAll { get; init; }
 
     // Response to the selected unit's alarm
@@ -58,6 +66,20 @@ public sealed partial record ConsoleView
     public string LimitText { get; init; } = "";
     public string ReactiveText { get; init; } = "";
     public string DamperText { get; init; } = "";
+
+    // What the mode does to the setpoints, in words beside the controls it changes.
+    public string ModeHint => Mode switch
+    {
+        ControlMode.Manual => "Manual: the ramps hold where they are, and a setpoint you apply takes effect at once.",
+        ControlMode.Hold => "Hold: the console keeps the last snapshot until you leave Hold.",
+        _ => "Auto: setpoints ramp to the value you apply.",
+    };
+    public string FanSpeedHint => Hint(SetpointRange.FanSpeed, "%", "ramps 1 % every 2 s");
+    public string LoadHint => Hint(SetpointRange.Load, "MW", "ramps 5 MW a minute");
+    public string ReactiveHint => Hint(SetpointRange.Reactive, "MVAr", "ramps 2 MVAr every 2 s");
+
+    private string Hint(SetpointRange range, string unit, string ramp) =>
+        $"{range.Min.ToString("0", Inv)} to {range.Max.ToString("0", Inv)} {unit}; {(IsManual ? "applies at once in Manual" : ramp)}.";
 
     // Operator log: the latest lines, newest first (the model keeps 200).
     public const int LogRowsShown = 8;
@@ -92,10 +114,20 @@ public sealed partial record ConsoleView
             e.State switch { AlarmState.Unacknowledged => "unacked", AlarmState.ReturnedUnacknowledged => "returned", _ => "acked" },
             e.NeedsAck)).ToImmutableArray();
 
+        // On the shelf for its hour, whether it still stands or has returned to normal since.
+        var shelved = ops.Shelves.Where(s => s.Value > tick).OrderBy(s => s.Value).ThenBy(s => s.Key, StringComparer.Ordinal).Select(s =>
+        {
+            var standing = book.Entries.FirstOrDefault(e => e.Key == s.Key);
+            return new AlarmRowView(s.Key, EquipmentCatalog.UnitOf(s.Key), PriorityWord(EquipmentCatalog.Find(s.Key)!.Alarm!.Priority),
+                $"until {TimeOf(s.Value)}", AlarmBook.Title(s.Key),
+                standing is { } e ? $"{Value(e, e.Value)} / {Value(e, e.Limit)} {e.UnitOfMeasure}".TrimEnd() : "Returned to normal",
+                StateWord(AlarmState.Shelved), "acked", CanAck: false) { IsShelved = true };
+        }).ToImmutableArray();
+
         var summary = new List<string>();
         if (book.ActiveCount > 0) summary.Add($"{book.ActiveCount} active");
         if (book.UnacknowledgedCount > 0) summary.Add($"{book.UnacknowledgedCount} unacknowledged");
-        if (book.ShelvedCount > 0) summary.Add($"{book.ShelvedCount} shelved");
+        if (shelved.Length > 0) summary.Add($"{shelved.Length} shelved");
 
         var mine = book.Entries.FirstOrDefault(e => e.Unit == view.Selected && e.State != AlarmState.Shelved);
         ResponseView? response = null;
@@ -122,8 +154,9 @@ public sealed partial record ConsoleView
                 state.EndsWith('…') ? "moving" : d.Running ? "running" : "stopped");
         }).ToImmutableArray();
 
-        static string RampText(Ramp r, long t, string unit, string format) => r.IsMoving(t)
-            ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
+        static string RampText(Ramp r, long t, string unit, string format) =>
+            r.IsMoving(t) ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
+            : r.IsHeld(t) ? $"{r.ValueAt(t).ToString(format, Inv)} {unit} · held, target {r.To.ToString(format, Inv)}"
             : $"{r.To.ToString(format, Inv)} {unit}";
 
         // Newest first, by tick and then by the order the lines were written: lines often share a tick (Acknowledge
@@ -143,7 +176,7 @@ public sealed partial record ConsoleView
             Tick = tick,
             AlarmSummaryText = summary.Count == 0 ? "No standing alarms" : string.Join(" · ", summary),
             AlarmRows = rows,
-            AlarmMoreText = rows.Length > AlarmRowsShown ? $"+{rows.Length - AlarmRowsShown} more" : "",
+            ShelvedRows = shelved,
             CanAckAll = rows.Any(r => r.CanAck),
             Response = response,
             Pending = pending,
@@ -161,6 +194,7 @@ public sealed partial record ConsoleView
     {
         LogKind.Acknowledge => "Ack",
         LogKind.Shelve => "Shelved",
+        LogKind.Unshelve => "Unshelved",
         _ => kind.ToString(),
     };
 

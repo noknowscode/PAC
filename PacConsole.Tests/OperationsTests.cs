@@ -107,6 +107,53 @@ public class OperationsTests
     }
 
     [Test]
+    public void Manual_holds_a_ramp_where_it_is_and_Auto_carries_it_on()
+    {
+        var ramping = PlantOps.Initial.SetLoad(640, 200, Now);
+        var manual = ramping.ModeChanged(ControlMode.Auto, ControlMode.Manual, 230, Now);
+        manual.Load.ValueAt(230).Should().BeApproximately(625, 1e-9);
+        manual.Load.ValueAt(400).Should().BeApproximately(625, 1e-9, "the ramp holds in Manual");
+        manual.Load.ValueAt(215).Should().BeApproximately(622.5, 1e-9, "ticks before the pause keep the values they had");
+        manual.Load.IsHeld(400).Should().BeTrue();
+        manual.Load.IsMoving(400).Should().BeFalse();
+        manual.Log.Last().Text.Should().Be("Plant mode Auto → Manual");
+
+        var auto = manual.ModeChanged(ControlMode.Manual, ControlMode.Auto, 300, Now);
+        auto.Load.ValueAt(330).Should().BeApproximately(630, 1e-9, "5 MW a minute again, from where it held");
+        auto.Load.ValueAt(500).Should().Be(640);
+        // Hold freezes the data, not the ramps.
+        ramping.ModeChanged(ControlMode.Auto, ControlMode.Hold, 230, Now).Load.Should().Be(ramping.Load);
+    }
+
+    [Test]
+    public void In_Manual_an_applied_setpoint_takes_effect_at_once()
+    {
+        var ops = PlantOps.Initial.ModeChanged(ControlMode.Auto, ControlMode.Manual, 200, Now).SetLoad(660, 210, Now, ControlMode.Manual);
+        ops.Load.ValueAt(209).Should().Be(620, "before the apply");
+        ops.Load.ValueAt(210).Should().Be(660, "from the apply's own tick");
+        ops.Load.IsMoving(210).Should().BeFalse();
+        ops.Log.Last().Text.Should().Be("Load setpoint 620 → 660 MW (at once, Manual)");
+        (Simulation.OutputMw(210, 7, ops) - Simulation.OutputMw(210, 7, PlantOps.Initial)).Should().BeApproximately(40, 1e-9);
+
+        var fans = PlantOps.Initial.SetFanSpeed(75, 120, Now, ControlMode.Manual);
+        PlantEffects.FanSpeedFraction(fans, 120).Should().Be(0.75);
+        fans.Log.Single().Text.Should().Be("Fan speed setpoint 100 → 75 % (at once, Manual)");
+    }
+
+    [Test]
+    public void Unshelving_lists_the_alarm_again_and_is_logged()
+    {
+        var shelved = PlantOps.Initial.Shelve("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, 120, Now);
+        var ops = shelved.Unshelve("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, 121, Now);
+        ops.IsShelved("clg.vib", 121).Should().BeFalse();
+        ops.Log.Last().Should().Match<LogEntry>(e => e.Kind == LogKind.Unshelve && e.Text == "Unshelved: CLG-05 cooling fan vibration high");
+        AlarmBook.Compose(121, Setpoints.Default, ops).Entries.Single(e => e.Key == "clg.vib").State
+            .Should().Be(AlarmState.Acknowledged, "shelving acknowledged it");
+        // Nothing on the shelf: nothing to do, nothing logged.
+        PlantOps.Initial.Unshelve("clg.vib", "x", UnitId.Clg, 121, Now).Should().BeSameAs(PlantOps.Initial);
+    }
+
+    [Test]
     public void The_initial_plant_reads_exactly_as_before_operations()
     {
         // With no actions the cooling bank's vibration is the fault drift itself.

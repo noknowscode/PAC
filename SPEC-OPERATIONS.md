@@ -28,8 +28,9 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 
 | Capability | Status | Note |
 |---|---|---|
-| Alarm summary: priority, time, value / limit, state | implemented | an alarm band under the status strip, 4 fixed rows and a "+N more" line. *Moved 2026-10-19: the list now opens at the top of the inspector under the Active alarms view.* |
-| Acknowledge, acknowledge all, shelve | implemented | shelve is 1 h with the reason "Shelved by operator"; notes carry more |
+| Alarm summary: priority, time, value / limit, state | implemented | an alarm band under the status strip, 4 fixed rows and a "+N more" line. *Moved 2026-10-19: the list now opens at the top of the inspector under the Active alarms view. 2026-11-01: the first four rows, then "Show all N" opens the rest in place.* |
+| Acknowledge, acknowledge all, shelve | implemented | shelve is 1 h with the reason "Shelved by operator"; notes carry more. *2026-11-01:* shelved alarms are listed under the alarm list until their hour is up, each with Unshelve (logged) |
+| Plant mode: Auto, Manual, Hold | implemented | *2026-11-01:* Manual holds the load, fan speed and reactive power ramps where they are, and a setpoint applied in Manual takes effect at once (logged "at once, Manual"); Auto carries the ramps on toward their targets. Hold pauses the telemetry and keeps the last snapshot. The faceplate says which applies |
 | Alarm states: unacknowledged, acknowledged, returned unacknowledged, shelved | implemented | ISA-18.2 lifecycle, reduced |
 | Alarm response guidance | implemented | per rule: cause, steps, consequence; in the inspector while the unit is in alarm |
 | Per-equipment faceplates | implemented | CLG cells + fan speed; TRB load + alarm limit; GEN reactive power; CND CW pumps A/B; TKA transfer pumps; STK damper; SIL unloading; each unit's valves |
@@ -37,7 +38,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 | Commanded vs actual, travel and ramps | implemented | devices take 2–5 ticks to start or stop; valves travel 5 ticks; load ramps at 5 MW/min |
 | A plant that responds | implemented | effects listed under Interaction Brief |
 | Range bars on reading tiles | implemented | normal band, alarm limit, value marker |
-| Event log and shift notes | implemented | operator entries plus alarm transitions in the window; the last 8, fixed rows |
+| Event log and shift notes | implemented | operator entries plus alarm transitions in the window; the latest 8, newest first (lines that share a tick, as under HOLD, in the order written) |
 | Operator identity and permissions | substituted | a fixed "Operator 04"; no login |
 | Fans stop turning in the drawing | omitted | the drawing's fan animation is not per cell |
 | Alarm history beyond 15 min | omitted | the replay window bounds it |
@@ -93,7 +94,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 ConsolePage ← ConsoleViewModel
 └─ FeedView(View)
    ├─ Header, StatusStrip (as v3)
-   ├─ AlarmBand     ← Data.Alarm0..3, AlarmSummary · Ack → Acknowledge(key) · Shelve → Shelve(key) · AckAll
+   ├─ AlarmBand     ← Data.ShownAlarmRows, MoreAlarmRows (Show all), ShelvedRows, AlarmSummary · Ack → Acknowledge(key) · Shelve → Shelve(key) · Unshelve → Unshelve(key) · AckAll
    ├─ SystemsBar, PlantPanel (as v3)
    ├─ Inspector
    │  ├─ AlarmResponse  ← Data.Response (visible while the unit is in alarm) · Ack
@@ -101,7 +102,7 @@ ConsolePage ← ConsoleViewModel
    │  └─ Control: PendingBar ← Data.Pending (Confirm / Cancel)
    │     └─ Faceplate per unit (CLG cells + speed · TRB load + limit · GEN reactive · CND pumps · TKA pumps · STK damper · SIL unload) + valves
    ├─ Trends (as v3; events from AlarmRules)
-   └─ OperatorLog   ← Data.Log0..7 · NoteDraft ⇒ AddNote
+   └─ OperatorLog   ← Data.LogRows · NoteDraft ⇒ AddNote
 ```
 
 Data flow: `Ops` joins the View combine (8 sources). Commands write `Ops` (single writer per action). Drafts are written by their NumberBox only, and read by their Apply.
@@ -170,7 +171,7 @@ Phases 1 to 5 done: `c52f64e` (operations), the deadband fix commit, verified vi
 
 - **Replay cost per recomposition:** the Compose budget is under 5 ms; measure in Core.
 - **NumberBox two-way inside the FeedView template:** bind `Parent.X` like the sliders do (verified for sliders in this app).
-- **Many fixed slots:** keep each slot a record MVUX updates in place.
+- **Many fixed slots:** keep each slot a record MVUX updates in place. *Since 2026-11-01 the lists fill their panels through `Controls/Slots`, which keeps each row's element across recompositions the way the fixed slots did.*
 
 ## Unresolved Questions
 

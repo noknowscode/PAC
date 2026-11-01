@@ -129,6 +129,47 @@ public class ConsoleV3Tests
     }
 
     [Test]
+    public void The_alarm_list_shows_four_rows_and_opens_the_rest()
+    {
+        var row = Compose(UnitId.Clg).AlarmRows[0];
+        var view = Compose(UnitId.Clg) with { AlarmRows = [.. Enumerable.Range(0, 6).Select(i => row with { Key = $"k{i}" })] };
+        view.ShownAlarmRows.Select(r => r.Key).Should().Equal("k0", "k1", "k2", "k3");
+        view.MoreAlarmRows.Select(r => r.Key).Should().Equal("k4", "k5");
+        view.HasMoreAlarms.Should().BeTrue();
+        view.ShowAllAlarmsText.Should().Be("Show all 6");
+        Compose(UnitId.Clg).HasMoreAlarms.Should().BeFalse();
+    }
+
+    [Test]
+    public void Shelved_alarms_are_listed_until_their_hour_is_up_and_can_be_unshelved()
+    {
+        var ops = PlantOps.Initial.Shelve("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, Simulation.StartTick, T0);
+        var view = ComposeWith(ops, UnitId.Clg);
+        view.AlarmRows.Should().BeEmpty("a shelved alarm leaves the list");
+        view.ShelvedRows.Should().ContainSingle().Which.Should().Match<AlarmRowView>(r =>
+            r.IsShelved && !r.CanAck && r.State == "Shelved" && r.Time.StartsWith("until ") && r.Detail.EndsWith("mm/s"));
+        view.AlarmSummaryText.Should().Be("1 shelved");
+        view.ShelvedRows[0].AutomationName.Should().Contain(", until ");
+        ComposeWith(ops.Unshelve("clg.vib", "x", UnitId.Clg, Simulation.StartTick, T0), UnitId.Clg).ShelvedRows.Should().BeEmpty();
+    }
+
+    [Test]
+    public void Manual_says_what_it_does_beside_the_setpoints()
+    {
+        var auto = Compose(UnitId.Trb);
+        auto.LoadHint.Should().Be("400 to 700 MW; ramps 5 MW a minute.");
+        auto.ModeHint.Should().StartWith("Auto:");
+
+        var ops = PlantOps.Initial.SetLoad(640, Simulation.StartTick - 30, T0).ModeChanged(ControlMode.Auto, ControlMode.Manual, Simulation.StartTick, T0);
+        var manual = ConsoleView.Compose(new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
+            Setpoints.Default, ops, ControlMode.Manual, UnitId.Trb, T0);
+        manual.LoadHint.Should().Be("400 to 700 MW; applies at once in Manual.");
+        manual.ModeHint.Should().StartWith("Manual: the ramps hold");
+        manual.LoadText.Should().Be("625 MW · held, target 640");
+        manual.ModeLine.Should().Be("Generating · Manual");
+    }
+
+    [Test]
     public void Reading_tiles_carry_their_range_bar()
     {
         var tile = Compose(UnitId.Clg).ConditionTiles[1];

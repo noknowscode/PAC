@@ -106,8 +106,14 @@
                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}" />
           <Button Grid.Column="2" Content="Shelve 1 h"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
+                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}, ConverterParameter=Invert}"
                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Shelve}" CommandParameter="{Binding Key}"
                   ToolTipService.ToolTip="Hide this alarm for an hour; it is logged" />
+          <Button Grid.Column="2" Content="Unshelve"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
+                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Unshelve}" CommandParameter="{Binding Key}"
+                  ToolTipService.ToolTip="List this alarm again now; it is logged" />
         </Grid>
       </StackPanel>
     </DataTemplate>
@@ -163,7 +169,7 @@
       <!-- ============ ACTIVE ALARMS ============
            The alarm summary (ISA-18.2, reduced) while Active alarms is chosen: newest unacknowledged
            first, each with its priority, time and state in words and its own Acknowledge and Shelve.
-           The first four rows, then a count of the rest. -->
+           The first four rows; Show all opens the rest below them. Then the shelved alarms, each with Unshelve. -->
       <StackPanel AutomationProperties.Name="Active alarms"
                   Visibility="{Binding Data.IsAlarms, Converter={StaticResource Visible}}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space12}" MinHeight="{StaticResource ControlHeight}">
@@ -177,8 +183,24 @@
         </Grid>
         <!-- Each row carries its own top margin (AlarmItemTemplate). -->
         <StackPanel controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.ShownAlarmRows}" />
-        <TextBlock Text="{Binding Data.AlarmMoreText}" Style="{StaticResource TypeMicro}" Margin="{StaticResource GapTop8}"
-                   Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}}" />
+        <!-- The rest of the list, opened in place by the toggle below it (view state, like the tabs). -->
+        <StackPanel Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}}"
+                    controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.MoreAlarmRows}" />
+        <ToggleButton x:Name="ShowAllAlarms" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
+                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarToggleButtonTouch}, Wide={StaticResource ToolbarToggleButton}}"
+                      Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}}">
+          <Grid>
+            <TextBlock Text="{Binding Data.ShowAllAlarmsText}" Style="{StaticResource ControlLabel}"
+                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, ConverterParameter=Invert}" />
+            <TextBlock Text="Show fewer" Style="{StaticResource ControlLabel}"
+                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}}" />
+          </Grid>
+        </ToggleButton>
+        <StackPanel Margin="{StaticResource GapTop16}" AutomationProperties.Name="Shelved alarms"
+                    Visibility="{Binding Data.HasShelvedRows, Converter={StaticResource Visible}}">
+          <TextBlock Text="SHELVED" Style="{StaticResource TypeCaps}" />
+          <StackPanel controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.ShelvedRows}" />
+        </StackPanel>
         <Border Style="{StaticResource Rule}" Margin="{StaticResource GapTop16}" />
       </StackPanel>
 
@@ -273,6 +295,7 @@
             <RadioButton Grid.Column="2" Content="Hold" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsHold, Mode=OneWay}" Command="{Binding Parent.SetHold}"
                          Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}" />
           </Grid>
+          <TextBlock Text="{Binding Data.ModeHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
         </StackPanel>
 
         <!-- Devices on this equipment: start or stop through the confirm bar. -->
@@ -295,7 +318,7 @@
             <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyFanSpeed}"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
-          <TextBlock Text="60 to 100 %; ramps 1 % every 2 s." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+          <TextBlock Text="{Binding Data.FanSpeedHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
         </StackPanel>
 
         <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowLoad, Converter={StaticResource Visible}}">
@@ -310,7 +333,7 @@
             <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLoad}"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
-          <TextBlock Text="400 to 700 MW; ramps 5 MW a minute." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+          <TextBlock Text="{Binding Data.LoadHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}" Margin="{StaticResource GapTop8}">
             <TextBlock Text="Inlet pressure alarm limit" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
             <TextBlock Grid.Column="1" Text="{Binding Data.LimitText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -336,7 +359,7 @@
             <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyReactive}"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
-          <TextBlock Text="0 to 200 MVAr; ramps 2 MVAr every 2 s." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+          <TextBlock Text="{Binding Data.ReactiveHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
         </StackPanel>
 
         <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowDamper, Converter={StaticResource Visible}}">
