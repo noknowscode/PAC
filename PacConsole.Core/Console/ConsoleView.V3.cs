@@ -69,8 +69,8 @@ public sealed record ConnectionView(UnitId Id, string Title)
     public override string ToString() => Title;
 }
 
-/// <summary>A valve slot in the Control tab: shown only on the equipment it belongs to.</summary>
-public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere, string AutomationName)
+/// <summary>A valve in the Control tab of the equipment it belongs to.</summary>
+public sealed record ValveSlotView(int Id, string Number, bool Open, string AutomationName)
 {
     /// <summary>"Open", "Shut", "Opening…" or "Closing…": the actual position, which lags the command while the valve travels.</summary>
     public string State { get; init; } = "";
@@ -78,7 +78,7 @@ public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere
 
 /// <summary>
 /// One row of the synchronized trends: a series, its value at the shared cursor, and what every row shares (the
-/// cursor, the latest alert onset and the time axis), so one row template serves all four slots.
+/// cursor, the latest alert onset and the time axis), so one row template serves every row.
 /// </summary>
 public sealed record TrendRowView(TrendSeries Series, string Value, int Cursor, int EventIndex, string TimeStart, string TimeMid, string TimeEnd)
 {
@@ -142,47 +142,22 @@ public sealed partial record ConsoleView
     public ImmutableArray<ReadingTileView> OverviewTiles { get; init; } = [];
     public ImmutableArray<ReadingTileView> ConditionTiles { get; init; } = [];
     public ImmutableArray<ConnectionView> Connections { get; init; } = [];
+
+    /// <summary>False for equipment with no connections: the inspector then says so instead of an empty row.</summary>
+    public bool HasConnections => !Connections.IsEmpty;
+
+    /// <summary>The valves on the selected equipment, in plant order.</summary>
     public ImmutableArray<ValveSlotView> ValveSlots { get; init; } = [];
     public string ValvesNote { get; init; } = "";
 
-    // Fixed slots (see the TempTile note in ConsoleView): buttons and charts stay put while their
-    // records update in place.
-    public ReadingTileView? Overview0 => At(OverviewTiles, 0);
-    public ReadingTileView? Overview1 => At(OverviewTiles, 1);
-    public ReadingTileView? Overview2 => At(OverviewTiles, 2);
-    public ReadingTileView? Overview3 => At(OverviewTiles, 3);
-    public ReadingTileView? Overview4 => At(OverviewTiles, 4);
-    public ReadingTileView? Overview5 => At(OverviewTiles, 5);
-    public ReadingTileView? Condition0 => At(ConditionTiles, 0);
-    public ReadingTileView? Condition1 => At(ConditionTiles, 1);
-    public ReadingTileView? Condition2 => At(ConditionTiles, 2);
-    public ConnectionView? Connection0 => At(Connections, 0);
-    public ConnectionView? Connection1 => At(Connections, 1);
-    /// <summary>False for equipment with no connections: the inspector then says so instead of an empty row.</summary>
-    public bool HasConnections => !Connections.IsEmpty;
-    public ValveSlotView? Slot1 => At(ValveSlots, 0);
-    public ValveSlotView? Slot2 => At(ValveSlots, 1);
-    public ValveSlotView? Slot3 => At(ValveSlots, 2);
-    public ValveSlotView? Slot4 => At(ValveSlots, 3);
-    public ValveSlotView? Slot5 => At(ValveSlots, 4);
-    public ValveSlotView? Slot6 => At(ValveSlots, 5);
-    public ValveSlotView? Slot7 => At(ValveSlots, 6);
-    public ValveSlotView? Slot8 => At(ValveSlots, 7);
-    public ValveSlotView? Slot9 => At(ValveSlots, 8);
-
     // Synchronized trends
     public TrendSet? Trends { get; init; }
-    public TrendSeries? Trend0 => Trends is { } t && t.Series.Length > 0 ? t.Series[0] : null;
-    public TrendSeries? Trend1 => Trends is { } t && t.Series.Length > 1 ? t.Series[1] : null;
-    public TrendSeries? Trend2 => Trends is { } t && t.Series.Length > 2 ? t.Series[2] : null;
-    public TrendSeries? Trend3 => Trends is { } t && t.Series.Length > 3 ? t.Series[3] : null;
     public int CursorIndex => Trends?.Cursor ?? TrendSet.Samples - 1;
     public string CursorTime { get; init; } = "";
     public bool CursorIsLatest { get; init; } = true;
-    public TrendRowView? TrendRow0 => Row(Trend0);
-    public TrendRowView? TrendRow1 => Row(Trend1);
-    public TrendRowView? TrendRow2 => Row(Trend2);
-    public TrendRowView? TrendRow3 => Row(Trend3);
+
+    /// <summary>One row per series (net generation first), each with the shared cursor and time axis.</summary>
+    public ImmutableArray<TrendRowView> TrendRows => Trends is { } t ? [.. t.Series.Select(Row)] : [];
     public string TimeStart { get; init; } = "";
     public string TimeMid { get; init; } = "";
     public string TimeEnd { get; init; } = "";
@@ -202,10 +177,8 @@ public sealed partial record ConsoleView
     public bool IsThemeLight => Theme == ThemeChoice.Light;
     public bool IsThemeGraphite => Theme == ThemeChoice.Graphite;
 
-    private static T? At<T>(ImmutableArray<T> items, int i) where T : class => i < items.Length ? items[i] : null;
-
-    private TrendRowView? Row(TrendSeries? s) =>
-        s is null ? null : new(s, s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]), CursorIndex, EventIndex, TimeStart, TimeMid, TimeEnd);
+    private TrendRowView Row(TrendSeries s) =>
+        new(s, s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]), CursorIndex, EventIndex, TimeStart, TimeMid, TimeEnd);
 
     /// <summary>Which valves sit on which equipment: steam admission, condensate, cooling water, fuel, damper bypass.</summary>
     public static UnitId? ValveOwner(int id) => id switch
@@ -289,10 +262,10 @@ public sealed partial record ConsoleView
             OverviewTiles = [.. equipment.Readings.Where(r => r.Group == ReadingGroup.Overview).Select(Tile)],
             ConditionTiles = [.. equipment.Readings.Where(r => r.Group == ReadingGroup.Condition).Select(Tile)],
             Connections = [.. equipment.Connections.Select(c => new ConnectionView(c, EquipmentCatalog.Get(c).Title))],
-            ValveSlots = [.. ops.Valves.Select(v =>
+            ValveSlots = [.. here.Select(v =>
             {
                 var state = PlantEffects.ValveState(ops, v, tick);
-                return new ValveSlotView(v.Id, v.Id.ToString(CultureInfo.InvariantCulture), v.Open, ValveOwner(v.Id) == selected,
+                return new ValveSlotView(v.Id, v.Id.ToString(CultureInfo.InvariantCulture), v.Open,
                     $"Valve {v.Code} {state.ToLowerInvariant()}. Select to {(v.Open ? "close" : "open")}") { State = state };
             })],
             ValvesNote = here.Count == 0

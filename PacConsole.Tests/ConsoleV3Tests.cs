@@ -86,8 +86,8 @@ public class ConsoleV3Tests
     {
         var view = Compose(UnitId.Clg);
         view.AlarmSummaryText.Should().Be("1 active · 1 unacknowledged");
-        view.Alarm0!.Should().Match<AlarmRowView>(r => r.Key == "clg.vib" && r.Priority == "Medium" && r.State == "Unacknowledged" && r.CanAck);
-        view.Alarm0!.Title.Should().Be("CLG-05 cooling fan vibration high");
+        view.AlarmRows[0].Should().Match<AlarmRowView>(r => r.Key == "clg.vib" && r.Priority == "Medium" && r.State == "Unacknowledged" && r.CanAck);
+        view.AlarmRows[0].Title.Should().Be("CLG-05 cooling fan vibration high");
         view.Response!.Steps.Should().StartWith("1. Start the standby cell 6.").And.Contain("75 %");
         view.CanAckAll.Should().BeTrue();
     }
@@ -97,7 +97,7 @@ public class ConsoleV3Tests
     {
         var clg = Compose(UnitId.Clg);
         clg.Devices.Select(d => d.Name).Should().Equal("Cell 1", "Cell 2", "Cell 3", "Cell 4", "Cell 5", "Cell 6 (standby)");
-        clg.Device5!.Should().Match<DeviceView>(d => d.State == "Stopped" && d.Action == "Start");
+        clg.Devices[5].Should().Match<DeviceView>(d => d.State == "Stopped" && d.Action == "Start");
         clg.ShowFanSpeed.Should().BeTrue();
         clg.FanSpeedText.Should().Be("100 %");
         var trb = Compose(UnitId.Trb);
@@ -131,7 +131,7 @@ public class ConsoleV3Tests
     [Test]
     public void Reading_tiles_carry_their_range_bar()
     {
-        var tile = Compose(UnitId.Clg).Condition1!;
+        var tile = Compose(UnitId.Clg).ConditionTiles[1];
         tile.Key.Should().Be("clg.vib");
         tile.LimitAt.Should().BeApproximately(4.5 / 7.1, 1e-9);
         tile.BandStart.Should().Be(0);
@@ -241,8 +241,8 @@ public class ConsoleV3Tests
         view.InspectorCode.Should().Be("GEN-03");
         view.InspectorName.Should().Be("Generator");
         view.OverviewTiles.Should().HaveCount(6);
-        view.Overview0!.Key.Should().Be("gen.gross");
-        view.Overview0.IsCompared.Should().BeTrue();
+        view.OverviewTiles[0].Key.Should().Be("gen.gross");
+        view.OverviewTiles[0].IsCompared.Should().BeTrue();
         view.OverviewTiles.Skip(1).Should().OnlyContain(t => !t.IsCompared);
         view.Connections.Select(c => c.Title).Should().Equal("TRB-04 · Steam turbine");
         view.EquipmentChoices.Should().HaveCount(7);
@@ -264,8 +264,8 @@ public class ConsoleV3Tests
         var inputs = ViewInputs.Default with { Compared = ["gen.frequency", "gen.gross", "trb.press"] };
         var view = Compose(UnitId.Gen, inputs);
         view.Trends!.Series.Select(s => s.Key).Should().Equal("net", "gen.frequency", "gen.gross");
-        view.Trend0!.Target.Should().Be(Setpoints.Default.TargetMw);
-        view.Trend3.Should().BeNull();
+        view.Trends.Series[0].Target.Should().Be(Setpoints.Default.TargetMw);
+        view.TrendRows.Should().HaveCount(3, "one row per series: net generation and the two GEN-03 readings");
         view.CursorIsLatest.Should().BeTrue();
         foreach (var s in view.Trends.Series)
         {
@@ -282,19 +282,20 @@ public class ConsoleV3Tests
         earlier.CursorIndex.Should().Be(10);
         earlier.CursorIsLatest.Should().BeFalse();
         earlier.CursorTime.Should().NotBe(latest.CursorTime);
-        earlier.TrendRow0!.Value.Should().Be(earlier.Trend0!.Format1(earlier.Trend0.Values[10]));
-        earlier.TrendRow0.Cursor.Should().Be(10);
+        var net = earlier.Trends!.Series[0];
+        earlier.TrendRows[0].Value.Should().Be(net.Format1(net.Values[10]));
+        earlier.TrendRows[0].Cursor.Should().Be(10);
     }
 
     [Test]
     public void Trend_rows_carry_the_shared_axis_and_end_with_the_series()
     {
         var view = Compose(UnitId.Gen, ViewInputs.Default with { Compared = ["gen.frequency"] });
-        view.TrendRow0!.Label.Should().Be(view.Trend0!.Label);
-        view.TrendRow1!.Series.Should().BeSameAs(view.Trend1);
-        view.TrendRow1.TimeStart.Should().Be(view.TimeStart);
-        view.TrendRow1.EventIndex.Should().Be(view.EventIndex);
-        view.TrendRow2.Should().BeNull();
+        view.TrendRows.Should().HaveCount(2);
+        view.TrendRows[0].Label.Should().Be(view.Trends!.Series[0].Label);
+        view.TrendRows[1].Series.Should().BeSameAs(view.Trends.Series[1]);
+        view.TrendRows[1].TimeStart.Should().Be(view.TimeStart);
+        view.TrendRows[1].EventIndex.Should().Be(view.EventIndex);
     }
 
     [Test]
@@ -329,7 +330,7 @@ public class ConsoleV3Tests
     public void Valves_show_only_on_the_equipment_they_belong_to()
     {
         var trb = Compose(UnitId.Trb);
-        trb.ValveSlots.Count(v => v.IsHere).Should().Be(3);
+        trb.ValveSlots.Select(v => v.Id).Should().Equal(101, 102, 103);
         Compose(UnitId.Gen).ValvesNote.Should().Be("No valves on GEN-03.");
         Enumerable.Range(101, 9).Should().OnlyContain(id => ConsoleView.ValveOwner(id) != null);
     }

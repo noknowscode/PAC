@@ -486,6 +486,16 @@
     <Setter Property="Height" Value="{StaticResource TouchTarget}" />
   </Style>
 
+  <!-- Hairline rules between the console's sections, and the vertical one in the header. -->
+  <Style x:Key="Rule" TargetType="Border">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{ThemeResource HairlineBrush}" />
+  </Style>
+  <Style x:Key="VerticalRule" TargetType="Border">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Background" Value="{ThemeResource HairlineBrush}" />
+  </Style>
+
   <!-- Figure callout in the plant view: a quiet label plate at the end of a hairline leader, 24 px tall
        (the WCAG 2.2 minimum target). Brushes are set per state in code; the selected plate turns orange. -->
   <Style x:Key="TagButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">

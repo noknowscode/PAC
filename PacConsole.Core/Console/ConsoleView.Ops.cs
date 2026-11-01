@@ -30,14 +30,12 @@ public sealed partial record ConsoleView
 {
     public long Tick { get; init; }
 
-    // Alarm summary
+    // Alarm summary: the first rows, then a count of the rest.
+    public const int AlarmRowsShown = 4;
     public string AlarmSummaryText { get; init; } = "";
     public bool HasAlarmRows => !AlarmRows.IsEmpty;
     public ImmutableArray<AlarmRowView> AlarmRows { get; init; } = [];
-    public AlarmRowView? Alarm0 => At(AlarmRows, 0);
-    public AlarmRowView? Alarm1 => At(AlarmRows, 1);
-    public AlarmRowView? Alarm2 => At(AlarmRows, 2);
-    public AlarmRowView? Alarm3 => At(AlarmRows, 3);
+    public ImmutableArray<AlarmRowView> ShownAlarmRows => [.. AlarmRows.Take(AlarmRowsShown)];
     public string AlarmMoreText { get; init; } = "";
     public bool HasMoreAlarms => AlarmMoreText.Length > 0;
     public bool CanAckAll { get; init; }
@@ -51,12 +49,6 @@ public sealed partial record ConsoleView
     // Faceplate
     public ImmutableArray<DeviceView> Devices { get; init; } = [];
     public bool HasDevices => !Devices.IsEmpty;
-    public DeviceView? Device0 => At(Devices, 0);
-    public DeviceView? Device1 => At(Devices, 1);
-    public DeviceView? Device2 => At(Devices, 2);
-    public DeviceView? Device3 => At(Devices, 3);
-    public DeviceView? Device4 => At(Devices, 4);
-    public DeviceView? Device5 => At(Devices, 5);
     public bool ShowFanSpeed => Selected == UnitId.Clg;
     public bool ShowLoad => Selected == UnitId.Trb;
     public bool ShowReactive => Selected == UnitId.Gen;
@@ -70,14 +62,6 @@ public sealed partial record ConsoleView
     // Operator log: the latest lines, newest first (the model keeps 200).
     public const int LogRowsShown = 8;
     public ImmutableArray<LogRowView> LogRows { get; init; } = [];
-    public LogRowView? Log0 => At(LogRows, 0);
-    public LogRowView? Log1 => At(LogRows, 1);
-    public LogRowView? Log2 => At(LogRows, 2);
-    public LogRowView? Log3 => At(LogRows, 3);
-    public LogRowView? Log4 => At(LogRows, 4);
-    public LogRowView? Log5 => At(LogRows, 5);
-    public LogRowView? Log6 => At(LogRows, 6);
-    public LogRowView? Log7 => At(LogRows, 7);
     public bool LogIsEmpty => LogRows.IsEmpty;
 
     /// <summary>Adds the operations fields: alarm summary, response, pending command, faceplate and log.</summary>
@@ -159,7 +143,7 @@ public sealed partial record ConsoleView
             Tick = tick,
             AlarmSummaryText = summary.Count == 0 ? "No standing alarms" : string.Join(" · ", summary),
             AlarmRows = rows,
-            AlarmMoreText = rows.Length > 4 ? $"+{rows.Length - 4} more" : "",
+            AlarmMoreText = rows.Length > AlarmRowsShown ? $"+{rows.Length - AlarmRowsShown} more" : "",
             CanAckAll = rows.Any(r => r.CanAck),
             Response = response,
             Pending = pending,
