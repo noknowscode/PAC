@@ -72,7 +72,7 @@ public class TagLayoutTests
     {
         // The same projection and anchors PlantViewport places its tags with; the app measures each tag's button,
         // here a 12 px label is taken as 7 px a character plus the plate's padding.
-        var projection = PlantSolids.ViewProjection(pose, width, height);
+        var projection = PlantFraming.ViewProjection(pose, width, height);
         var requests = UnitCatalog.All.Select(u =>
         {
             var label = u.Id == alerting ? $"{u.Code} · alert" : u.Code;

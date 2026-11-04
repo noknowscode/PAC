@@ -24,6 +24,8 @@ public sealed partial class PlantViewport : UserControl
 
     // The unit under the pointer (outlined), and the current press: where, whether it began on a tag, and by touch.
     private UnitId? _hovered;
+    // Made on the first hover or click, once the plant model (built off the UI thread at launch) is ready.
+    private UnitPicker? _picker;
     private Windows.Foundation.Point? _pressAt;
     private bool _pressOnTag;
     private bool _pressIsTouch;
@@ -308,8 +310,9 @@ public sealed partial class PlantViewport : UserControl
     /// <summary>The unit drawn under a point on the surface, using the same projection as the drawing.</summary>
     private UnitId? UnitAt(Windows.Foundation.Point at)
     {
-        var projection = PlantSolids.ViewProjection(_rig.Pose, (float)Surface.ActualWidth, (float)Surface.ActualHeight);
-        return PlantSolids.Default.UnitAt(projection, new((float)at.X, (float)at.Y), _rig.Lift);
+        var projection = PlantFraming.ViewProjection(_rig.Pose, (float)Surface.ActualWidth, (float)Surface.ActualHeight);
+        _picker ??= new UnitPicker(PlantSolids.Default);
+        return _picker.UnitAt(projection, new((float)at.X, (float)at.Y), _rig.Lift);
     }
 
     // xaml-lint: allow codebehind - drag-to-orbit (see OnPointerPressed).

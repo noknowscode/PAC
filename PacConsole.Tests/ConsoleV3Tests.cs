@@ -194,11 +194,11 @@ public class ConsoleV3Tests
         var parts = PacConsole.Core.Solids.PlantSolids.Default.All;
         UnitId[] alerting = [UnitId.Clg, UnitId.Gen];
         parts.Where(p => p.Unit is { } u && alerting.Contains(u))
-            .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+            .Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Alarms, alerting));
         parts.Where(p => p.Unit is { } u && !alerting.Contains(u))
-            .Should().NotContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+            .Should().NotContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Alarms, alerting));
         parts.Where(p => p.Name.StartsWith("stand.", StringComparison.Ordinal))
-            .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+            .Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Alarms, alerting));
 
         // Choosing it moves the selection to the first unit in alarm; with nothing in alarm it stays put.
         PlantSystems.SelectionFor(PlantSystem.Alarms, UnitId.Trb, alerting).Should().Be(UnitId.Gen);
@@ -216,12 +216,12 @@ public class ConsoleV3Tests
         foreach (var system in Enum.GetValues<PlantSystem>().Where(s => s != PlantSystem.Alarms))
         {
             parts.Where(p => p.Name.StartsWith("stand.", StringComparison.Ordinal))
-                .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, system), system.ToString());
-            parts.Count(p => !p.Name.StartsWith("stand.", StringComparison.Ordinal) && PacConsole.Core.Solids.PlantSolids.InSystem(p, system))
+                .Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, system), system.ToString());
+            parts.Count(p => !p.Name.StartsWith("stand.", StringComparison.Ordinal) && PacConsole.Core.Solids.PartSystems.InSystem(p, system))
                 .Should().BeGreaterThan(5, system.ToString());
         }
-        parts.Where(p => p.Name == "cnd.exhaust").Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.SteamWater));
-        parts.Where(p => p.Name.StartsWith("xfmr.", StringComparison.Ordinal)).Should().OnlyContain(p => !PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Cooling));
+        parts.Where(p => p.Name == "cnd.exhaust").Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.SteamWater));
+        parts.Where(p => p.Name.StartsWith("xfmr.", StringComparison.Ordinal)).Should().OnlyContain(p => !PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Cooling));
     }
 
     [TestCase(PlantSystem.Cooling, UnitId.Gen, UnitId.Clg)]

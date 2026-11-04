@@ -205,7 +205,7 @@ internal sealed class SolidGeometry : IDisposable
         {
             var parts = _cachedParts!;
             _membership = new bool[parts.Count];
-            for (var i = 0; i < parts.Count; i++) _membership[i] = PlantSolids.InSystem(parts[i], system, alerting);
+            for (var i = 0; i < parts.Count; i++) _membership[i] = PartSystems.InSystem(parts[i], system, alerting);
             _membershipParts = _cachedParts;
             _membershipSystem = system;
             _membershipAlerts = alerts;

@@ -55,7 +55,7 @@ public class OrbitAllocationTests
         long Frame(int i)
         {
             var pose = new CameraPose(CameraPose.Iso.Yaw + i * 0.002f, CameraPose.Iso.Elevation);
-            var p = PlantSolids.ViewProjection(pose, 1084, 620);
+            var p = PlantFraming.ViewProjection(pose, 1084, 620);
             var before = GC.GetAllocatedBytesForCurrentThread();
             var volumes = new List<Volume>(Parts.Length);
             foreach (var part in Parts)

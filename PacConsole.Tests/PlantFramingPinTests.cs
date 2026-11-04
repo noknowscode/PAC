@@ -9,7 +9,8 @@ namespace PacConsole.Tests;
 /// <summary>
 /// The plant's framing and hit testing, value for value, against <c>Fixtures/framing.txt</c>: the projections the main
 /// view and the thumbnails use, and the unit under each point of a grid at several cameras, one with a unit lifted.
-/// Written before framing and hit testing left <see cref="PlantSolids"/>, so the move keeps every result. Set
+/// Written before framing and hit testing left <see cref="PlantSolids"/> (for <see cref="PlantFraming"/> and
+/// <see cref="UnitPicker"/>), so the move keeps every result. Set
 /// PAC_PIN_WRITE=write to write the file again (only for an intended change).
 /// </summary>
 public class PlantFramingPinTests
@@ -85,10 +86,11 @@ public class PlantFramingPinTests
     private static string Describe()
     {
         var plant = PlantSolids.Default;
+        var picker = new UnitPicker(plant);
         var text = new StringBuilder();
         foreach (var (yaw, elevation, w, h, padding) in Views)
         {
-            var p = PlantSolids.ViewProjection(new CameraPose(yaw, elevation), w, h, padding);
+            var p = PlantFraming.ViewProjection(new CameraPose(yaw, elevation), w, h, padding);
             text.Append(Invariant($"view {yaw} {elevation} {w} {h} {padding} -> {p.Scale:0.000000} {p.CenterX:0.0000} {p.CenterY:0.0000}\n"));
         }
         foreach (var preset in CameraPresets.All)
@@ -96,20 +98,20 @@ public class PlantFramingPinTests
             foreach (var (name, unit, padding) in Fits)
             {
                 IReadOnlyList<SolidPart> parts = unit is { } id ? plant.UnitWithPad(id) : plant.All;
-                var p = PlantSolids.Fit(preset.Pose, parts, 300, 200, padding);
+                var p = PlantFraming.Fit(preset.Pose, parts, 300, 200, padding);
                 text.Append(Invariant($"fit {preset.Key} {name} 300 200 {padding} -> {p.Scale:0.000000} {p.CenterX:0.0000} {p.CenterY:0.0000}\n"));
             }
         }
         foreach (var (yaw, elevation, lifted) in HitCameras)
         {
-            var p = PlantSolids.ViewProjection(new CameraPose(yaw, elevation), Width, Height);
+            var p = PlantFraming.ViewProjection(new CameraPose(yaw, elevation), Width, Height);
             var lift = lifted is { } l ? new Dictionary<UnitId, float> { [l] = 10 } : null;
             text.Append(Invariant($"hits {yaw} {elevation} {Width} {Height} lifted {lifted?.ToString() ?? "none"}\n"));
             for (var y = Step / 2; y < Height; y += Step)
             {
                 for (var x = Step / 2; x < Width; x += Step)
                 {
-                    text.Append(plant.UnitAt(p, new(x, y), lift) is { } hit ? (char)('0' + (int)hit) : '.');
+                    text.Append(picker.UnitAt(p, new(x, y), lift) is { } hit ? (char)('0' + (int)hit) : '.');
                 }
                 text.Append('\n');
             }

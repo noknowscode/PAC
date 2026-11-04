@@ -10,7 +10,7 @@ namespace PacConsole.Rendering;
 /// <summary>
 /// The main 3D viewport surface: the plant as solids, plus the leader lines that tie each floating
 /// tag to its unit. PlantViewport owns the camera and the tag layout and calls <see cref="Show"/>;
-/// both use <see cref="PlantSolids.ViewProjection"/>, so tags and drawing share one projection.
+/// both use <see cref="PlantFraming.ViewProjection"/>, so tags and drawing share one projection.
 /// </summary>
 public sealed partial class PlantCanvas : SKCanvasElement
 {
@@ -114,7 +114,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
             if (_renderer is null || _leaderPaint is null) return;
             var f = _frame;
             _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
-            var projection = PlantSolids.ViewProjection(f.Pose, (float)area.Width, (float)area.Height);
+            var projection = PlantFraming.ViewProjection(f.Pose, (float)area.Width, (float)area.Height);
             _renderer.Draw(canvas, Parts, projection, new SolidFrame(f.Selected, f.Alerting, f.Lift, f.Seconds, Hovered: f.Hovered, System: f.System, Motion: f.Motion));
 
             // Leaders follow the tags, which move every animation frame. Drawn as a line and a box per tag

@@ -92,7 +92,7 @@ public sealed partial class PlantThumb : SKCanvasElement
             // A thumbnail's camera never moves, so it fits the plant tightly at its own yaw (the main view's
             // framing holds every yaw, which leaves a fixed view half empty at this size).
             var v = _view;
-            var projection = PlantSolids.Fit(v.Pose, Parts, (float)area.Width, (float)area.Height, 6);
+            var projection = PlantFraming.Fit(v.Pose, Parts, (float)area.Width, (float)area.Height, 6);
             _renderer.Draw(canvas, Parts, projection, new SolidFrame(v.Selected, v.Alerting, Details: false, System: v.System, Motion: false));
         }
     }

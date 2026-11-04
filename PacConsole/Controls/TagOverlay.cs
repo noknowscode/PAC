@@ -58,7 +58,7 @@ internal sealed class TagOverlay
     /// </summary>
     public void Layout(CameraPose pose, IReadOnlyDictionary<UnitId, float> lift, UnitId? selected, ImmutableArray<UnitId> alerting, PlantSystem system, float width, float height)
     {
-        var projection = PlantSolids.ViewProjection(pose, width, height);
+        var projection = PlantFraming.ViewProjection(pose, width, height);
         var tagHeight = 0f;
         _requests.Clear();
         foreach (var u in UnitCatalog.All)

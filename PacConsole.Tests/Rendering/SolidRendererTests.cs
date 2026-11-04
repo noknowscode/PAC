@@ -69,7 +69,7 @@ public class SolidRendererTests
         var ready = new SemaphoreSlim(0);
         renderer.StillLayersReady += () => ready.Release();
         var frame = new SolidFrame(UnitId.Trb, Alerting, Lifts(), Seconds: 2.5);
-        var projection = PlantSolids.ViewProjection(CameraPose.Iso, Width, Height);
+        var projection = PlantFraming.ViewProjection(CameraPose.Iso, Width, Height);
 
         var direct = Draw(renderer, projection, frame);
         var recorded = Draw(renderer, projection, frame);
@@ -89,7 +89,7 @@ public class SolidRendererTests
     public void A_lift_at_a_still_camera_draws_the_lifted_unit()
     {
         using var renderer = new SolidRenderer { Palette = Light };
-        var projection = PlantSolids.ViewProjection(CameraPose.Iso, Width, Height);
+        var projection = PlantFraming.ViewProjection(CameraPose.Iso, Width, Height);
         Draw(renderer, projection, new SolidFrame(UnitId.Gen, Alerting, Lifts(), Seconds: 1));
 
         var lifted = Draw(renderer, projection, new SolidFrame(UnitId.Gen, Alerting, Lifts(UnitId.Gen, CameraRig.FullLift * 0.6f), Seconds: 1, Hovered: UnitId.Trb));
@@ -106,7 +106,7 @@ public class SolidRendererTests
     {
         using var renderer = new SolidRenderer { Palette = Light };
         var pose = new CameraPose(0.9f, 0.55f);
-        var projection = PlantSolids.ViewProjection(pose, Width, Height);
+        var projection = PlantFraming.ViewProjection(pose, Width, Height);
 
         var bitmap = Draw(renderer, projection, new SolidFrame(UnitId.Clg, Alerting, Lifts(UnitId.Clg, CameraRig.FullLift), Seconds: 1.3, System: system));
 
@@ -118,7 +118,7 @@ public class SolidRendererTests
     {
         using var renderer = new SolidRenderer { Palette = Light };
         var preset = CameraPresets.All.Single(p => p.Key == "plan");
-        var projection = PlantSolids.ViewProjection(preset.Pose, Width, Height);
+        var projection = PlantFraming.ViewProjection(preset.Pose, Width, Height);
 
         var bitmap = Draw(renderer, projection, new SolidFrame(null, [], null, Details: false, Motion: false));
 

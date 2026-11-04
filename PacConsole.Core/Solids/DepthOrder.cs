@@ -40,6 +40,10 @@ public sealed record Volume(PlanPoint[] Footprint, float Y0, float Y1)
 
     public Volume Raised(float by) => by == 0 ? this : this with { Y0 = Y0 + by, Y1 = Y1 + by };
 
+    /// <summary>The hull's corners: the bottom plan at <see cref="Y0"/>, then the top plan at <see cref="Y1"/>.</summary>
+    public IEnumerable<Vec3> Corners() =>
+        Bottom.Select(q => new Vec3(q.X, Y0, q.Z)).Concat(Top.Select(q => new Vec3(q.X, Y1, q.Z)));
+
     public Vec3 Centre
     {
         get
