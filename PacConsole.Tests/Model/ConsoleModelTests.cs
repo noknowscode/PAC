@@ -285,8 +285,9 @@ public class ConsoleModelTests
         var key = (await h.Read(h.Model.View))!.AlarmRows.First().Key;
 
         await h.Model.Shelve(key, snapshot, ControlMode.Auto, default);
-        (await h.Read(h.Model.Ops))!.IsShelved(key, snapshot.Tick).Should().BeTrue();
+        await ModelHarness.UntilAsync(async () => (await h.Read(h.Model.Ops))!.IsShelved(key, snapshot.Tick), "the alarm is shelved");
         await h.Model.Unshelve(key, snapshot, ControlMode.Auto, default);
+        await ModelHarness.UntilAsync(async () => !(await h.Read(h.Model.Ops))!.IsShelved(key, snapshot.Tick), "the alarm is back");
 
         var ops = (await h.Read(h.Model.Ops))!;
         ops.IsShelved(key, snapshot.Tick).Should().BeFalse();

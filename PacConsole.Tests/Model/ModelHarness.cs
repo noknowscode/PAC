@@ -50,8 +50,23 @@ internal sealed class ModelHarness : IAsyncDisposable
         }
     }
 
-    /// <summary>A feed's current value, as a binding would read it; fails rather than hangs when none comes.</summary>
-    public Task<T?> Read<T>(IFeed<T> feed) where T : notnull => Within(Task.Run(async () => await feed));
+    /// <summary>
+    /// A feed's current value, as a binding would read it; fails rather than hangs when none comes. A state reaches a new
+    /// subscriber a moment after the command that set it returns, so this reads until two reads 25 ms apart agree (a
+    /// composed view, a new record each time, gets four tries).
+    /// </summary>
+    public Task<T?> Read<T>(IFeed<T> feed) where T : notnull => Within(Task.Run(async () =>
+    {
+        var value = await feed;
+        for (var i = 0; i < 4; i++)
+        {
+            await Task.Delay(25);
+            var again = await feed;
+            if (EqualityComparer<T?>.Default.Equals(again, value)) return again;
+            value = again;
+        }
+        return value;
+    }));
 
     /// <summary>Fails a test that would otherwise hang on a feed or command.</summary>
     public static async Task<T> Within<T>(Task<T> task) => await task.WaitAsync(TimeSpan.FromSeconds(10));
