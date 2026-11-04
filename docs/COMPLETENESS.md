@@ -3,7 +3,7 @@
 Audited head: `feat/production-readiness` at `9fdaae1`; re-checked after the A pass at `40bae01` (section below). The
 audit's original findings follow unchanged below the re-check, each marked with what became of it.
 
-Verdict: **Complete with gaps** (0 Blockers, 0 functional Majors, 3 head Majors, 2 Minors)
+Verdict: **Complete with gaps** (0 Blockers, 0 functional Majors, 3 head Majors, 1 Minor)
 
 Safe to show (`R` on desktop, X11): the CLG-05 alarm story end to end, select-before-operate with Confirm, Cancel, Esc,
 refusal and expiry, typed setpoints with Apply (Auto ramp, Manual at once, out-of-range clamped), Hold and resume,
@@ -52,9 +52,10 @@ takes arrow keys and Home; Space activates; Esc cancels a pending command.
 - Head Majors: 3. iOS and WinAppSDK are built by CI and never run. WebAssembly is proven for launch, select-before-operate
   (Confirm, Esc) and the log across a reload, not yet for workflows 3, 4, 6 and 7. Android now runs on an x86_64 API 34
   emulator in CI (`android-emulator` job: install, launch, the first screen's "Net output", no crash, not blank).
-- Minors: 2. The ghost faceplate after a unit change (software renderer only, unconfirmed on a GPU host). Headless
-  Chromium with software GL draws about one frame a second (measured: 1.0–1.7 rAF/s), so every press takes seconds to show;
-  a desktop browser with a GPU has not been tried here.
+- Minors: 1. Headless Chromium with software GL draws about one frame a second (measured: 1.0–1.7 rAF/s), so every press
+  takes seconds to show; a desktop browser with a GPU has not been tried here.
+- Closed: the ghost faceplate after a unit change did not reproduce: TRB-04 (Control) → GEN-03 through the picker shows
+  only the generator's faceplate (`desktop-picker-trb-to-gen.png`).
 
 ## Original audit (at `9fdaae1`)
 
@@ -130,7 +131,7 @@ None.
 
 - **Fixed (`2d5afbb`).** [Logic] The operator log mixes two clocks, so an effect can be listed before its cause - operator entries carry wall-clock time (`ConsoleModel.cs`, `_time.GetLocalNow()`), alarm transitions carry the tick's snapshot time (`PacConsole.Core/Console/ConsoleView.Ops.cs:93`) - R - "Returned to normal 01:42:30" sits under "Fan speed setpoint 100 → 75 % (at once, Manual) 01:42:32" that caused it - owner: mvux
 - **Fixed (`0b5d9bb`).** [Visual] A converter brush on a `Run` does not repaint on a live theme switch - `EquipmentInspector.xaml:215` (`InspectorState` through `ToneConverter`) - R - after Light → Graphite the word "Nominal" stayed the Light muted ink (about #5A6573 on #33373D) until the selection changed the text - owner: gold-standard-pass
-- **Open (unconfirmed off the software renderer).** [Visual] A collapsed faceplate can stay painted - R - after TRB-04 → GEN-03 (picker), TRB-04's "Load setpoint 620 MW / Apply" stayed drawn below the generator's inspector, over the Overview tab too, until the next pointer press there; seen with the software renderer under Xvfb, so check on a GPU host before treating it as the app's - owner: uno-verify
+- **Not reproduced after the A pass (closed).** [Visual] A collapsed faceplate can stay painted - R - after TRB-04 → GEN-03 (picker), TRB-04's "Load setpoint 620 MW / Apply" stayed drawn below the generator's inspector, over the Overview tab too, until the next pointer press there; seen with the software renderer under Xvfb, so check on a GPU host before treating it as the app's - owner: uno-verify
 - **Fixed (`d9d5075`).** [Responsive] The header's gap text clips at 390 px - `ConsoleHeader.xaml:41` (`TargetGapText`) - R - "15 MW below targe" at 390×844 - owner: gold-standard-pass
 - **Fixed (`0b5d9bb`).** [Accessibility] Row buttons do not name their target - `EquipmentInspector.xaml:103-116` (Acknowledge, Shelve 1 h, Unshelve) and the five Apply buttons have only their caption; SPEC-OPERATIONS asks that every button name its action and target - C - owner: winui-xaml
 - **Fixed (`2d5afbb`).** [Testing] The model layer has no tests - `PacConsole.Tests` references Core only; `ConsoleModel` commands and the `Telemetry`/`RetryTelemetry` message loop (`ConsoleModel.cs:262-305`) are covered only by this runtime pass; no UI test project - C - owner: uno-app-ui-testing

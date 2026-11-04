@@ -28,7 +28,6 @@ Brief: the shared A-pass brief (uno-lab `A-GRADE-PLAN.md`), plus the Android emu
 Open:
 - iOS and WinAppSDK are still CI builds only; WebAssembly workflows 3, 4, 6 and 7 not driven in a browser.
 - Headless Chromium with software GL draws about one frame a second (rAF 1.0–1.7/s); a GPU browser was not tried.
-- The ghost faceplate after a unit change (software renderer only) is unconfirmed on a GPU host.
 - Proposed decisions await the owner (SPEC-OPERATIONS, SPEC.md: Decisions, A pass).
 
 ## Last verified state (2026-11-04)
