@@ -121,8 +121,9 @@ Fixed (`b3b14ca`):
 
 Measured, not changed (Core geometry, a structural change):
 - An orbit frame rebuilds every part's screen geometry: about 2.2 MB in `SolidPart.Build` and 0.44 MB in
-  `DepthOrder.Sort`, 4.7 ms of CPU, measured in a Release console over `PacConsole.Core`. At the ~29–32 fps this box
-  reaches, that is the whole 78–87 MB/s; the orbit rows above differ by frame rate, not by work per frame.
+  `DepthOrder.Sort`, 4.7 ms of CPU, measured in a Release console over `PacConsole.Core`. That accounts for the
+  78–87 MB/s above at about 29–32 frames a second (inferred from the allocation rate; the frame rate itself was not
+  counted), so the two orbit rows most likely differ by frame rate, not by work per frame.
 - Composing the console view allocates 161 KB per snapshot (every 2 s).
 - Building the plant model (`PlantSolids.Default`) costs about 65 ms, cold, on the UI thread when the plant first shows.
 - Lists: no `ListView`/`ItemsRepeater`; every list is a bounded `Slots` panel (alarms, 8 log lines, readings), so
