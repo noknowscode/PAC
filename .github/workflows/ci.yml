@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or PR cancels the run it supersedes, so the macOS queue only builds the latest commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   DOTNET_VERSION: '10.0.x'
   DOTNET_NOLOGO: true
