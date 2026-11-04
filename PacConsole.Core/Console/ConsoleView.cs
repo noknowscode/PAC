@@ -33,9 +33,9 @@ public sealed partial record ConsoleView
     /// <summary>Seconds after which held data is called stale.</summary>
     public const int StaleAfterSeconds = 10;
 
+    /// <summary>The view at <paramref name="snapshot"/>'s tick, with the setpoints in force from <paramref name="ops"/>.</summary>
     public static ConsoleView Compose(
         PlantSnapshot snapshot,
-        Setpoints setpoints,
         PlantOps ops,
         ControlMode mode,
         UnitId? requestedUnit,
@@ -43,6 +43,7 @@ public sealed partial record ConsoleView
         ViewInputs? inputs = null)
     {
         var tick = snapshot.Tick;
+        var setpoints = ops.Setpoints;
         var readings = Simulation.Readings(tick, setpoints.DamperPct, ops);
         var outputNow = Simulation.OutputMw(tick, PlantEffects.OpenValves(ops, tick), ops);
         var book = AlarmBook.Compose(tick, setpoints, ops);

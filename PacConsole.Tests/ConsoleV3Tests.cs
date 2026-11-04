@@ -13,7 +13,6 @@ public class ConsoleV3Tests
     private static ConsoleView Compose(UnitId? selected = null, ViewInputs? inputs = null) =>
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            Setpoints.Default,
             PlantOps.Initial,
             ControlMode.Auto,
             selected,
@@ -23,7 +22,7 @@ public class ConsoleV3Tests
     private static ConsoleView ComposeWith(PlantOps ops, UnitId selected) =>
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            Setpoints.Default, ops, ControlMode.Auto, selected, T0);
+            ops, ControlMode.Auto, selected, T0);
 
     [Test]
     public void Picker_always_shows_the_selected_unit()
@@ -162,7 +161,7 @@ public class ConsoleV3Tests
 
         var ops = PlantOps.Initial.SetLoad(640, Simulation.StartTick - 30, T0).ModeChanged(ControlMode.Auto, ControlMode.Manual, Simulation.StartTick, T0);
         var manual = ConsoleView.Compose(new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            Setpoints.Default, ops, ControlMode.Manual, UnitId.Trb, T0);
+            ops, ControlMode.Manual, UnitId.Trb, T0);
         manual.LoadHint.Should().Be("400 to 700 MW; applies at once in Manual.");
         manual.ModeHint.Should().StartWith("Manual: the ramps hold");
         manual.LoadText.Should().Be("625 MW · held, target 640");

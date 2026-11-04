@@ -16,8 +16,7 @@ public class ConsoleViewTests
         TimeSpan? age = null) =>
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            setpoints ?? Setpoints.Default,
-            PlantOps.Initial,
+            PlantOps.Initial with { Setpoints = setpoints ?? Setpoints.Default },
             mode,
             selected,
             T0 + (age ?? TimeSpan.Zero));

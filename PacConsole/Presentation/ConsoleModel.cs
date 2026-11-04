@@ -103,7 +103,7 @@ public partial record ConsoleModel
 
     // Feed.Combine takes at most eight sources, so the view inputs arrive already combined.
     public IFeed<ConsoleView> View => Feed.Combine(Snapshot, Ops, Mode, Selection, Clock, Inputs)
-        .Select(t => ConsoleView.Compose(t.Item1, t.Item2.Setpoints, t.Item2, t.Item3, t.Item4.Unit, Later(t.Item5, t.Item1.At), t.Item6));
+        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4.Unit, Later(t.Item5, t.Item1.At), t.Item6));
 
     private static DateTimeOffset Later(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 

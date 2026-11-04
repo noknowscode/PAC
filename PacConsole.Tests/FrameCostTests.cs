@@ -43,7 +43,7 @@ public class FrameCostTests
         var ops = PacConsole.Core.Operations.PlantOps.Initial;
         PacConsole.Core.Console.ConsoleView Compose(long tick) => PacConsole.Core.Console.ConsoleView.Compose(
             new PacConsole.Core.Telemetry.PlantSnapshot(tick, t0, PacConsole.Core.Telemetry.Simulation.Readings(tick)),
-            PacConsole.Core.Telemetry.Setpoints.Default, ops, PacConsole.Core.Plant.ControlMode.Auto, null, t0);
+            ops, PacConsole.Core.Plant.ControlMode.Auto, null, t0);
         for (var i = 0; i < 20; i++) Compose(600 + i);
         var sw = Stopwatch.StartNew();
         const int n = 20;
