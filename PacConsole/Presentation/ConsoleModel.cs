@@ -170,7 +170,7 @@ public partial record ConsoleModel
     /// <summary>The header's Full screen button: the window between full screen and its normal presenter.</summary>
     public async ValueTask ToggleFullScreen() => await _fullScreen.ToggleAsync();
 
-    // ---------------------------------------------------------------- operations (SPEC-OPERATIONS.md)
+    // Operations (SPEC-OPERATIONS.md)
 
     /// <summary>
     /// Updates the ops state and saves the result, dated by the snapshot the operator acted on. MVUX hands a record

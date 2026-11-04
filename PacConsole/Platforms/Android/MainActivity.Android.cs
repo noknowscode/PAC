@@ -18,5 +18,4 @@ public class MainActivity : Uno.UI.Runtime.Android.ApplicationActivity
 
         base.OnCreate(savedInstanceState);
     }
-
 }

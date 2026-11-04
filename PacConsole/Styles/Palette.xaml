@@ -43,7 +43,7 @@
       <SolidColorBrush x:Key="AlertTintBrush" Color="#FCEAD7" />
 
       <!--
-        Plant drawings (hero, presets, unit preview): the Anatomy figure's solid look, drawn straight on
+        Plant drawings (the main view and the view thumbnails): the Anatomy figure's solid look, drawn straight on
         the ground. Paper is the ground colour, so the figure's silhouette sits on the page with no frame.
         Shades step down from paper, tops step up; the selected unit is lit with a faint orange.
       -->

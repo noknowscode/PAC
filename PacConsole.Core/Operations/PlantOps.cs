@@ -215,7 +215,7 @@ public sealed record PlantOps(
         return sum;
     }
 
-    // ---------------------------------------------------------------- select-before-operate
+    // Select-before-operate
 
     /// <summary>Selects a command: it waits for Confirm, or is refused at once with the reason.</summary>
     public PlantOps Select(OpsCommand command, long tick) => this with { Pending = new Pending(command, tick, Permissive(command)) };
@@ -277,7 +277,7 @@ public sealed record PlantOps(
         return id == "sil.unload" ? next with { Silo = new SiloMark(tick, PlantEffects.SiloLevel(this, tick), running) } : next;
     }
 
-    // ---------------------------------------------------------------- setpoints
+    // Setpoints
 
     // In Auto (and while data is held) a setpoint ramps at its rate; in Manual the operator's value applies at once.
 
@@ -335,7 +335,7 @@ public sealed record PlantOps(
         SetpointChanges = SetpointChanges.RemoveAll(c => c.Tick <= tick - HistoryTicks).Add(new SetpointChange(tick + 1, Setpoints)),
     };
 
-    // ---------------------------------------------------------------- alarms and notes
+    // Alarms and notes
 
     public PlantOps Acknowledge(string key, string description, UnitId unit, long tick, DateTimeOffset now) =>
         (this with { Acks = Acks.SetItem(key, tick) }).Logged(tick, now, LogKind.Acknowledge, unit, $"Acknowledged: {description}");

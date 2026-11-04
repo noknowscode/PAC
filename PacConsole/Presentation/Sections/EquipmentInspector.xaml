@@ -167,7 +167,7 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
     <StackPanel Spacing="{StaticResource Space16}" AutomationProperties.Name="Equipment inspector"
                 Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource InspectorInsetNarrow}, Normal={StaticResource InspectorInset}}">
-      <!-- ============ ACTIVE ALARMS ============
+      <!-- Active alarms.
            The alarm summary (ISA-18.2, reduced) while Active alarms is chosen: newest unacknowledged
            first, each with its priority, time and state in words and its own Acknowledge and Shelve.
            The first four rows; Show all opens the rest below them. Then the shelved alarms, each with Unshelve. -->

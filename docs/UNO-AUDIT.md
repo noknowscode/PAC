@@ -50,10 +50,10 @@ Exit code 0 both times. The surviving allowances carry their reason at the site:
 - Uno.Sdk `7.0.0-dev.115` (owner decision). Newest dev `7.0.0-dev.132`, newest stable `6.7.30`.
 - Resolved through the SDK: Uno.WinUI `7.0.0-dev.2509`, Uno.Extensions `8.0.0-dev.150`, Uno.Toolkit `11.0.0-dev.157`,
   Uno.Themes `9.0.0-dev.61`, SkiaSharp `4.151.1` (stable `4.154.0` exists; it comes with the SDK, so it moves with it).
-- Test packages: `FluentAssertions` 6.12.0, stable is 8.11.0. Version 8 is under a commercial licence for commercial
+- Test packages: `FluentAssertions` 7.2.2, stable is 8.11.0. Version 8 is under a commercial licence for commercial
   use, so the bump is a licence decision, not a version bump. Every other pin in `Directory.Packages.props`
-  (coverlet.collector 10.1.0, Microsoft.NET.Test.Sdk 18.11.0, NUnit 5.0.0, NUnit3TestAdapter 6.3.1,
-  Microsoft.Extensions.TimeProvider.Testing 10.11.0) is the newest stable.
+  (Microsoft.NET.Test.Sdk 18.11.0, NUnit 5.0.0, NUnit3TestAdapter 6.3.1, Microsoft.Extensions.TimeProvider.Testing
+  10.11.0) is the newest stable. coverlet.collector, which nothing ran, was removed in the pre-transfer cleanup.
 - TFMs are .NET 10 on all five heads.
 
 ### Code hygiene

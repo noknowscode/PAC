@@ -74,11 +74,9 @@
         <Border Background="{ThemeResource CardBrush}">
           <StackPanel>
 
-            <!-- ============ HEADER ============ -->
             <local:ConsoleHeader />
 
-            <!-- ============ PLANT + INSPECTOR ============ -->
-            <!-- The inspector column is Auto and the inspector sets its own width: a responsive
+            <!-- The plant and the inspector. The inspector column is Auto and the inspector sets its own width: a responsive
                  ColumnDefinition.Width does not switch on Skia heads (uno-runtime-gotchas, Layout).
                  Side by side, plant and inspector share one fixed height and the inspector scrolls:
                  an Auto row sized to the inspector resized (and fully redrew) the plant on every
@@ -166,7 +164,7 @@
                 </controls:PlantViewport>
               </Border>
 
-              <!-- ============ EQUIPMENT INSPECTOR ============ -->
+              <!-- Equipment inspector -->
               <Border Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Wide=1}"
                       Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Wide=0}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}"
@@ -178,13 +176,11 @@
               </Border>
             </Grid>
 
-            <!-- ============ SYNCHRONIZED TRENDS ============ -->
             <local:TrendsSection />
 
-            <!-- ============ OPERATOR LOG ============ -->
             <local:OperatorLog />
 
-            <!-- ============ FOOTER ============ -->
+            <!-- Footer -->
             <Border Background="{ThemeResource PanelBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
                     Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource FooterInsetNarrow}, Normal={StaticResource FooterInset}}">
               <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">

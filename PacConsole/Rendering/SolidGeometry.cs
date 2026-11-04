@@ -114,7 +114,7 @@ internal sealed class SolidGeometry : IDisposable
         return mask;
     }
 
-    // ---------------------------------------------------------------- shadows
+    // Shadows
 
     private float[] _shadowLift = [];
 
@@ -187,7 +187,7 @@ internal sealed class SolidGeometry : IDisposable
         return length < 1e-5f ? (0, 0) : (x / length, z / length);
     }
 
-    // ---------------------------------------------------------------- system membership
+    // System membership
 
     private bool[] _membership = [];
     private PlantSystem _membershipSystem;
@@ -213,7 +213,7 @@ internal sealed class SolidGeometry : IDisposable
         return _membership[index];
     }
 
-    // ---------------------------------------------------------------- paths
+    // Paths
 
     private ShapePaths?[] _shapePaths = [];
     private SKPath?[]?[] _detailPaths = [];
