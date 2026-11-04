@@ -113,8 +113,10 @@ public partial class App : Application
         // The plant model (about 65 ms of geometry) builds on a worker while the record loads; the first drawing that
         // needs it waits for the same build instead of starting its own on the UI thread.
         var plant = Task.Run(() => PlantSolids.Default);
-        // The page model opens on the saved operator record, so it is read before the first navigation.
-        await Host.Services.GetRequiredService<OperatorJournal>().OpenAsync(CancellationToken.None);
+        // The page model opens on the saved operator record, so it is read before the first navigation. The fonts load
+        // meanwhile: in a browser they arrive over HTTP, and text measured before them reflowed the page under the
+        // pointer (a click aimed at the Control tab landed on the alarm callout once the fonts came).
+        await Task.WhenAll(Host.Services.GetRequiredService<OperatorJournal>().OpenAsync(CancellationToken.None), PreloadFontsAsync());
         _ = plant.ContinueWith(
             t => Host.Services.GetService<ILogger<App>>()?.LogError(t.Exception, "Building the plant model failed"),
             CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
@@ -231,6 +233,22 @@ public partial class App : Application
         }
     }
 #endif
+
+    /// <summary>
+    /// Loads the three faces of IBM Plex Sans the styles use (Styles/Tokens.xaml) before the page lays out: a browser
+    /// fetches them over HTTP, and the desktop host loads them off the UI thread.
+    /// </summary>
+    private Task PreloadFontsAsync()
+    {
+#if __WASM__ || __DESKTOP__
+        return Task.WhenAll(new[] { "SansFont", "SansMediumFont", "SansStrongFont" }
+            .Select(key => Uno.UI.Xaml.Media.FontFamilyHelper.PreloadAsync(
+                (FontFamily)Resources[key], Microsoft.UI.Text.FontWeights.Normal, Windows.UI.Text.FontStretch.Normal, Windows.UI.Text.FontStyle.Normal)));
+#else
+        // The phone heads and WinAppSDK read packaged fonts from the package as they lay out.
+        return Task.CompletedTask;
+#endif
+    }
 
     private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
     {
