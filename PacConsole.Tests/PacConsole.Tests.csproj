@@ -18,7 +18,6 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
-    <PackageReference Include="coverlet.collector" />
     <!-- The renderer tests draw for real. The app heads bring their own Skia natives; a plain net10.0 test host on
          Linux does not. -->
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
