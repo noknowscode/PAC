@@ -29,10 +29,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\PacConsole.Core\PacConsole.Core.csproj" />
     <!-- The SkiaSharp the app runs on (Uno.Sdk 7.0.0-dev.115), with the Windows and Linux natives. -->
-    <PackageReference Include="SkiaSharp" Version="4.151.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.151.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.151.1" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <!-- ILogger, for the renderer's worker-fault report. -->
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 </Project>
