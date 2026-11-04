@@ -19,7 +19,7 @@ env:
 
 jobs:
   test:
-    name: Unit tests (PacConsole.Core)
+    name: Unit tests (Core and the page model)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +27,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Test
-        # The tests reference PacConsole.Core only, so no mobile workload is needed.
-        run: dotnet test PacConsole.Tests/PacConsole.Tests.csproj -c Release
+        # The tests reference the app's plain net10.0 build (the page model, the journal, the renderer); the override
+        # keeps restore off the mobile heads, so no workload is needed.
+        run: dotnet test PacConsole.Tests/PacConsole.Tests.csproj -c Release -p:PacTargetFrameworks=net10.0
 
   desktop:
     name: Desktop (${{ matrix.rid }})

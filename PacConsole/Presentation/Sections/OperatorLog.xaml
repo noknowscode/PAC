@@ -37,14 +37,18 @@
       <TextBlock Text="Alarms in and out, actions, acknowledgements and shift notes · Operator 04" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
     </StackPanel>
     <TextBlock Text="Nothing logged yet. Actions, alarms and notes appear here as they happen." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"
-               Visibility="{Binding Data.LogIsEmpty, Converter={StaticResource Visible}}" />
-    <StackPanel Spacing="{StaticResource Space10}" Visibility="{Binding Data.LogIsEmpty, Converter={StaticResource Visible}, ConverterParameter=Invert}"
+               Visibility="{Binding Data.LogIsEmpty, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+    <StackPanel Spacing="{StaticResource Space10}" Visibility="{Binding Data.LogIsEmpty, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}"
                 controls:Slots.ItemTemplate="{StaticResource LogRowTemplate}" controls:Slots.ItemsSource="{Binding Data.LogRows}" />
+    <!-- The record is saved after every action; when a save fails (the journal logs why), say so where the log is. -->
+    <TextBlock Text="Not saved on this device. The log and your changes stay until the console closes." Style="{StaticResource TypeMicro}"
+               Foreground="{ThemeResource AlertTextBrush}" TextWrapping="WrapWholeWords"
+               Visibility="{Binding Parent.SaveFailed, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}" Margin="{StaticResource GapTop6}">
       <TextBox Text="{Binding Parent.NoteDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Add a shift note…"
                MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
                AutomationProperties.Name="Shift note" />
-      <Button Grid.Column="1" Content="Add note" Command="{Binding Parent.AddNote}"
+      <Button Grid.Column="1" Content="Add note" Command="{Binding Parent.AddNote}" AutomationProperties.Name="Add shift note"
               Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
     </Grid>
   </StackPanel>

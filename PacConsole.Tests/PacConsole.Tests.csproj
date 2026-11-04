@@ -4,6 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!--
+      UNOB0025: the tests run the app's plain net10.0 build on Uno's reference assemblies on purpose. They drive the
+      page model (MVUX states and commands), the persistence store and the renderer offscreen, and never start the
+      Uno runtime or a window.
+    -->
+    <UnoDisableUNOB0025Validation>true</UnoDisableUNOB0025Validation>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,5 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PacConsole.Core\PacConsole.Core.csproj" />
+    <ProjectReference Include="..\PacConsole\PacConsole.csproj" />
   </ItemGroup>
 </Project>

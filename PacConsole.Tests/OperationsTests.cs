@@ -126,17 +126,20 @@ public class OperationsTests
     }
 
     [Test]
-    public void In_Manual_an_applied_setpoint_takes_effect_at_once()
+    public void In_Manual_an_applied_setpoint_takes_effect_at_the_next_scan()
     {
         var ops = PlantOps.Initial.ModeChanged(ControlMode.Auto, ControlMode.Manual, 200, Now).SetLoad(660, 210, Now, ControlMode.Manual);
-        ops.Load.ValueAt(209).Should().Be(620, "before the apply");
-        ops.Load.ValueAt(210).Should().Be(660, "from the apply's own tick");
-        ops.Load.IsMoving(210).Should().BeFalse();
+        ops.Load.ValueAt(210).Should().Be(620, "the snapshot the operator acted on stands as it was");
+        ops.Load.ValueAt(211).Should().Be(660, "the whole step at the next scan, with no ramp");
+        ops.Load.IsStep.Should().BeTrue();
+        ops.Load.IsMoving(211).Should().BeFalse();
+        ops.Setpoints.TargetMw.Should().Be(660);
         ops.Log.Last().Text.Should().Be("Load setpoint 620 → 660 MW (at once, Manual)");
-        (Simulation.OutputMw(210, 7, ops) - Simulation.OutputMw(210, 7, PlantOps.Initial)).Should().BeApproximately(40, 1e-9);
+        (Simulation.OutputMw(211, 7, ops) - Simulation.OutputMw(211, 7, PlantOps.Initial)).Should().BeApproximately(40, 1e-9);
 
         var fans = PlantOps.Initial.SetFanSpeed(75, 120, Now, ControlMode.Manual);
-        PlantEffects.FanSpeedFraction(fans, 120).Should().Be(0.75);
+        PlantEffects.FanSpeedFraction(fans, 120).Should().Be(1);
+        PlantEffects.FanSpeedFraction(fans, 121).Should().Be(0.75);
         fans.Log.Single().Text.Should().Be("Fan speed setpoint 100 → 75 % (at once, Manual)");
     }
 
@@ -220,17 +223,18 @@ public class OperationsTests
     }
 
     [Test]
-    public void A_new_alarm_limit_applies_from_its_tick_and_leaves_the_past_alone()
+    public void A_new_alarm_limit_applies_from_the_next_scan_and_leaves_the_past_alone()
     {
         // TRB-04's inlet pressure sits near 165 bar: under a 150 bar limit it alarms, under 170 it never does.
         const long tick = 600;
         var lowered = Setpoints.Default with { TurbineLimitBar = 150 };
-        var ops = PlantOps.Initial.SetTurbineLimit(150, Setpoints.Default, tick, Now);
+        var ops = PlantOps.Initial.SetTurbineLimit(150, tick, Now);
+        ops.Setpoints.Should().Be(lowered);
 
-        var book = AlarmBook.Compose(tick, lowered, ops);
-        book.Entries.Single(e => e.Key == "trb.press").Should().Match<AlarmEntry>(e => e.OnsetTick == tick && !e.OnsetBeforeWindow);
-        book.Transitions.Should().ContainSingle(t => t.Key == "trb.press" && t.Raised && t.Tick == tick);
-        AlarmRules.At(tick - 1, lowered, ops).Should().NotContain(a => a.Key == "trb.press", "the old limit was in force");
+        var book = AlarmBook.Compose(tick + 1, ops.Setpoints, ops);
+        book.Entries.Single(e => e.Key == "trb.press").Should().Match<AlarmEntry>(e => e.OnsetTick == tick + 1 && !e.OnsetBeforeWindow);
+        book.Transitions.Should().ContainSingle(t => t.Key == "trb.press" && t.Raised && t.Tick == tick + 1);
+        AlarmRules.At(tick, lowered, ops).Should().NotContain(a => a.Key == "trb.press", "the snapshot the operator acted on had the old limit");
         ops.Log.Single().Text.Should().Be("Inlet pressure alarm limit 170 → 150 bar");
 
         // Without the change on record, the same setpoints read as if the limit had always been 150.
@@ -242,22 +246,24 @@ public class OperationsTests
     {
         var first = Setpoints.Default with { DamperPct = 80 };
         var second = first with { DamperPct = 50 };
-        var ops = PlantOps.Initial.SetDamper(80, Setpoints.Default, 500, Now).SetDamper(50, first, 520, Now);
+        var ops = PlantOps.Initial.SetDamper(80, 500, Now).SetDamper(50, 520, Now);
+        ops.Setpoints.Should().Be(second);
 
-        SampleMemo.At(499, second, ops).Setpoints.DamperPct.Should().Be(65);
-        SampleMemo.At(500, second, ops).Setpoints.DamperPct.Should().Be(80);
-        SampleMemo.At(520, second, ops).Setpoints.DamperPct.Should().Be(50);
-        SampleMemo.At(499, second, ops).Readings.Should().Equal(Simulation.Readings(499, 65, ops), "flue gas flow follows the damper in force");
-        SampleMemo.At(500, second, ops).Readings.Should().Equal(Simulation.Readings(500, 80, ops));
+        SampleMemo.At(500, second, ops).Setpoints.DamperPct.Should().Be(65);
+        SampleMemo.At(501, second, ops).Setpoints.DamperPct.Should().Be(80);
+        SampleMemo.At(520, second, ops).Setpoints.DamperPct.Should().Be(80);
+        SampleMemo.At(521, second, ops).Setpoints.DamperPct.Should().Be(50);
+        SampleMemo.At(500, second, ops).Readings.Should().Equal(Simulation.Readings(500, 65, ops), "flue gas flow follows the damper in force");
+        SampleMemo.At(501, second, ops).Readings.Should().Equal(Simulation.Readings(501, 80, ops));
         ops.Log.Select(e => e.Text).Should().Equal("Stack damper 65 → 80 %", "Stack damper 80 → 50 %");
     }
 
     [Test]
     public void Setpoint_changes_older_than_the_longest_trend_are_let_go()
     {
-        var ops = PlantOps.Initial.SetDamper(80, Setpoints.Default, 100, Now);
-        ops = ops.SetDamper(70, Setpoints.Default with { DamperPct = 80 }, 100 + PlantOps.HistoryTicks + 1, Now);
-        ops.SetpointChanges.Should().ContainSingle().Which.Tick.Should().Be(100 + PlantOps.HistoryTicks + 1);
+        var ops = PlantOps.Initial.SetDamper(80, 100, Now);
+        ops = ops.SetDamper(70, 100 + PlantOps.HistoryTicks + 1, Now);
+        ops.SetpointChanges.Should().ContainSingle().Which.Tick.Should().Be(100 + PlantOps.HistoryTicks + 2);
     }
 
     [Test]

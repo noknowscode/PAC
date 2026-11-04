@@ -12,14 +12,18 @@ public interface ITelemetryService
 }
 
 /// <summary>
-/// Emits a <see cref="PlantSnapshot"/> every <see cref="Interval"/> using <see cref="Simulation"/>.
-/// Readings are produced at the reference damper; the model applies the operator's damper setpoint.
+/// Emits a <see cref="PlantSnapshot"/> every <see cref="Interval"/> using <see cref="Simulation"/>, from
+/// <paramref name="startTick"/>: the prototype's first tick on a first launch, or where a saved operator record says
+/// the plant has got to since. Readings are produced at the reference damper; the model applies the operator's damper.
 /// </summary>
-public sealed class SimulatedTelemetry(TimeProvider time) : ITelemetryService
+public sealed class SimulatedTelemetry(TimeProvider time, long startTick = Simulation.StartTick) : ITelemetryService
 {
-    private long _tick = Simulation.StartTick;
+    /// <summary>One snapshot every 2 s, the plant's tick.</summary>
+    public static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(2);
 
-    public TimeSpan Interval { get; init; } = TimeSpan.FromSeconds(2);
+    private long _tick = startTick;
+
+    public TimeSpan Interval { get; init; } = TickInterval;
 
     public bool IsPaused { get; set; }
 

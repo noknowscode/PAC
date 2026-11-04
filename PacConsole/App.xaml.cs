@@ -1,5 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using PacConsole.Core.Persistence;
+using PacConsole.Core.Solids;
 using PacConsole.Core.Telemetry;
+using PacConsole.Services;
 
 namespace PacConsole;
 
@@ -68,7 +71,13 @@ public partial class App : Application
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton(TimeProvider.System);
-                    services.AddSingleton<ITelemetryService>(sp => new SimulatedTelemetry(sp.GetRequiredService<TimeProvider>())
+                    services.AddSingleton<OperatorJournal>();
+                    services.AddSingleton<IOperatorJournal>(sp => sp.GetRequiredService<OperatorJournal>());
+                    // The simulated plant carries on from the saved record's tick, plus the time the console was closed.
+                    services.AddSingleton<ITelemetryService>(sp => new SimulatedTelemetry(
+                        sp.GetRequiredService<TimeProvider>(),
+                        sp.GetRequiredService<IOperatorJournal>().Restored?.ResumeTick(sp.GetRequiredService<TimeProvider>().GetUtcNow(), SimulatedTelemetry.TickInterval)
+                            ?? Simulation.StartTick)
                     {
 #if DEBUG
                         // PAC_TELEMETRY_FAULT=<n> drops the stream after n snapshots, once, to exercise the error state and Retry.
@@ -101,6 +110,14 @@ public partial class App : Application
 #endif
 
         Host = builder.Build();
+        // The plant model (about 65 ms of geometry) builds on a worker while the record loads; the first drawing that
+        // needs it waits for the same build instead of starting its own on the UI thread.
+        var plant = Task.Run(() => PlantSolids.Default);
+        // The page model opens on the saved operator record, so it is read before the first navigation.
+        await Host.Services.GetRequiredService<OperatorJournal>().OpenAsync(CancellationToken.None);
+        _ = plant.ContinueWith(
+            t => Host.Services.GetService<ILogger<App>>()?.LogError(t.Exception, "Building the plant model failed"),
+            CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
         await MainWindow.InitializeNavigationAsync(
             () => Task.FromResult(Host),
             initialRoute: "Console"

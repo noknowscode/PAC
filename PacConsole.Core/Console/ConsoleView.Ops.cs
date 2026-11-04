@@ -153,16 +153,19 @@ public sealed partial record ConsoleView
                 state.EndsWith('…') ? "moving" : d.Running ? "running" : "stopped");
         }).ToImmutableArray();
 
+        // A step (Manual) reaches its target at the next scan: it shows the target, never a minute of ramp.
         static string RampText(Ramp r, long t, string unit, string format) =>
-            r.IsMoving(t) ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
+            r.IsMoving(t) && !r.IsStep ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
             : r.IsHeld(t) ? $"{r.ValueAt(t).ToString(format, Inv)} {unit} · held, target {r.To.ToString(format, Inv)}"
             : $"{r.To.ToString(format, Inv)} {unit}";
 
         // Newest first, by tick and then by the order the lines were written: lines often share a tick (Acknowledge
         // all writes one per alarm, and under HOLD the tick stands still), and the latest of them must lead. The
-        // operator acts on a snapshot after its alarms came in, so a tick's own lines follow its alarm transitions.
+        // operator acts on a snapshot after its alarms came in, and a command takes effect from the next scan, so a
+        // tick's own lines follow its alarm transitions and an action always precedes what it caused. Every line reads
+        // the plant's clock, the time of its tick's snapshot, so the times agree with that order.
         var log = book.Transitions.Select(t => (t.Tick, Row: new LogRowView(TimeOf(t.Tick), t.Raised ? "Alarm" : "Normal", t.Text, t.Raised ? "alarm" : "normal")))
-            .Concat(ops.Log.Select(e => (e.Tick, Row: new LogRowView(e.At.ToLocalTime().ToString("HH:mm:ss", Inv), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant()))))
+            .Concat(ops.Log.Select(e => (e.Tick, Row: new LogRowView(TimeOf(e.Tick), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant()))))
             .Select((x, written) => (x.Tick, x.Row, Written: written))
             .OrderByDescending(x => x.Tick)
             .ThenByDescending(x => x.Written)

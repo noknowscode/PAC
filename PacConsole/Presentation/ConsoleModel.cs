@@ -1,5 +1,6 @@
 using PacConsole.Core.Console;
 using PacConsole.Core.Operations;
+using PacConsole.Core.Persistence;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 
@@ -9,19 +10,27 @@ namespace PacConsole.Presentation;
 /// Domain state for the console. Telemetry arrives as a stream; the operator's inputs are
 /// states; <see cref="View"/> combines them through one pure function in Core.
 /// Camera, orbit and hover state live in PlantViewport, not here: they change every frame
-/// and are not domain data.
+/// and are not domain data. The operator side of the plant (<see cref="Ops"/>) and the mode
+/// open where the last launch left them and are saved after every change (<see cref="IOperatorJournal"/>).
 /// </summary>
 public partial record ConsoleModel
 {
     private readonly ITelemetryService _telemetry;
     private readonly TimeProvider _time;
     private readonly IThemeService _themes;
+    private readonly IOperatorJournal _journal;
+    private readonly PlantOps _restoredOps;
+    private long _version;
 
-    public ConsoleModel(ITelemetryService telemetry, TimeProvider time, IThemeService themes)
+    public ConsoleModel(ITelemetryService telemetry, TimeProvider time, IThemeService themes, IOperatorJournal journal)
     {
         _telemetry = telemetry;
         _time = time;
         _themes = themes;
+        _journal = journal;
+        _restoredOps = journal.Restored?.Ops ?? PlantOps.Initial;
+        // A console closed while held opens held: the stream starts paused at the plant's resumed tick.
+        if (journal.Restored?.Mode == ControlMode.Hold) _telemetry.IsPaused = true;
     }
 
     /// <summary>
@@ -40,23 +49,26 @@ public partial record ConsoleModel
     /// </summary>
     public IFeed<DateTimeOffset> Clock => Feed.AsyncEnumerable(Ticks);
 
-    // Applied setpoints. Written only by the Apply commands (SPEC-OPERATIONS.md: typed, then applied).
-    public IState<double> TargetMw => State.Value(this, () => Setpoints.Default.TargetMw);
-    public IState<double> TurbineLimitBar => State.Value(this, () => Setpoints.Default.TurbineLimitBar);
-    public IState<double> DamperPct => State.Value(this, () => Setpoints.Default.DamperPct);
-
-    // Drafts: each written only by its NumberBox (two-way), read by its Apply command as a feed parameter.
-    public IState<double> LoadDraft => State.Value(this, () => Setpoints.Default.TargetMw);
-    public IState<double> LimitDraft => State.Value(this, () => Setpoints.Default.TurbineLimitBar);
-    public IState<double> DamperDraft => State.Value(this, () => Setpoints.Default.DamperPct);
-    public IState<double> FanSpeedDraft => State.Value(this, () => 100.0);
-    public IState<double> ReactiveDraft => State.Value(this, () => 120.0);
+    // Drafts: each written only by its NumberBox (two-way), read by its Apply command as a feed parameter. Each opens
+    // on the value in force (SPEC-OPERATIONS.md: typed, then applied).
+    public IState<double> LoadDraft => State.Value(this, () => _restoredOps.Setpoints.TargetMw);
+    public IState<double> LimitDraft => State.Value(this, () => _restoredOps.Setpoints.TurbineLimitBar);
+    public IState<double> DamperDraft => State.Value(this, () => _restoredOps.Setpoints.DamperPct);
+    public IState<double> FanSpeedDraft => State.Value(this, () => _restoredOps.FanSpeed.To);
+    public IState<double> ReactiveDraft => State.Value(this, () => _restoredOps.Reactive.To);
     public IState<string> NoteDraft => State.Value(this, () => "");
 
-    /// <summary>The operator side of the plant: devices, ramps, valves, acknowledgements, shelves, the log and the pending command.</summary>
-    public IState<PlantOps> Ops => State.Value(this, () => PlantOps.Initial);
+    /// <summary>
+    /// The operator side of the plant: devices, ramps, valves, the applied setpoints, acknowledgements, shelves, the log
+    /// and the pending command. The applied setpoints live here, not in states of their own, so a new limit and the
+    /// change that dates it reach the view in one update.
+    /// </summary>
+    public IState<PlantOps> Ops => State.Value(this, () => _restoredOps);
 
-    public IState<ControlMode> Mode => State.Value(this, () => ControlMode.Auto);
+    public IState<ControlMode> Mode => State.Value(this, () => _journal.Restored?.Mode ?? ControlMode.Auto);
+
+    /// <summary>True after a save failed (the journal logged why): the log band says the record is only in memory.</summary>
+    public IState<bool> SaveFailed => State.Value(this, () => false);
 
     /// <summary>
     /// Opens on the cooling bank, the unit in alert at start. Pinned rather than left to follow the
@@ -86,12 +98,9 @@ public partial record ConsoleModel
     public IFeed<ViewInputs> Inputs => Feed.Combine(System, Range, Compared, Cursor, Theme)
         .Select(t => new ViewInputs(t.Item1, t.Item2, t.Item3, (int)Math.Round(t.Item4), t.Item5));
 
-    public IFeed<Setpoints> CurrentSetpoints => Feed.Combine(TargetMw, TurbineLimitBar, DamperPct)
-        .Select(t => new Setpoints(t.Item1, t.Item2, t.Item3));
-
     // Feed.Combine takes at most eight sources, so the view inputs arrive already combined.
-    public IFeed<ConsoleView> View => Feed.Combine(Snapshot, CurrentSetpoints, Ops, Mode, Selection, Clock, Inputs)
-        .Select(t => ConsoleView.Compose(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5.Unit, Later(t.Item6, t.Item1.At), t.Item7));
+    public IFeed<ConsoleView> View => Feed.Combine(Snapshot, Ops, Mode, Selection, Clock, Inputs)
+        .Select(t => ConsoleView.Compose(t.Item1, t.Item2.Setpoints, t.Item2, t.Item3, t.Item4.Unit, Later(t.Item5, t.Item1.At), t.Item6));
 
     private static DateTimeOffset Later(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 
@@ -154,49 +163,69 @@ public partial record ConsoleModel
 
     // ---------------------------------------------------------------- operations (SPEC-OPERATIONS.md)
 
-    /// <summary>Updates the ops state; MVUX hands a record state over as nullable, and none means the initial plant.</summary>
-    private ValueTask Op(Func<PlantOps, PlantOps> change, CancellationToken ct) =>
-        Ops.UpdateAsync(o => change(o ?? PlantOps.Initial), ct);
+    /// <summary>
+    /// Updates the ops state and saves the result, dated by the snapshot the operator acted on. MVUX hands a record
+    /// state over as nullable, and none means the initial plant. The version is taken inside the update, which MVUX
+    /// runs one at a time, so the journal can drop a save that a later change overtook.
+    /// </summary>
+    private async ValueTask Op(Func<PlantOps, PlantOps> change, PlantSnapshot snapshot, ControlMode mode, CancellationToken ct)
+    {
+        PlantOps? next = null;
+        long version = 0;
+        await Ops.UpdateAsync(o =>
+        {
+            next = change(o ?? PlantOps.Initial);
+            version = Interlocked.Increment(ref _version);
+            return next;
+        }, ct);
+        if (next is null) return;
+        var saved = await _journal.SaveAsync(OperatorRecord.Of(snapshot.Tick, _time.GetUtcNow(), mode, next), version, ct);
+        await SaveFailed.SetAsync(!saved, ct);
+    }
 
     // Commands read the latest snapshot as a feed parameter (MVUX injects the current value of a feed
     // named like the parameter) for the tick their effects start from.
 
     /// <summary>Selects a device's start or stop for select-before-operate.</summary>
+    /// <summary>Selects a device's start or stop for select-before-operate. Nothing is saved: a selection never outlives the console.</summary>
     public async ValueTask SelectDevice(string id, PlantSnapshot snapshot, CancellationToken ct) =>
-        await Op(o =>
+        await Ops.UpdateAsync(o =>
         {
-            var d = o.Device(id);
+            var ops = o ?? PlantOps.Initial;
+            var d = ops.Device(id);
             OpsCommand command = d.Running ? new StopDevice(d.Unit, d.Id, d.Name) : new StartDevice(d.Unit, d.Id, d.Name);
-            return o.Select(command, snapshot.Tick);
+            return ops.Select(command, snapshot.Tick);
         }, ct);
 
     /// <summary>Selects a valve's move to the other position.</summary>
     public async ValueTask SelectValve(int id, PlantSnapshot snapshot, CancellationToken ct) =>
-        await Op(o =>
+        await Ops.UpdateAsync(o =>
         {
-            var valve = o.Valves.First(v => v.Id == id);
-            return ConsoleView.ValveOwner(id) is { } owner ? o.Select(new MoveValve(owner, id, !valve.Open), snapshot.Tick) : o;
+            var ops = o ?? PlantOps.Initial;
+            var valve = ops.Valves.First(v => v.Id == id);
+            return ConsoleView.ValveOwner(id) is { } owner ? ops.Select(new MoveValve(owner, id, !valve.Open), snapshot.Tick) : ops;
         }, ct);
 
-    public async ValueTask ConfirmPending(PlantSnapshot snapshot, CancellationToken ct) =>
-        await Op(o => o.Confirm(snapshot.Tick, _time.GetLocalNow()), ct);
+    public async ValueTask ConfirmPending(PlantSnapshot snapshot, ControlMode mode, CancellationToken ct) =>
+        await Op(o => o.Confirm(snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
 
+    /// <summary>Drops the pending command: the confirm bar's Cancel, and Esc anywhere on the page (SPEC-OPERATIONS).</summary>
     public async ValueTask CancelPending(CancellationToken ct) =>
-        await Op(o => o.Cancel(), ct);
+        await Ops.UpdateAsync(o => (o ?? PlantOps.Initial).Cancel(), ct);
 
-    public async ValueTask Acknowledge(string key, PlantSnapshot snapshot, CancellationToken ct) =>
-        await Op(o => o.Acknowledge(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), ct);
+    public async ValueTask Acknowledge(string key, PlantSnapshot snapshot, ControlMode mode, CancellationToken ct) =>
+        await Op(o => o.Acknowledge(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
 
-    public async ValueTask Shelve(string key, PlantSnapshot snapshot, CancellationToken ct) =>
-        await Op(o => o.Shelve(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), ct);
+    public async ValueTask Shelve(string key, PlantSnapshot snapshot, ControlMode mode, CancellationToken ct) =>
+        await Op(o => o.Shelve(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
 
-    public async ValueTask Unshelve(string key, PlantSnapshot snapshot, CancellationToken ct) =>
-        await Op(o => o.Unshelve(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), ct);
+    public async ValueTask Unshelve(string key, PlantSnapshot snapshot, ControlMode mode, CancellationToken ct) =>
+        await Op(o => o.Unshelve(key, AlarmBook.Title(key), EquipmentCatalog.UnitOf(key), snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
 
     /// <summary>Acknowledges every alarm waiting for it (the view arrives as a feed parameter).</summary>
-    public async ValueTask AcknowledgeAll(ConsoleView view, PlantSnapshot snapshot, CancellationToken ct) =>
+    public async ValueTask AcknowledgeAll(ConsoleView view, PlantSnapshot snapshot, ControlMode mode, CancellationToken ct) =>
         await Op(o => view.AlarmRows.Where(r => r.CanAck)
-            .Aggregate(o, (ops, r) => ops.Acknowledge(r.Key, r.Title, r.Unit, snapshot.Tick, _time.GetLocalNow())), ct);
+            .Aggregate(o, (ops, r) => ops.Acknowledge(r.Key, r.Title, r.Unit, snapshot.Tick, _time.GetLocalNow())), snapshot, mode, ct);
 
     // Apply: a typed draft is rounded and kept in its range (SetpointRange); an empty field applies nothing. The ramped
     // setpoints ramp in Auto and apply at once in Manual (PlantOps.ModeChanged).
@@ -204,41 +233,38 @@ public partial record ConsoleModel
     public async ValueTask ApplyLoad(double loadDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.Load.Apply(loadDraft) is not { } mw) return;
-        await Op(o => o.SetLoad(mw, snapshot.Tick, _time.GetLocalNow(), mode), ct);
-        await TargetMw.SetAsync(mw, ct);
+        await Op(o => o.SetLoad(mw, snapshot.Tick, _time.GetLocalNow(), mode), snapshot, mode, ct);
     }
 
     public async ValueTask ApplyFanSpeed(double fanSpeedDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.FanSpeed.Apply(fanSpeedDraft) is not { } pct) return;
-        await Op(o => o.SetFanSpeed(pct, snapshot.Tick, _time.GetLocalNow(), mode), ct);
+        await Op(o => o.SetFanSpeed(pct, snapshot.Tick, _time.GetLocalNow(), mode), snapshot, mode, ct);
     }
 
     public async ValueTask ApplyReactive(double reactiveDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.Reactive.Apply(reactiveDraft) is not { } mvar) return;
-        await Op(o => o.SetReactive(mvar, snapshot.Tick, _time.GetLocalNow(), mode), ct);
+        await Op(o => o.SetReactive(mvar, snapshot.Tick, _time.GetLocalNow(), mode), snapshot, mode, ct);
     }
 
-    // The limit and the damper apply at once. Ops first: it keeps the setpoints they replace from this tick, so the
-    // alarm replay never reads the new value into the past, even for the moment between the two updates.
-    public async ValueTask ApplyLimit(double limitDraft, Setpoints currentSetpoints, PlantSnapshot snapshot, CancellationToken ct)
+    // The limit and the damper apply at once, from the next scan; the ops state keeps the setpoints they replace for
+    // the ticks before it, so the alarm replay never reads the new value into the past.
+    public async ValueTask ApplyLimit(double limitDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.TurbineLimit.Apply(limitDraft) is not { } bar) return;
-        await Op(o => o.SetTurbineLimit(bar, currentSetpoints, snapshot.Tick, _time.GetLocalNow()), ct);
-        await TurbineLimitBar.SetAsync(bar, ct);
+        await Op(o => o.SetTurbineLimit(bar, snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
     }
 
-    public async ValueTask ApplyDamper(double damperDraft, Setpoints currentSetpoints, PlantSnapshot snapshot, CancellationToken ct)
+    public async ValueTask ApplyDamper(double damperDraft, ControlMode mode, PlantSnapshot snapshot, CancellationToken ct)
     {
         if (SetpointRange.Damper.Apply(damperDraft) is not { } pct) return;
-        await Op(o => o.SetDamper(pct, currentSetpoints, snapshot.Tick, _time.GetLocalNow()), ct);
-        await DamperPct.SetAsync(pct, ct);
+        await Op(o => o.SetDamper(pct, snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
     }
 
-    public async ValueTask AddNote(string noteDraft, PlantSnapshot snapshot, CancellationToken ct)
+    public async ValueTask AddNote(string noteDraft, PlantSnapshot snapshot, ControlMode mode, CancellationToken ct)
     {
-        await Op(o => o.AddNote(noteDraft, snapshot.Tick, _time.GetLocalNow()), ct);
+        await Op(o => o.AddNote(noteDraft, snapshot.Tick, _time.GetLocalNow()), snapshot, mode, ct);
         await NoteDraft.SetAsync("", ct);
     }
 
@@ -254,7 +280,7 @@ public partial record ConsoleModel
         // HOLD pauses the stream at the source, so the last snapshot stays current and ages. Manual pauses the ramps.
         _telemetry.IsPaused = next == ControlMode.Hold;
         await Mode.SetAsync(next, ct);
-        await Op(o => o.ModeChanged(current, next, snapshot.Tick, _time.GetLocalNow()), ct);
+        await Op(o => o.ModeChanged(current, next, snapshot.Tick, _time.GetLocalNow()), snapshot, next, ct);
     }
 
     /// <summary>Restarts a stopped or empty telemetry stream (the Retry on the error and none states).</summary>
