@@ -231,8 +231,8 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 
 ## Decisions (2026-10-15, delegated by the user)
 
-- **Unit preview: one design for all units.** Selected unit's solids plus the vibration gauge. The CND fan-cell drive train stays in the reference figure only; deferred, not planned. Reason: the gauge carries the alert meaning for every unit; the drive train is ~30 solids for one unit of six.
-- **Fan speed: omitted.** No fan-speed telemetry exists; a speed control would impersonate a capability (`capability-coverage.md`, step 3).
+- **Unit preview: one design for all units.** Selected unit's solids plus the vibration gauge. The CND fan-cell drive train stays in the reference figure only; deferred, not planned. Reason: the gauge carries the alert meaning for every unit; the drive train is ~30 solids for one unit of six. *Superseded:* console v3 dropped the preview.
+- **Fan speed: omitted.** No fan-speed telemetry exists; a speed control would impersonate a capability (`capability-coverage.md`, step 3). *Superseded:* SPEC-OPERATIONS built a fan speed setpoint on the Control tab.
 - **Hover: outline, not selection.** Hovering a unit's solid draws a `MutedBrush` outline on it; clicking it executes `SelectCommand` (tags keep working). Lift follows selection. Reason: hover-to-select would rewrite the telemetry panels whenever the pointer crosses the plant. Adds to phase 4: a per-unit hit test against each unit's rest-pose screen hull (the figure's `HULLS` approach), frontmost by pad depth; drag past 4 px cancels the click as today.
 - **Accent: `AccentBrush` (orange).** Matches the tags' selected state; the figure's white is its own palette.
 - **Verification: rooted session.** Implementation runs in a session opened with `Open-RootedSession.ps1`, which seeds `.mcp.json`, resuming from `HANDOFF.md`.
