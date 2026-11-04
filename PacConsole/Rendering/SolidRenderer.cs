@@ -576,9 +576,17 @@ public sealed class SolidRenderer : IDisposable
         {
             var images = new SKImage?[pictures.Length];
             var dests = new SKRect[pictures.Length];
-            for (var i = 0; i < pictures.Length && !_disposed; i++)
+            try
             {
-                if (pictures[i] is { } picture) (images[i], dests[i]) = Rasterize(picture, scale);
+                for (var i = 0; i < pictures.Length && !_disposed; i++)
+                {
+                    if (pictures[i] is { } picture) (images[i], dests[i]) = Rasterize(picture, scale);
+                }
+            }
+            catch (Exception ex)
+            {
+                Failed(images, ex);
+                return;
             }
             lock (_layerGate)
             {
@@ -810,11 +818,19 @@ public sealed class SolidRenderer : IDisposable
         {
             var images = new SKImage?[pictures.Count];
             var dests = new SKRect[pictures.Count];
-            // This worker owns these recordings: each is disposed here, rasterized or not.
-            for (var k = 0; k < pictures.Count; k++)
+            try
             {
-                using var picture = pictures[k];
-                if (!_disposed) (images[k], dests[k]) = Rasterize(picture, scale);
+                for (var k = 0; k < pictures.Count && !_disposed; k++) (images[k], dests[k]) = Rasterize(pictures[k], scale);
+            }
+            catch (Exception ex)
+            {
+                Failed(images, ex);
+                return;
+            }
+            finally
+            {
+                // This worker owns these recordings: each is disposed here, rasterized or not.
+                foreach (var picture in pictures) picture.Dispose();
             }
             lock (_layerGate)
             {
@@ -836,6 +852,16 @@ public sealed class SolidRenderer : IDisposable
         _partImages = [];
         _partLooks = [];
         _partRequested = [];
+    }
+
+    /// <summary>
+    /// A worker's fault: frees what it made and logs it, where a fire-and-forget task would drop it unobserved.
+    /// Nothing waits for these images, so the plant keeps drawing those runs and parts as vectors.
+    /// </summary>
+    private static void Failed(SKImage?[] images, Exception ex)
+    {
+        foreach (var image in images) image?.Dispose();
+        typeof(SolidRenderer).Log().LogError(ex, "Rasterizing the plant's cached layers failed; they stay vector drawings");
     }
 
     /// <summary>A picture as an image of exactly its device pixels: its cull rect snapped outward to the pixel grid.</summary>
