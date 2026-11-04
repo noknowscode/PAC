@@ -1,5 +1,47 @@
-# HANDOFF: PacConsole A pass
+# HANDOFF: PacConsole A pass 2, pre-transfer cleanup, showcase info file
 Updated: 2026-11-04
+
+## 2026-11-04: A pass 2, cleanup and `.studiolive` (branch `feat/production-readiness`, `d5bfdb0` → `c5b71b9` + this file)
+Three briefs, in order: the code review's closed list (A pass 2), the pre-transfer cleanup, the showcase info file.
+
+A pass 2, done (each item one commit; `docs/COMPLETENESS.md`, "Re-check after A pass 2", has the table):
+- **Structure:** `PlantSolids` (998 lines) is the plant model (71); `PartKit`, `UnitSolids`, `CycleSolids` build it;
+  `PlantFraming`, `UnitPicker`, `PartSystems` read it; pinned first by `Fixtures/framing.txt`. `StillFrameCache` (390)
+  is `StillRunCache` (235), `PartImageCache` (148) and `LayerRaster` (38). Full screen goes through `IFullScreen`,
+  injected into `ConsoleModel` from the window `IApplicationBuilder.Configure` hands over; `App.Shell` is gone.
+- **Quality:** the capture tool builds again (SPEC.md, Decisions, A pass 2); one `MotionPreference`; `Compose` reads
+  `ops.Setpoints`; no `null!` in the renderer; the journal starts fresh on any storage fault and the log band says the
+  record is not saved; one summary on `SelectDevice`.
+- **Docs:** SPEC.md's capability table and the model test counts match the code.
+- **Runtime:** Debug desktop under Xvfb `:616` (click and hover hit tests, full screen 1440×900 → 1920×1200 and back,
+  select-before-operate with Confirm and Esc, the log across a relaunch, Graphite from the menu, a storage fault at
+  launch, 390 px) and Release WebAssembly in headless Chromium (click selection, Confirm, Esc).
+  Evidence: `docs/evidence/2026-11-04-a-pass2/`.
+- Full screen under Xvfb needs a window manager to honour `_NET_WM_STATE`; the check used a 40-line watcher that
+  applies it (`desktop-fullscreen-requests.txt`).
+
+Cleanup, done: six unused usings (IDE0005), `AlarmBook.ShelvedCount` (test-only) removed, `DepthOrder.Separable` made an
+internal test seam, `coverlet.collector` removed, the template's `.run/Readme.md` removed, banner decoration and
+restating comments trimmed, 70 design-spike files nothing linked (screenshots and a hairline page) removed from `docs/`, `media/INVENTORY.md`
+written (media itself untouched: the owner decides what transfers).
+
+Showcase info file, done: `.studiolive/` (sample.json, agent-context.json, user-conversation.json, icon.png, four
+screenshots); the validator prints OK. A custom icon replaces the template's (SPEC.md, Decisions, pre-transfer,
+proposed), as do the absolute URLs (question 1 in uno-private#2444).
+
+The PR had a conflict with `main` (central package management in the capture tool): merged `main` into the branch in
+`c5b71b9`, the tool keeps central versions.
+
+Open:
+- Owner decisions: the proposed decisions in SPEC.md (A pass 2; pre-transfer) and SPEC-OPERATIONS.md; the phone tags
+  at 360 px; which of `media/` transfers (`media/INVENTORY.md`).
+- iOS and WinAppSDK are CI builds only; WebAssembly workflows 3, 4, 6 and 7 not driven in a browser.
+
+## Last verified state (2026-11-04, this session)
+- **Build:** desktop and WebAssembly Debug, Android Debug, the tests' net10.0 build: 0 warnings. Release WebAssembly
+  publish: trim warnings only (Uno's and the MVUX generator's). The capture tool builds.
+- **Tests:** 364/364 (`dotnet test PacConsole.Tests -p:PacTargetFrameworks=net10.0`).
+- **Lint:** every gating rule 0; 77 automation names in 2,240 XAML lines (34.4 per 1,000).
 
 ## 2026-11-04: A pass (branch `feat/production-readiness`, `d522a09` → `40bae01` + docs)
 Brief: the shared A-pass brief (uno-lab `A-GRADE-PLAN.md`), plus the Android emulator smoke job. Done:
@@ -7,8 +49,8 @@ Brief: the shared A-pass brief (uno-lab `A-GRADE-PLAN.md`), plus the Android emu
   orchestrator, pinned by ten reference frames (`PacConsole.Tests/Rendering`, `Fixtures/render`). `PlantViewport`'s camera
   rules moved to `Core/Geometry/CameraRig` (tested); `FrameClock` and `TagOverlay` beside it; the switcher, thumbnails and
   orbit toggles bind `RestingPreset`/`IsAutoOrbit` two-way, the camera tools bind commands.
-- **Model tests:** the test project references the app's plain `net10.0` build (`PacTargetFrameworks=net10.0`); 41 tests of
-  `ConsoleModel` over a fake clock. They found a real race (a new limit composed before the change that dates it), fixed by
+- **Model tests:** the test project references the app's plain `net10.0` build (`PacTargetFrameworks=net10.0`); 33 tests of
+  `ConsoleModel` over a fake clock (25 page-model, 8 persistence). They found a real race (a new limit composed before the change that dates it), fixed by
   keeping the applied setpoints in `PlantOps`.
 - **Functional Majors built:** Esc cancels select-before-operate (KeyboardAccelerator on Cancel); operator data persists
   (`operator/operator.json`, atomic writes, restored before the first navigation, the simulated plant resumes at the saved
@@ -30,7 +72,7 @@ Open:
 - Headless Chromium with software GL draws about one frame a second (rAF 1.0–1.7/s); a GPU browser was not tried.
 - Proposed decisions await the owner (SPEC-OPERATIONS, SPEC.md: Decisions, A pass).
 
-## Last verified state (2026-11-04)
+## Verified state after the A pass (2026-11-04)
 - **Build:** desktop Debug and the tests' net10.0 build, 0 warnings; Release WebAssembly publish, trim warnings only (Uno's).
 - **Tests:** 360/360 (`dotnet test PacConsole.Tests -p:PacTargetFrameworks=net10.0`).
 - **Lint:** every gating rule 0.
