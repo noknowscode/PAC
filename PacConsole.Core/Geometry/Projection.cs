@@ -23,11 +23,6 @@ public readonly record struct CameraPose(float Yaw, float Elevation)
     /// <summary>True when this pose is within <paramref name="tolerance"/> rad of <paramref name="other"/> on both axes.</summary>
     public bool IsNear(CameraPose other, float tolerance = 0.03f) =>
         MathF.Abs(Wrap(Yaw - other.Yaw)) < tolerance && MathF.Abs(Elevation - other.Elevation) < tolerance;
-
-    /// <summary>Yaw in whole degrees, 0-359, for the viewport caption.</summary>
-    public int YawDegrees => (int)MathF.Round(((Yaw * 180 / MathF.PI) % 360 + 360) % 360) % 360;
-
-    public int ElevationDegrees => (int)MathF.Round(Elevation * 180 / MathF.PI);
 }
 
 public sealed record CameraPreset(string Key, string Label, string Detail, CameraPose Pose);

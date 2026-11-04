@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using PacConsole.Core.Telemetry;
-using Uno.Resizetizer;
 
 namespace PacConsole;
 

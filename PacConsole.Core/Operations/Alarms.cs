@@ -139,7 +139,7 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
             var since = onset[a.Key];
             var acked = ops.Acks.TryGetValue(a.Key, out var ack) && ack >= since;
             var state = ops.IsShelved(a.Key, tick) ? AlarmState.Shelved : acked ? AlarmState.Acknowledged : AlarmState.Unacknowledged;
-            entries.Add(Entry(a.Key, spec, a.Value, a.Limit, since, since == start, state, ops, tick));
+            entries.Add(Entry(a.Key, spec, a.Value, a.Limit, since, since == start, state, ops));
         }
         // Returned to normal in the window without an acknowledgement since it came in: it stays until acknowledged,
         // or until its onset leaves the window.
@@ -148,7 +148,7 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
             if (ops.Acks.TryGetValue(key, out var ack) && ack >= since) continue;
             if (ops.IsShelved(key, tick)) continue;
             var spec = EquipmentCatalog.Find(key)!;
-            entries.Add(Entry(key, spec, double.NaN, spec.Limit!(setpoints), since, since == start, AlarmState.ReturnedUnacknowledged, ops, tick));
+            entries.Add(Entry(key, spec, double.NaN, spec.Limit!(setpoints), since, since == start, AlarmState.ReturnedUnacknowledged, ops));
         }
 
         var ordered = entries
@@ -159,7 +159,7 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
         return new AlarmBook(ordered, transitions.ToImmutable());
     }
 
-    private static AlarmEntry Entry(string key, ReadingSpec spec, double value, double limit, long since, bool beforeWindow, AlarmState state, PlantOps ops, long tick) =>
+    private static AlarmEntry Entry(string key, ReadingSpec spec, double value, double limit, long since, bool beforeWindow, AlarmState state, PlantOps ops) =>
         new(key, EquipmentCatalog.UnitOf(key), spec.Alarm!.Priority, Title(key), value, limit, spec.Format, spec.Unit, since, beforeWindow, state,
             ops.Shelves.TryGetValue(key, out var until) ? until : 0);
 

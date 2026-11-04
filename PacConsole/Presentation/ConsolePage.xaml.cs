@@ -1,5 +1,3 @@
-using System.Windows.Input;
-
 namespace PacConsole.Presentation;
 
 public sealed partial class ConsolePage : Page

@@ -208,13 +208,13 @@ public class PlantSolidsTests
                 {
                     var b = boxes[i];
                     if (x < b.L || x > b.R || y < b.T || y > b.B) continue;
-                    if (Exit(volumes[i], halves[i], origin, d) is not { } t) continue;
+                    if (Exit(halves[i], origin, d) is not { } t) continue;
                     if (t > nearestT) { nearestT = t; nearest = i; }
                     if (top < 0 || rank[i] > rank[top]) top = i;
                 }
                 if (top < 0 || top == nearest) continue;
                 // A tie on a shared face is fine; anything farther than that is a misorder.
-                var topT = Exit(volumes[top], halves[top], origin, d)!.Value;
+                var topT = Exit(halves[top], origin, d)!.Value;
                 if (nearestT - topT > 0.05f) bad.Add((top, nearest));
             }
         }
@@ -222,7 +222,7 @@ public class PlantSolidsTests
     }
 
     /// <summary>The ray parameter where it leaves the hull toward the viewer (its visible surface), or null if it misses.</summary>
-    private static float? Exit(Volume v, (Vec3 N, float C)[] halves, Vec3 o, Vec3 d)
+    private static float? Exit((Vec3 N, float C)[] halves, Vec3 o, Vec3 d)
     {
         float t0 = float.MinValue, t1 = float.MaxValue;
         foreach (var (n, c) in halves)

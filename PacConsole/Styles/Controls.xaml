@@ -6,6 +6,8 @@
     with no outline, plus an ink state layer that reads +6% on hover and +10% on press. Checked
     raises the surface to white with orange text (the one indicator colour). Focus uses system
     focus visuals in the accent.
+    Templates rather than lightweight keys: Simple's state keys swap one fill per state and per variant,
+    while this look is one ink layer over whatever fill a variant has, in both themes.
   -->
 
   <Style x:Key="ConsoleButtonBase" TargetType="ButtonBase">

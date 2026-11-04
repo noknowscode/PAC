@@ -36,7 +36,6 @@ public sealed partial record ConsoleView
     // Alarm summary: the first rows; "Show all" opens the rest below them.
     public const int AlarmRowsShown = 4;
     public string AlarmSummaryText { get; init; } = "";
-    public bool HasAlarmRows => !AlarmRows.IsEmpty;
     public ImmutableArray<AlarmRowView> AlarmRows { get; init; } = [];
     public ImmutableArray<AlarmRowView> ShownAlarmRows => [.. AlarmRows.Take(AlarmRowsShown)];
     public ImmutableArray<AlarmRowView> MoreAlarmRows => [.. AlarmRows.Skip(AlarmRowsShown)];

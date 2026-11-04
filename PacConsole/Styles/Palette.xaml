@@ -22,20 +22,17 @@
       <SolidColorBrush x:Key="MutedBrush" Color="#5A6573" />
       <SolidColorBrush x:Key="FaintBrush" Color="#8A939E" />
 
-      <!-- Lines and fills. Controls are filled, not outlined; the border keys serve focus rings and the valve ring. -->
+      <!-- Lines and fills. Controls are filled, not outlined; the border key serves the valve ring. -->
       <SolidColorBrush x:Key="HairlineBrush" Color="#D9DDE2" />
       <!-- A view thumbnail's frame: the hairline's step from the panel ground, half again (on #F4F5F6). -->
       <SolidColorBrush x:Key="ThumbFrameBrush" Color="#CCD1D8" />
       <SolidColorBrush x:Key="BorderBrushDefault" Color="#8A939E" />
-      <SolidColorBrush x:Key="BorderBrushStrong" Color="#3E4B5A" />
       <SolidColorBrush x:Key="FillBrush" Color="#E9ECEF" />
       <SolidColorBrush x:Key="FillStrongBrush" Color="#D5DAE0" />
 
       <!-- Accent: the one selection colour, a deep slate-teal. Selected, compared and plotted, nothing else. -->
       <SolidColorBrush x:Key="AccentBrush" Color="#2F5D73" />
       <SolidColorBrush x:Key="AccentFillBrush" Color="#1F2F5D73" />
-      <SolidColorBrush x:Key="AccentTintBrush" Color="#0D2F5D73" />
-      <SolidColorBrush x:Key="AccentBorderBrush" Color="#992F5D73" />
       <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
 
       <!-- Alert: burnt orange, always paired with the word (alert, above limit) or a dashed stroke.
@@ -72,8 +69,6 @@
       <SolidColorBrush x:Key="CircuitWaterBrush" Color="#9EC1D8" />
       <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#96C9C3" />
       <SolidColorBrush x:Key="CircuitFuelBrush" Color="#B9A8D0" />
-      <!-- Electrical has no pipe; its swatch marks the system in the systems bar. -->
-      <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#C9B27A" />
       <!-- System inks: a system's dot in the systems bar, and its outline, glow and motion when the plant
            view isolates it. Stronger than the pipe tints, distinct from the slate-teal selection and the
            burnt-orange alert. -->
@@ -112,13 +107,10 @@
       <SolidColorBrush x:Key="HairlineBrush" Color="#2E3237" />
       <SolidColorBrush x:Key="ThumbFrameBrush" Color="#3A3F45" />
       <SolidColorBrush x:Key="BorderBrushDefault" Color="#6E767F" />
-      <SolidColorBrush x:Key="BorderBrushStrong" Color="#C4C9CF" />
       <SolidColorBrush x:Key="FillBrush" Color="#24282D" />
       <SolidColorBrush x:Key="FillStrongBrush" Color="#353A40" />
       <SolidColorBrush x:Key="AccentBrush" Color="#7FB3C8" />
       <SolidColorBrush x:Key="AccentFillBrush" Color="#247FB3C8" />
-      <SolidColorBrush x:Key="AccentTintBrush" Color="#107FB3C8" />
-      <SolidColorBrush x:Key="AccentBorderBrush" Color="#997FB3C8" />
       <SolidColorBrush x:Key="OnAccentBrush" Color="#0E1A20" />
       <SolidColorBrush x:Key="AlertBrush" Color="#F0793A" />
       <SolidColorBrush x:Key="AlertTextBrush" Color="#F38B55" />
@@ -143,7 +135,6 @@
       <SolidColorBrush x:Key="CircuitWaterBrush" Color="#3F5F78" />
       <SolidColorBrush x:Key="CircuitCoolingBrush" Color="#3A6662" />
       <SolidColorBrush x:Key="CircuitFuelBrush" Color="#5C4E70" />
-      <SolidColorBrush x:Key="CircuitElectricalBrush" Color="#6E6040" />
       <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="#E8899C" />
       <SolidColorBrush x:Key="SystemCoolingBrush" Color="#56C4B6" />
       <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="#AD90DB" />

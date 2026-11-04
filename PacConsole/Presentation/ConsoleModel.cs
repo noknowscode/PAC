@@ -2,7 +2,6 @@ using PacConsole.Core.Console;
 using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
-using Uno.Extensions.Toolkit;
 
 namespace PacConsole.Presentation;
 
