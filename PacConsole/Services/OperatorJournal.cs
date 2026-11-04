@@ -20,6 +20,8 @@ public sealed class OperatorJournal(TimeProvider time, ILogger<OperatorJournal> 
     /// <summary>
     /// Finds the folder and reads the record. On WebAssembly the folder is persisted in IndexedDB and is ready only once
     /// a StorageFolder call has awaited it, so the folder comes from <see cref="ApplicationData"/>, never a bare path.
+    /// Any storage fault here is logged and the console starts fresh: it must open whatever the storage does. With no
+    /// folder, every save reports failure, and the log band says the record is only in memory.
     /// </summary>
     public async Task OpenAsync(CancellationToken ct)
     {
@@ -30,7 +32,7 @@ public sealed class OperatorJournal(TimeProvider time, ILogger<OperatorJournal> 
             Restored = load.Record;
             if (load.SetAside is { } aside) log.LogWarning("The saved operator record could not be read; it was kept as {Path} and the console starts fresh", aside);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             log.LogError(ex, "The saved operator record could not be opened; the console starts fresh");
         }

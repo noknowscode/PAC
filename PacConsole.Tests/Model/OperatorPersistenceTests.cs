@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PacConsole.Core.Operations;
 using PacConsole.Core.Persistence;
@@ -147,6 +148,25 @@ public class OperatorPersistenceTests
     }
 
     [Test]
+    public async Task Any_storage_fault_at_launch_starts_fresh_logged_and_every_save_says_it_was_not_kept()
+    {
+        // LocalFolder can fail in ways other than IO and access errors (on WebAssembly, before IndexedDB is ready).
+        var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 11, 4, 9, 0, 0, TimeSpan.Zero));
+        var log = new ListLogger<OperatorJournal>();
+        var journal = new OperatorJournal(time, log, _ => throw new InvalidOperationException("storage is not ready"));
+
+        await journal.OpenAsync(default);
+
+        journal.Restored.Should().BeNull("the console starts fresh");
+        log.Errors.Should().ContainSingle().Which.Should().BeOfType<InvalidOperationException>();
+        await using var h = new ModelHarness(time: time, journal: journal);
+        var snapshot = (await h.Read(h.Model.Snapshot))!;
+        await h.Model.AddNote("Kept in memory", snapshot, ControlMode.Auto, default);
+        (await h.Read(h.Model.SaveFailed)).Should().BeTrue("the log band tells the operator the record is not saved");
+        (await h.Read(h.Model.Ops))!.Log.Should().ContainSingle("the console keeps working from memory");
+    }
+
+    [Test]
     public async Task A_relaunch_through_the_model_restores_what_the_operator_did()
     {
         var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 11, 4, 9, 0, 0, TimeSpan.Zero));
@@ -171,5 +191,20 @@ public class OperatorPersistenceTests
         restored.AlarmRows.Where(r => r.Unit == UnitId.Clg).Should().OnlyContain(r => !r.CanAck, "the acknowledgements were kept");
         restored.LogRows.Should().Contain(r => r.Text == "Before the relaunch");
         restored.TargetText.Should().Contain("640");
+    }
+}
+
+/// <summary>Keeps the exceptions logged at Error or above.</summary>
+internal sealed class ListLogger<T> : ILogger<T>
+{
+    public List<Exception?> Errors { get; } = [];
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        if (logLevel >= LogLevel.Error) Errors.Add(exception);
     }
 }
