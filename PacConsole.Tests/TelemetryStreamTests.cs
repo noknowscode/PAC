@@ -45,4 +45,30 @@ public class TelemetryStreamTests
         (await next).Should().BeTrue();
         e.Current.Tick.Should().Be(Simulation.StartTick + 1);
     }
+
+    [Test]
+    public async Task Fault_switch_fails_the_stream_once_and_a_new_stream_resumes()
+    {
+        var time = new FakeTimeProvider();
+        var telemetry = new SimulatedTelemetry(time) { FaultAfter = 2 };
+        using var cts = new CancellationTokenSource();
+
+        await using (var e = telemetry.Stream(cts.Token).GetAsyncEnumerator(cts.Token))
+        {
+            (await e.MoveNextAsync()).Should().BeTrue();
+            var second = e.MoveNextAsync();
+            time.Advance(TimeSpan.FromSeconds(2));
+            (await second).Should().BeTrue();
+
+            var third = e.MoveNextAsync();
+            time.Advance(TimeSpan.FromSeconds(2));
+            var fault = async () => await third;
+            await fault.Should().ThrowAsync<TelemetryFaultException>();
+        }
+
+        telemetry.FaultAfter.Should().BeNull("the switch fires once");
+        await using var resumed = telemetry.Stream(cts.Token).GetAsyncEnumerator(cts.Token);
+        (await resumed.MoveNextAsync()).Should().BeTrue();
+        resumed.Current.Tick.Should().Be(Simulation.StartTick + 1, "the plant kept its tick through the fault");
+    }
 }

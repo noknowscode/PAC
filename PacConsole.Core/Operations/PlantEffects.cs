@@ -22,7 +22,7 @@ public static class PlantEffects
         return d.Running ? settled : 1 - settled;
     }
 
-    // ---------------------------------------------------------------- CLG-05 cooling bank
+    // CLG-05 cooling bank
 
     public static double FanSpeedFraction(PlantOps ops, long tick) => ops.FanSpeed.ValueAt(tick) / 100;
 
@@ -62,7 +62,7 @@ public static class PlantEffects
         return v * running;
     }
 
-    // ---------------------------------------------------------------- CND-07 condenser
+    // CND-07 condenser
 
     /// <summary>Cooling-water flow as a fraction of duty: either pump carries the full flow.</summary>
     public static double CoolingWaterFlow(PlantOps ops, long tick) =>
@@ -76,7 +76,7 @@ public static class PlantEffects
     public static double VacuumLossMw(PlantOps ops, long tick) =>
         Math.Clamp((CondenserPressure(ops, tick, 9) - 9) / 9, 0, 1) * 40;
 
-    // ---------------------------------------------------------------- TKA-02, SIL-06
+    // TKA-02, SIL-06
 
     public static double FuelTransfer(PlantOps ops, long tick) =>
         Math.Min(1, ops.RunningSum(UnitId.Tka, tick, FuelTau));
@@ -91,7 +91,7 @@ public static class PlantEffects
         return Math.Clamp(m.Level + rate * (tick - m.Tick), 20, 98);
     }
 
-    // ---------------------------------------------------------------- valves
+    // Valves
 
     /// <summary>A valve's actual opening at <paramref name="tick"/>, 0 to 1, travelling linearly after a move.</summary>
     public static double ValveOpening(PlantOps ops, Valve valve, long tick)

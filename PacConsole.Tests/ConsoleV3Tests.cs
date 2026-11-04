@@ -13,7 +13,6 @@ public class ConsoleV3Tests
     private static ConsoleView Compose(UnitId? selected = null, ViewInputs? inputs = null) =>
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            Setpoints.Default,
             PlantOps.Initial,
             ControlMode.Auto,
             selected,
@@ -23,7 +22,31 @@ public class ConsoleV3Tests
     private static ConsoleView ComposeWith(PlantOps ops, UnitId selected) =>
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            Setpoints.Default, ops, ControlMode.Auto, selected, T0);
+            ops, ControlMode.Auto, selected, T0);
+
+    [Test]
+    public void Picker_always_shows_the_selected_unit()
+    {
+        // Active alarms keeps the selection when its alarm clears (or with nothing in alarm): the picker must
+        // still name the unit the inspector shows, and keep one ItemsSource instance across recompositions.
+        var inputs = ViewInputs.Default with { System = PlantSystem.Alarms };
+        var view = Compose(UnitId.Stk, inputs);
+        view.AlertingUnits.Should().NotContain(UnitId.Stk);
+        view.SelectedIndex.Should().BeGreaterThanOrEqualTo(0);
+        view.EquipmentChoices[view.SelectedIndex].Id.Should().Be(UnitId.Stk);
+        Compose(UnitId.Stk, inputs).EquipmentChoices.Should().BeSameAs(view.EquipmentChoices);
+
+        var all = Compose(UnitId.Stk);
+        all.EquipmentChoices.Should().HaveCount(EquipmentCatalog.All.Length, "a unit inside the system adds nothing");
+    }
+
+    [Test]
+    public void Theme_choice_checks_exactly_one_menu_item()
+    {
+        Compose().IsThemeSystem.Should().BeTrue("the console follows the OS until the operator picks a theme");
+        var graphite = Compose(inputs: ViewInputs.Default with { Theme = ThemeChoice.Graphite });
+        (graphite.IsThemeSystem, graphite.IsThemeLight, graphite.IsThemeGraphite).Should().Be((false, false, true));
+    }
 
     [Test]
     public void Every_unit_has_equipment_with_unique_reading_keys()
@@ -62,8 +85,8 @@ public class ConsoleV3Tests
     {
         var view = Compose(UnitId.Clg);
         view.AlarmSummaryText.Should().Be("1 active · 1 unacknowledged");
-        view.Alarm0!.Should().Match<AlarmRowView>(r => r.Key == "clg.vib" && r.Priority == "Medium" && r.State == "Unacknowledged" && r.CanAck);
-        view.Alarm0.Title.Should().Be("CLG-05 cooling fan vibration high");
+        view.AlarmRows[0].Should().Match<AlarmRowView>(r => r.Key == "clg.vib" && r.Priority == "Medium" && r.State == "Unacknowledged" && r.CanAck);
+        view.AlarmRows[0].Title.Should().Be("CLG-05 cooling fan vibration high");
         view.Response!.Steps.Should().StartWith("1. Start the standby cell 6.").And.Contain("75 %");
         view.CanAckAll.Should().BeTrue();
     }
@@ -73,7 +96,7 @@ public class ConsoleV3Tests
     {
         var clg = Compose(UnitId.Clg);
         clg.Devices.Select(d => d.Name).Should().Equal("Cell 1", "Cell 2", "Cell 3", "Cell 4", "Cell 5", "Cell 6 (standby)");
-        clg.Device5!.Should().Match<DeviceView>(d => d.State == "Stopped" && d.Action == "Start");
+        clg.Devices[5].Should().Match<DeviceView>(d => d.State == "Stopped" && d.Action == "Start");
         clg.ShowFanSpeed.Should().BeTrue();
         clg.FanSpeedText.Should().Be("100 %");
         var trb = Compose(UnitId.Trb);
@@ -93,9 +116,62 @@ public class ConsoleV3Tests
     }
 
     [Test]
+    public void The_log_leads_with_the_latest_line_even_when_lines_share_a_tick()
+    {
+        // Under HOLD the tick stands still, and Acknowledge all writes a line per alarm at one tick: the last written leads.
+        var ops = Enumerable.Range(1, 10).Aggregate(PlantOps.Initial, (o, i) => o.AddNote($"Note {i}", Simulation.StartTick, T0));
+        ops = ops.Acknowledge("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, Simulation.StartTick, T0);
+        var log = ComposeWith(ops, UnitId.Clg).LogRows;
+        log.Should().HaveCount(ConsoleView.LogRowsShown);
+        log[0].Text.Should().Be("Acknowledged: CLG-05 cooling fan vibration high");
+        log.Skip(1).Select(r => r.Text).Should().Equal("Note 10", "Note 9", "Note 8", "Note 7", "Note 6", "Note 5", "Note 4");
+    }
+
+    [Test]
+    public void The_alarm_list_shows_four_rows_and_opens_the_rest()
+    {
+        var row = Compose(UnitId.Clg).AlarmRows[0];
+        var view = Compose(UnitId.Clg) with { AlarmRows = [.. Enumerable.Range(0, 6).Select(i => row with { Key = $"k{i}" })] };
+        view.ShownAlarmRows.Select(r => r.Key).Should().Equal("k0", "k1", "k2", "k3");
+        view.MoreAlarmRows.Select(r => r.Key).Should().Equal("k4", "k5");
+        view.HasMoreAlarms.Should().BeTrue();
+        view.ShowAllAlarmsText.Should().Be("Show all 6");
+        Compose(UnitId.Clg).HasMoreAlarms.Should().BeFalse();
+    }
+
+    [Test]
+    public void Shelved_alarms_are_listed_until_their_hour_is_up_and_can_be_unshelved()
+    {
+        var ops = PlantOps.Initial.Shelve("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, Simulation.StartTick, T0);
+        var view = ComposeWith(ops, UnitId.Clg);
+        view.AlarmRows.Should().BeEmpty("a shelved alarm leaves the list");
+        view.ShelvedRows.Should().ContainSingle().Which.Should().Match<AlarmRowView>(r =>
+            r.IsShelved && !r.CanAck && r.State == "Shelved" && r.Time.StartsWith("until ") && r.Detail.EndsWith("mm/s"));
+        view.AlarmSummaryText.Should().Be("1 shelved");
+        view.ShelvedRows[0].AutomationName.Should().Contain(", until ");
+        ComposeWith(ops.Unshelve("clg.vib", "x", UnitId.Clg, Simulation.StartTick, T0), UnitId.Clg).ShelvedRows.Should().BeEmpty();
+    }
+
+    [Test]
+    public void Manual_says_what_it_does_beside_the_setpoints()
+    {
+        var auto = Compose(UnitId.Trb);
+        auto.LoadHint.Should().Be("400 to 700 MW; ramps 5 MW a minute.");
+        auto.ModeHint.Should().StartWith("Auto:");
+
+        var ops = PlantOps.Initial.SetLoad(640, Simulation.StartTick - 30, T0).ModeChanged(ControlMode.Auto, ControlMode.Manual, Simulation.StartTick, T0);
+        var manual = ConsoleView.Compose(new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
+            ops, ControlMode.Manual, UnitId.Trb, T0);
+        manual.LoadHint.Should().Be("400 to 700 MW; applies at once in Manual.");
+        manual.ModeHint.Should().StartWith("Manual: the ramps hold");
+        manual.LoadText.Should().Be("625 MW · held, target 640");
+        manual.ModeLine.Should().Be("Generating · Manual");
+    }
+
+    [Test]
     public void Reading_tiles_carry_their_range_bar()
     {
-        var tile = Compose(UnitId.Clg).Condition1!;
+        var tile = Compose(UnitId.Clg).ConditionTiles[1];
         tile.Key.Should().Be("clg.vib");
         tile.LimitAt.Should().BeApproximately(4.5 / 7.1, 1e-9);
         tile.BandStart.Should().Be(0);
@@ -117,11 +193,11 @@ public class ConsoleV3Tests
         var parts = PacConsole.Core.Solids.PlantSolids.Default.All;
         UnitId[] alerting = [UnitId.Clg, UnitId.Gen];
         parts.Where(p => p.Unit is { } u && alerting.Contains(u))
-            .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+            .Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Alarms, alerting));
         parts.Where(p => p.Unit is { } u && !alerting.Contains(u))
-            .Should().NotContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+            .Should().NotContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Alarms, alerting));
         parts.Where(p => p.Name.StartsWith("stand.", StringComparison.Ordinal))
-            .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Alarms, alerting));
+            .Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Alarms, alerting));
 
         // Choosing it moves the selection to the first unit in alarm; with nothing in alarm it stays put.
         PlantSystems.SelectionFor(PlantSystem.Alarms, UnitId.Trb, alerting).Should().Be(UnitId.Gen);
@@ -139,12 +215,12 @@ public class ConsoleV3Tests
         foreach (var system in Enum.GetValues<PlantSystem>().Where(s => s != PlantSystem.Alarms))
         {
             parts.Where(p => p.Name.StartsWith("stand.", StringComparison.Ordinal))
-                .Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, system), system.ToString());
-            parts.Count(p => !p.Name.StartsWith("stand.", StringComparison.Ordinal) && PacConsole.Core.Solids.PlantSolids.InSystem(p, system))
+                .Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, system), system.ToString());
+            parts.Count(p => !p.Name.StartsWith("stand.", StringComparison.Ordinal) && PacConsole.Core.Solids.PartSystems.InSystem(p, system))
                 .Should().BeGreaterThan(5, system.ToString());
         }
-        parts.Where(p => p.Name == "cnd.exhaust").Should().OnlyContain(p => PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.SteamWater));
-        parts.Where(p => p.Name.StartsWith("xfmr.", StringComparison.Ordinal)).Should().OnlyContain(p => !PacConsole.Core.Solids.PlantSolids.InSystem(p, PlantSystem.Cooling));
+        parts.Where(p => p.Name == "cnd.exhaust").Should().OnlyContain(p => PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.SteamWater));
+        parts.Where(p => p.Name.StartsWith("xfmr.", StringComparison.Ordinal)).Should().OnlyContain(p => !PacConsole.Core.Solids.PartSystems.InSystem(p, PlantSystem.Cooling));
     }
 
     [TestCase(PlantSystem.Cooling, UnitId.Gen, UnitId.Clg)]
@@ -205,8 +281,8 @@ public class ConsoleV3Tests
         view.InspectorCode.Should().Be("GEN-03");
         view.InspectorName.Should().Be("Generator");
         view.OverviewTiles.Should().HaveCount(6);
-        view.Overview0!.Key.Should().Be("gen.gross");
-        view.Overview0.IsCompared.Should().BeTrue();
+        view.OverviewTiles[0].Key.Should().Be("gen.gross");
+        view.OverviewTiles[0].IsCompared.Should().BeTrue();
         view.OverviewTiles.Skip(1).Should().OnlyContain(t => !t.IsCompared);
         view.Connections.Select(c => c.Title).Should().Equal("TRB-04 · Steam turbine");
         view.EquipmentChoices.Should().HaveCount(7);
@@ -228,8 +304,8 @@ public class ConsoleV3Tests
         var inputs = ViewInputs.Default with { Compared = ["gen.frequency", "gen.gross", "trb.press"] };
         var view = Compose(UnitId.Gen, inputs);
         view.Trends!.Series.Select(s => s.Key).Should().Equal("net", "gen.frequency", "gen.gross");
-        view.Trend0!.Target.Should().Be(Setpoints.Default.TargetMw);
-        view.Trend3.Should().BeNull();
+        view.Trends.Series[0].Target.Should().Be(Setpoints.Default.TargetMw);
+        view.TrendRows.Should().HaveCount(3, "one row per series: net generation and the two GEN-03 readings");
         view.CursorIsLatest.Should().BeTrue();
         foreach (var s in view.Trends.Series)
         {
@@ -246,7 +322,31 @@ public class ConsoleV3Tests
         earlier.CursorIndex.Should().Be(10);
         earlier.CursorIsLatest.Should().BeFalse();
         earlier.CursorTime.Should().NotBe(latest.CursorTime);
-        earlier.Trend0Value.Should().Be(earlier.Trend0!.Format1(earlier.Trend0.Values[10]));
+        var net = earlier.Trends!.Series[0];
+        earlier.TrendRows[0].Value.Should().Be(net.Format1(net.Values[10]));
+        earlier.TrendRows[0].Cursor.Should().Be(10);
+    }
+
+    [Test]
+    public void Trend_rows_carry_the_shared_axis_and_end_with_the_series()
+    {
+        var view = Compose(UnitId.Gen, ViewInputs.Default with { Compared = ["gen.frequency"] });
+        view.TrendRows.Should().HaveCount(2);
+        view.TrendRows[0].Label.Should().Be(view.Trends!.Series[0].Label);
+        view.TrendRows[1].Series.Should().BeSameAs(view.Trends.Series[1]);
+        view.TrendRows[1].TimeStart.Should().Be(view.TimeStart);
+        view.TrendRows[1].EventIndex.Should().Be(view.EventIndex);
+    }
+
+    [Test]
+    public void Every_equipment_has_connections_and_says_so()
+    {
+        foreach (var unit in Enum.GetValues<UnitId>())
+        {
+            var view = Compose(unit);
+            view.HasConnections.Should().Be(!view.Connections.IsEmpty, unit.ToString());
+        }
+        (Compose(UnitId.Gen) with { Connections = [] }).HasConnections.Should().BeFalse();
     }
 
     [TestCase(TrendRange.Minutes15, 15)]
@@ -270,7 +370,7 @@ public class ConsoleV3Tests
     public void Valves_show_only_on_the_equipment_they_belong_to()
     {
         var trb = Compose(UnitId.Trb);
-        trb.ValveSlots.Count(v => v.IsHere).Should().Be(3);
+        trb.ValveSlots.Select(v => v.Id).Should().Equal(101, 102, 103);
         Compose(UnitId.Gen).ValvesNote.Should().Be("No valves on GEN-03.");
         Enumerable.Range(101, 9).Should().OnlyContain(id => ConsoleView.ValveOwner(id) != null);
     }

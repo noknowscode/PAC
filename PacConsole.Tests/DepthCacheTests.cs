@@ -20,7 +20,7 @@ public class DepthCacheTests
         var units = UnitCatalog.All.Select(u => u.Id).ToArray();
         foreach (var pose in new[] { CameraPose.Iso, new CameraPose(2.1f, 0.35f), new CameraPose(-0.7f, 1.2f) })
         {
-            var p = PlantSolids.ViewProjection(pose, 1084, 620);
+            var p = PlantFraming.ViewProjection(pose, 1084, 620);
             for (var u = 0; u < units.Length; u++)
             {
                 var previous = units[(u + units.Length - 1) % units.Length];
@@ -38,7 +38,7 @@ public class DepthCacheTests
     [Test, Explicit("Timing: run on demand")]
     public void A_lift_frame_sorts_faster_with_the_cache()
     {
-        var p = PlantSolids.ViewProjection(CameraPose.Iso, 1084, 620);
+        var p = PlantFraming.ViewProjection(CameraPose.Iso, 1084, 620);
         var cache = new DepthCache();
         var frames = Enumerable.Range(0, 60).Select(i => Lifted(UnitId.Clg, i / 60f * SolidLift, UnitId.Trb, (1 - i / 60f) * SolidLift)).ToList();
         double Time(Func<List<Volume>, int[]> sort)

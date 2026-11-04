@@ -2,7 +2,8 @@ namespace PacConsole.Controls;
 
 /// <summary>
 /// Opacity pulse (1 → 0.3 → 1, sine, 1.6 s) for the live dot and the alert chip dot.
-/// Job: says "data is live" / draws the eye to an alert. Off when the OS asks for less motion.
+/// Job: says "data is live" / draws the eye to an alert, so it follows a binding: the live dot stops (at full
+/// opacity) while the data is held. Off when the OS asks for less motion.
 /// The shared 20 fps <see cref="AmbientClock"/> writes Opacity for every loaded dot (in the same tick
 /// as the plant's fans and flow, so they share frames) and stops when none is loaded:
 /// a Forever storyboard pumps frames permanently on Skia desktop, and Timeline.AutoReverse is not
@@ -26,13 +27,25 @@ public static class Pulse
 
     private static void OnChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not FrameworkElement element || e.NewValue is not true || !AnimationsEnabled()) return;
-
-        // Loaded and Unloaded can repeat (re-parenting), so each one adds or removes the dot.
-        element.Loaded += (_, _) => Add(element);
-        element.Unloaded += (_, _) => Remove(element);
-        if (element.IsLoaded) Add(element);
+        if (d is not FrameworkElement element || !MotionPreference.AnimationsEnabled()) return;
+        if (e.NewValue is true)
+        {
+            // Loaded and Unloaded can repeat (re-parenting), so each one adds or removes the dot.
+            element.Loaded += OnLoaded;
+            element.Unloaded += OnUnloaded;
+            if (element.IsLoaded) Add(element);
+        }
+        else
+        {
+            element.Loaded -= OnLoaded;
+            element.Unloaded -= OnUnloaded;
+            Remove(element);
+        }
     }
+
+    private static void OnLoaded(object sender, RoutedEventArgs e) => Add((UIElement)sender);
+
+    private static void OnUnloaded(object sender, RoutedEventArgs e) => Remove((UIElement)sender);
 
     private static void Add(UIElement dot)
     {
@@ -52,11 +65,5 @@ public static class Pulse
         var phase = (DateTimeOffset.Now - Start).TotalSeconds / PeriodSeconds * 2 * Math.PI;
         var opacity = Low + (1 - Low) * (0.5 + 0.5 * Math.Cos(phase));
         foreach (var dot in Dots) dot.Opacity = opacity;
-    }
-
-    private static bool AnimationsEnabled()
-    {
-        try { return new Windows.UI.ViewManagement.UISettings().AnimationsEnabled; }
-        catch { return true; }
     }
 }

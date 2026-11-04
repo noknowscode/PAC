@@ -1,0 +1,10 @@
+{
+  "background_color": "#f4f5f6",
+  "description": "PAC Control Console: an operator console for a simulated steam plant.",
+  "display": "standalone",
+  "name": "PAC Control Console",
+  "short_name": "PAC Console",
+  "start_url": "/index.html",
+  "theme_color": "#f4f5f6",
+  "scope": "/"
+}

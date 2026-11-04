@@ -11,5 +11,3 @@ public readonly record struct Vec3(float X, float Y, float Z)
 /// <summary>A point on screen, in device-independent pixels.</summary>
 public readonly record struct Vec2(float X, float Y);
 
-/// <summary>One wireframe edge.</summary>
-public readonly record struct Segment3(Vec3 A, Vec3 B);

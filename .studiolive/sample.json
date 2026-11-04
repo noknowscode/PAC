@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schemas.platform.uno/sample/v1",
+  "id": "pac",
+  "displayName": "PAC Control Console",
+  "description": "An operator console for a simulated steam-cycle power plant that takes an alarm from first alert to resolution on one screen. An inked isometric drawing of the plant, drawn with SkiaSharp, can be orbited, switched between isometric, elevation and plan views and narrowed to one process system; an equipment inspector gives each unit's readings, its alarm response and its controls, where every command is selected and then confirmed; synchronized trends share one cursor; and an operator log keeps every step. It is a showcase for control-room software teams. It uses one MVUX page model, Uno Navigation Extensions, Uno Toolkit responsive layouts from phone to wide desktop, the Simple theme with System, Light and Graphite palettes, and SkiaSharp in SKCanvasElement. Telemetry is simulated, and the operator's log, acknowledgements and setpoints are kept on the device.",
+  "platforms": [
+    "desktop",
+    "wasm",
+    "android",
+    "ios"
+  ],
+  "sourcePath": "PacConsole/PacConsole.csproj",
+  "iconUrl": "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/icon.png",
+  "screenshots": [
+    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/console-desktop.png",
+    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/select-before-operate-desktop.png",
+    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/plant-phone.png",
+    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/alarm-phone.png"
+  ],
+  "showcase": {
+    "summary": "An operator console that takes a simulated power-plant alarm from first alert to resolution on one screen.",
+    "type": "showcase",
+    "status": "preview",
+    "owner": [
+      "noknowscode"
+    ],
+    "industry": "Energy, power generation",
+    "goals": [
+      "An isometric plant drawn with SkiaSharp in SKCanvasElement: orbit, three standard views, depth-ordered solids and per-system isolation",
+      "One MVUX page model: telemetry as a feed with an error state and Retry, operator inputs as states, commands that read feeds as parameters",
+      "Select-before-operate control: each command is selected, then confirmed within 10 s or cancelled with Esc",
+      "Responsive layouts with the Uno Toolkit's utu:Responsive, from a 390 px phone to a wide desktop",
+      "System, Light and Graphite themes through ThemeResource palettes, kept between launches",
+      "Operator data (log, acknowledgements, shelves, setpoints) kept on the device with atomic writes"
+    ],
+    "tags": [
+      "mvux",
+      "navigation",
+      "toolkit",
+      "skia",
+      "theming",
+      "responsive",
+      "local-first"
+    ]
+  }
+}

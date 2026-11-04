@@ -1,0 +1,414 @@
+<UserControl x:Class="PacConsole.Presentation.EquipmentInspector"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:utu="using:Uno.Toolkit.UI"
+             xmlns:controls="using:PacConsole.Controls">
+
+  <!--
+    The equipment inspector (SPEC-CONSOLE.md, SPEC-OPERATIONS.md): the alarm list under Active alarms, the selected
+    equipment and its alarm response, then Overview, Condition and Control (plant mode, faceplate and valves), and
+    the connected equipment. It scrolls on its own beside the plant. Lists fill their panels through Slots, so a
+    button keeps its element while the view is recomposed under it. DataContext: the console FeedView's state.
+  -->
+
+  <UserControl.Resources>
+    <!-- A reading tile: label, value and unit; the word "Above limit" in alert; ↗ when it is in the trends.
+         72 px tall: a touch target at every width. -->
+    <Style x:Key="TileButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
+      <Setter Property="Padding" Value="{StaticResource TileInset}" />
+      <Setter Property="MinHeight" Value="{StaticResource TileMinHeight}" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Top" />
+      <Setter Property="ToolTipService.ToolTip" Value="Compare in the synchronized trends" />
+      <Setter Property="ContentTemplate">
+        <Setter.Value>
+          <DataTemplate>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space6}">
+              <StackPanel Spacing="{StaticResource Space2}">
+                <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" MaxLines="2" />
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <TextBlock Text="{Binding Value}" Style="{StaticResource TypeValue}"
+                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='high=AlertTextBrush|normal=TextPrimaryBrush'}" />
+                  <TextBlock Text="{Binding Unit}" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGapSm}" />
+                </StackPanel>
+                <controls:RangeBar Margin="{StaticResource GapTop4}" BandStart="{Binding BandStart}" BandEnd="{Binding BandEnd}"
+                                   LimitAt="{Binding LimitAt}" ValueAt="{Binding ValueAt}" OutOfBand="{Binding OutOfBand}" />
+                <TextBlock Text="{Binding StatusText}" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AlertTextBrush}"
+                           Visibility="{Binding IsHigh, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AccentBrush}"
+                         Visibility="{Binding IsCompared, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+            </Grid>
+          </DataTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- A tile as a button that adds its reading to the trends or takes it out. -->
+    <DataTemplate x:Key="ReadingTileTemplate">
+      <Button Content="{Binding}" Style="{StaticResource TileButton}"
+              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
+              AutomationProperties.Name="{Binding AutomationName}"
+              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
+    </DataTemplate>
+
+    <!-- A quiet text button: an alarm's title selects its unit. -->
+    <Style x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="{StaticResource LinkInset}" />
+      <Setter Property="MinHeight" Value="{StaticResource ControlHeightCompact}" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    </Style>
+    <Style x:Key="LinkButtonTouch" TargetType="Button" BasedOn="{StaticResource LinkButton}">
+      <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />
+    </Style>
+
+    <Style x:Key="ChipButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
+      <Setter Property="Background" Value="{ThemeResource CardBrush}" />
+      <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="{StaticResource ChipInset}" />
+      <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+      <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
+    </Style>
+    <Style x:Key="ChipButtonTouch" TargetType="Button" BasedOn="{StaticResource ChipButton}">
+      <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />
+    </Style>
+
+    <!-- A connected item of equipment, as a chip that selects it. -->
+    <DataTemplate x:Key="ConnectionChipTemplate">
+      <Button Content="{Binding Title}"
+              Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ChipButtonTouch}, Wide={StaticResource ChipButton}}"
+              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Id}"
+              AutomationProperties.Name="{Binding Title}" />
+    </DataTemplate>
+
+    <!-- Section caps ("ACTIVE ALARMS", "EQUIPMENT INSPECTOR"): the ramp's smallest size (12), set in capitals. -->
+    <Style x:Key="TypeCaps" TargetType="TextBlock" BasedOn="{StaticResource TypeMicro}" />
+
+    <DataTemplate x:Key="AlarmItemTemplate">
+      <StackPanel Spacing="{StaticResource Space2}" Margin="{StaticResource GapTop12}" AutomationProperties.Name="{Binding AutomationName}">
+        <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush'}">
+          <Run Text="{Binding Priority}" /><Run Text=" · " /><Run Text="{Binding Time}" /><Run Text=" · " /><Run Text="{Binding State}" />
+        </TextBlock>
+        <Button Content="{Binding Title}" HorizontalAlignment="Left"
+                Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource LinkButtonTouch}, Wide={StaticResource LinkButton}}"
+                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Unit}"
+                AutomationProperties.Name="{Binding SelectName}" ToolTipService.ToolTip="Select this equipment" />
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Space4}">
+          <TextBlock Text="{Binding Detail}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" TextWrapping="WrapWholeWords" />
+          <Button Grid.Column="1" Content="Acknowledge"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
+                  Visibility="{Binding CanAck, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}"
+                  AutomationProperties.Name="{Binding AcknowledgeName}" />
+          <Button Grid.Column="2" Content="Shelve 1 h"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
+                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Shelve}" CommandParameter="{Binding Key}"
+                  AutomationProperties.Name="{Binding ShelveName}" ToolTipService.ToolTip="Hide this alarm for an hour; it is logged" />
+          <Button Grid.Column="2" Content="Unshelve"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
+                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Unshelve}" CommandParameter="{Binding Key}"
+                  AutomationProperties.Name="{Binding UnshelveName}" ToolTipService.ToolTip="List this alarm again now; it is logged" />
+        </Grid>
+      </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DeviceRowTemplate">
+      <Grid ColumnDefinitions="10,*,Auto" ColumnSpacing="{StaticResource Space10}" MinHeight="{StaticResource ListRowMinHeight}">
+        <!-- The state dot repeats the State word beside it; it never carries the state alone. -->
+        <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" VerticalAlignment="Center" StrokeThickness="{StaticResource DeviceDotStroke}"
+                 Stroke="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=TextPrimaryBrush|moving=AccentBrush|stopped=FaintBrush'}"
+                 Fill="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=TextPrimaryBrush|moving=AccentFillBrush|stopped=CardBrush'}" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Name}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
+          <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="{Binding State}" /><Run Text="   " /><Run Text="{Binding Detail}" /></TextBlock>
+        </StackPanel>
+        <Button Grid.Column="2" Content="{Binding Action}" MinWidth="{StaticResource RowActionMinWidth}" VerticalAlignment="Center"
+                Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+                Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectDevice}" CommandParameter="{Binding Id}"
+                AutomationProperties.Name="{Binding AutomationName}" />
+      </Grid>
+    </DataTemplate>
+
+    <!-- A valve: filled while commanded open, a ring while shut. A plain button, because a toggle would
+         flip itself before select-before-operate has confirmed anything. -->
+    <Style x:Key="ValveButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Width" Value="{StaticResource ValveWidth}" />
+      <Setter Property="Height" Value="{StaticResource ValveHeight}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="{ThemeResource BorderBrushDefault}" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    </Style>
+
+    <DataTemplate x:Key="ValveFace">
+      <StackPanel HorizontalAlignment="Center">
+        <TextBlock Text="{Binding Number}" Style="{StaticResource ValveNumber}" HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding State}" Style="{StaticResource ValveState}" HorizontalAlignment="Center" />
+      </StackPanel>
+    </DataTemplate>
+
+    <!-- A valve on the selected equipment: selecting it selects its move to the other position. -->
+    <DataTemplate x:Key="ValveTemplate">
+      <Button ContentTemplate="{StaticResource ValveFace}" Content="{Binding}" Style="{StaticResource ValveButton}"
+              Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}"
+              Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
+              AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
+    <StackPanel Spacing="{StaticResource Space16}" AutomationProperties.Name="Equipment inspector"
+                Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource InspectorInsetNarrow}, Normal={StaticResource InspectorInset}}">
+      <!-- Active alarms.
+           The alarm summary (ISA-18.2, reduced) while Active alarms is chosen: newest unacknowledged
+           first, each with its priority, time and state in words and its own Acknowledge and Shelve.
+           The first four rows; Show all opens the rest below them. Then the shelved alarms, each with Unshelve. -->
+      <StackPanel AutomationProperties.Name="Active alarms"
+                  Visibility="{Binding Data.IsAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space12}" MinHeight="{StaticResource ControlHeight}">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="ACTIVE ALARMS" Style="{StaticResource TypeCaps}" />
+            <TextBlock Text="{Binding Data.AlarmSummaryText}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+          </StackPanel>
+          <Button Grid.Column="1" Content="Acknowledge all" Command="{Binding Parent.AcknowledgeAll}"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
+                  Visibility="{Binding Data.CanAckAll, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  AutomationProperties.Name="Acknowledge all alarms" />
+        </Grid>
+        <!-- Each row carries its own top margin (AlarmItemTemplate). -->
+        <StackPanel controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.ShownAlarmRows}" />
+        <!-- The rest of the list, opened in place by the toggle below it (view state, like the tabs). -->
+        <StackPanel Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                    controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.MoreAlarmRows}" />
+        <ToggleButton x:Name="ShowAllAlarms" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
+                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarToggleButtonTouch}, Wide={StaticResource ToolbarToggleButton}}"
+                      Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <Grid>
+            <TextBlock Text="{Binding Data.ShowAllAlarmsText}" Style="{StaticResource ControlLabel}"
+                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}" />
+            <TextBlock Text="Show fewer" Style="{StaticResource ControlLabel}"
+                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+          </Grid>
+        </ToggleButton>
+        <StackPanel Margin="{StaticResource GapTop16}" AutomationProperties.Name="Shelved alarms"
+                    Visibility="{Binding Data.HasShelvedRows, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <TextBlock Text="SHELVED" Style="{StaticResource TypeCaps}" />
+          <StackPanel controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.ShelvedRows}" />
+        </StackPanel>
+        <Border Style="{StaticResource Rule}" Margin="{StaticResource GapTop16}" />
+      </StackPanel>
+
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{Binding Data.InspectorCode}" Style="{StaticResource TypeCaps}" />
+          <TextBlock Grid.Column="1" Text="EQUIPMENT INSPECTOR" Style="{StaticResource TypeCaps}" />
+        </Grid>
+        <TextBlock Text="{Binding Data.InspectorName}" Style="{StaticResource TypeDisplay}" TextWrapping="WrapWholeWords" />
+        <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{ThemeResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
+        <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords">
+          <Run Text="{Binding Data.InspectorStateAlert}" Foreground="{ThemeResource AlertTextBrush}" /><Run Text="{Binding Data.InspectorStateNominal}" Foreground="{ThemeResource MutedBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
+        </TextBlock>
+      </StackPanel>
+
+      <!-- Alarm response: while the selected unit has an alarm, what to do about it. -->
+      <!-- xaml-lint: allow card - an alarm callout with its own alert ground, not a content surface. -->
+      <Border DataContext="{Binding Data.Response}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}, FallbackValue=Collapsed}"
+              Background="{ThemeResource AlertTintBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource CalloutInset}"
+              AutomationProperties.Name="Alarm response">
+        <StackPanel Spacing="{StaticResource Space6}">
+          <TextBlock Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AlertTextBrush}" TextWrapping="WrapWholeWords">
+            <Run Text="{Binding Priority}" /><Run Text=" priority · " /><Run Text="{Binding State}" />
+          </TextBlock>
+          <TextBlock Text="{Binding Title}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
+          <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="Likely cause: " /><Run Text="{Binding Cause}" Foreground="{ThemeResource TextPrimaryBrush}" /></TextBlock>
+          <TextBlock Text="{Binding Steps}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
+          <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="If not handled: " /><Run Text="{Binding Consequence}" /></TextBlock>
+          <Button Content="Acknowledge" Background="{ThemeResource CardBrush}" HorizontalAlignment="Left"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+                  Visibility="{Binding CanAck, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}"
+                  AutomationProperties.Name="{Binding AcknowledgeName}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Tabs: view-only, so each panel follows its tab's IsChecked. -->
+      <StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+          <RadioButton x:Name="TabOverview" Content="Overview" GroupName="InspectorTabs" IsChecked="True"
+                       Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TabRadioButtonTouch}, Wide={StaticResource TabRadioButton}}" />
+          <RadioButton x:Name="TabCondition" Content="Condition" GroupName="InspectorTabs"
+                       Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TabRadioButtonTouch}, Wide={StaticResource TabRadioButton}}" />
+          <RadioButton x:Name="TabControl" Content="Control" GroupName="InspectorTabs"
+                       Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TabRadioButtonTouch}, Wide={StaticResource TabRadioButton}}" />
+        </StackPanel>
+        <Border Style="{StaticResource Rule}" />
+      </StackPanel>
+
+      <!-- Overview: what the equipment is doing. -->
+      <StackPanel Spacing="{StaticResource Space12}" Visibility="{Binding IsChecked, ElementName=TabOverview, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}"
+              controls:Slots.ItemTemplate="{StaticResource ReadingTileTemplate}" controls:Slots.ItemsSource="{Binding Data.OverviewTiles}" />
+        <TextBlock Text="Select a reading to compare it in the synchronized trends." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+      </StackPanel>
+
+      <!-- Condition: how the equipment is holding up. -->
+      <StackPanel Spacing="{StaticResource Space12}" Visibility="{Binding IsChecked, ElementName=TabCondition, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}"
+              controls:Slots.ItemTemplate="{StaticResource ReadingTileTemplate}" controls:Slots.ItemsSource="{Binding Data.ConditionTiles}" />
+        <TextBlock Text="Vibration alarms above 4.5 mm/s." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+      </StackPanel>
+
+      <!-- Control: plant mode, then the selected equipment's faceplate. Every device start or stop and
+           every valve move is select-before-operate: the confirm bar asks before anything runs. -->
+      <StackPanel Spacing="{StaticResource Space16}" Visibility="{Binding IsChecked, ElementName=TabControl, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+        <!-- xaml-lint: allow card - the select-before-operate confirm bar, not a content surface. -->
+        <Border DataContext="{Binding Data.Pending}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}, FallbackValue=Collapsed}"
+                Background="{Binding IsRefused, Converter={StaticResource Tone}, ConverterParameter='True=AlertTintBrush|False=AccentFillBrush'}"
+                CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource CalloutInset}" AutomationProperties.Name="Pending command">
+          <StackPanel Spacing="{StaticResource Space8}">
+            <TextBlock Text="{Binding Text}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
+            <TextBlock Text="{Binding Reason}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Button Content="Confirm" Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource OnAccentBrush}"
+                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+                      Visibility="{Binding IsRefused, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}"
+                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ConfirmPending}"
+                      AutomationProperties.Name="{Binding ConfirmName}" />
+              <!-- Esc cancels from anywhere on the page while the bar shows (SPEC-OPERATIONS): the accelerator invokes this
+                   button's command. -->
+              <Button Content="Cancel" Background="{ThemeResource CardBrush}"
+                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.CancelPending}"
+                      AutomationProperties.Name="{Binding CancelName}">
+                <Button.KeyboardAccelerators>
+                  <KeyboardAccelerator Key="Escape" />
+                </Button.KeyboardAccelerators>
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="{StaticResource Space8}">
+          <TextBlock Text="Plant mode" Style="{StaticResource TypeMicro}" />
+          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}" Background="{ThemeResource FillBrush}">
+            <RadioButton Content="Auto" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsAuto, Mode=OneWay}" Command="{Binding Parent.SetAuto}"
+                         Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}" />
+            <RadioButton Grid.Column="1" Content="Manual" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsManual, Mode=OneWay}" Command="{Binding Parent.SetManual}"
+                         Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}" />
+            <RadioButton Grid.Column="2" Content="Hold" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsHold, Mode=OneWay}" Command="{Binding Parent.SetHold}"
+                         Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}" />
+          </Grid>
+          <TextBlock Text="{Binding Data.ModeHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+        </StackPanel>
+
+        <!-- Devices on this equipment: start or stop through the confirm bar. -->
+        <StackPanel Spacing="{StaticResource Space2}" Visibility="{Binding Data.HasDevices, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <TextBlock Text="Equipment" Style="{StaticResource TypeSection}" />
+          <StackPanel Spacing="{StaticResource Space2}"
+                      controls:Slots.ItemTemplate="{StaticResource DeviceRowTemplate}" controls:Slots.ItemsSource="{Binding Data.Devices}" />
+        </StackPanel>
+
+        <!-- Setpoints for this equipment: type, then Apply. Ramped ones show where they are heading. -->
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowFanSpeed, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <TextBlock Text="Fan speed" Style="{StaticResource TypeSection}" />
+            <TextBlock Grid.Column="1" Text="{Binding Data.FanSpeedText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <NumberBox Value="{Binding Parent.FanSpeedDraft, Mode=TwoWay}" Minimum="60" Maximum="100" SmallChange="5" LargeChange="10"
+                       MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
+                       AutomationProperties.Name="Fan speed setpoint, percent (60 to 100)" />
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyFanSpeed}" AutomationProperties.Name="Apply fan speed setpoint"
+                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
+          </Grid>
+          <TextBlock Text="{Binding Data.FanSpeedHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+        </StackPanel>
+
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowLoad, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <TextBlock Text="Load setpoint" Style="{StaticResource TypeSection}" />
+            <TextBlock Grid.Column="1" Text="{Binding Data.LoadText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <NumberBox Value="{Binding Parent.LoadDraft, Mode=TwoWay}" Minimum="400" Maximum="700" SmallChange="5" LargeChange="20"
+                       MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
+                       AutomationProperties.Name="Load setpoint, megawatts (400 to 700)" />
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLoad}" AutomationProperties.Name="Apply load setpoint"
+                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
+          </Grid>
+          <TextBlock Text="{Binding Data.LoadHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}" Margin="{StaticResource GapTop8}">
+            <TextBlock Text="Inlet pressure alarm limit" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
+            <TextBlock Grid.Column="1" Text="{Binding Data.LimitText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <NumberBox Value="{Binding Parent.LimitDraft, Mode=TwoWay}" Minimum="140" Maximum="180" SmallChange="1" LargeChange="5"
+                       MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
+                       AutomationProperties.Name="Inlet pressure alarm limit, bar (140 to 180)" />
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLimit}" AutomationProperties.Name="Apply inlet pressure alarm limit"
+                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
+          </Grid>
+        </StackPanel>
+
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowReactive, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <TextBlock Text="Reactive power setpoint" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
+            <TextBlock Grid.Column="1" Text="{Binding Data.ReactiveText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <NumberBox Value="{Binding Parent.ReactiveDraft, Mode=TwoWay}" Minimum="0" Maximum="200" SmallChange="5" LargeChange="20"
+                       MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
+                       AutomationProperties.Name="Reactive power setpoint, megavolt-amperes reactive (0 to 200)" />
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyReactive}" AutomationProperties.Name="Apply reactive power setpoint"
+                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
+          </Grid>
+          <TextBlock Text="{Binding Data.ReactiveHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
+        </StackPanel>
+
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowDamper, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <TextBlock Text="Stack damper" Style="{StaticResource TypeSection}" />
+            <TextBlock Grid.Column="1" Text="{Binding Data.DamperText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <NumberBox Value="{Binding Parent.DamperDraft, Mode=TwoWay}" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10"
+                       MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
+                       AutomationProperties.Name="Stack damper position, percent (0 to 100)" />
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyDamper}" AutomationProperties.Name="Apply stack damper position"
+                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
+          </Grid>
+        </StackPanel>
+
+        <!-- Valves on this equipment: the command shows at once, the position after its travel. They wrap. -->
+        <StackPanel Spacing="{StaticResource Space8}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
+            <TextBlock Text="Valves" Style="{StaticResource TypeSection}" />
+            <TextBlock Grid.Column="1" Text="{Binding Data.ValvesNote}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" TextWrapping="WrapWholeWords" />
+          </Grid>
+          <controls:FlowPanel HorizontalSpacing="{StaticResource Space8}" VerticalSpacing="{StaticResource Space8}"
+                              controls:Slots.ItemTemplate="{StaticResource ValveTemplate}" controls:Slots.ItemsSource="{Binding Data.ValveSlots}" />
+        </StackPanel>
+      </StackPanel>
+
+      <Border Style="{StaticResource Rule}" />
+
+      <!-- Connected equipment: chips that select it, or a line saying there is none. -->
+      <StackPanel Spacing="{StaticResource Space8}" AutomationProperties.Name="Connected equipment">
+        <TextBlock Text="Connected equipment" Style="{StaticResource TypeMicro}" />
+        <TextBlock Text="Not connected to other equipment in this plant." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" TextWrapping="WrapWholeWords"
+                   Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}" />
+        <controls:FlowPanel HorizontalSpacing="{StaticResource Space8}" VerticalSpacing="{StaticResource Space8}"
+                            Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                            controls:Slots.ItemTemplate="{StaticResource ConnectionChipTemplate}" controls:Slots.ItemsSource="{Binding Data.Connections}" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -9,4 +9,9 @@
     <RootNamespace>PacConsole.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- DepthOrder.Separable, the invariant the depth order relies on, is checked against the plant by the tests. -->
+    <InternalsVisibleTo Include="PacConsole.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -17,7 +17,7 @@ public class FrameCostTests
         var volumes = parts.Select(p => p.Volume).ToList();
         void Frame(int i)
         {
-            var p = PlantSolids.ViewProjection(new CameraPose(i * 0.01f, 0.49f), 1240, 760);
+            var p = PlantFraming.ViewProjection(new CameraPose(i * 0.01f, 0.49f), 1240, 760);
             var order = DepthOrder.Sort(volumes, p);
             foreach (var k in order)
             {
@@ -43,7 +43,7 @@ public class FrameCostTests
         var ops = PacConsole.Core.Operations.PlantOps.Initial;
         PacConsole.Core.Console.ConsoleView Compose(long tick) => PacConsole.Core.Console.ConsoleView.Compose(
             new PacConsole.Core.Telemetry.PlantSnapshot(tick, t0, PacConsole.Core.Telemetry.Simulation.Readings(tick)),
-            PacConsole.Core.Telemetry.Setpoints.Default, ops, PacConsole.Core.Plant.ControlMode.Auto, null, t0);
+            ops, PacConsole.Core.Plant.ControlMode.Auto, null, t0);
         for (var i = 0; i < 20; i++) Compose(600 + i);
         var sw = Stopwatch.StartNew();
         const int n = 20;
@@ -83,7 +83,7 @@ public class FrameCostTests
         var byName = new Dictionary<string, double>();
         for (var i = 0; i < 140; i++)
         {
-            var p = PlantSolids.ViewProjection(new CameraPose(i * 0.01f, 0.49f), 1240, 760);
+            var p = PlantFraming.ViewProjection(new CameraPose(i * 0.01f, 0.49f), 1240, 760);
             var sw = Stopwatch.StartNew();
             var order = DepthOrder.Sort(volumes, p);
             if (i >= 20) sort += sw.Elapsed.TotalMilliseconds;

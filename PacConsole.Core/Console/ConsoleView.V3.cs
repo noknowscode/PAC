@@ -5,10 +5,37 @@ using PacConsole.Core.Telemetry;
 
 namespace PacConsole.Core.Console;
 
-/// <summary>The operator's view choices that shape the page: system, trend range, compared readings and cursor.</summary>
-public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor)
+/// <summary>The console theme the operator picked: the OS theme, or light or graphite regardless of it.</summary>
+public enum ThemeChoice
+{
+    System,
+    Light,
+    Graphite,
+}
+
+/// <summary>The operator's view choices that shape the page: system, trend range, compared readings, cursor and theme.</summary>
+public sealed record ViewInputs(PlantSystem System, TrendRange Range, ImmutableArray<string> Compared, int Cursor, ThemeChoice Theme = ThemeChoice.System)
 {
     public static readonly ViewInputs Default = new(PlantSystem.All, TrendRange.Minutes15, [], -1);
+
+    /// <summary>The trends compare at most this many readings under net generation.</summary>
+    public const int MaxCompared = 3;
+
+    /// <summary>
+    /// Adds a reading to the compared ones or takes it out. The trends show one item of equipment at a time, so
+    /// readings of another unit are dropped; when nothing was picked for this unit, its first reading (shown by
+    /// default) counts as picked. At most <see cref="MaxCompared"/>: the oldest gives way. An unknown key changes nothing.
+    /// </summary>
+    public static ImmutableArray<string> ToggleCompared(ImmutableArray<string> compared, string key)
+    {
+        if (EquipmentCatalog.Find(key) is null) return compared;
+        var unit = EquipmentCatalog.UnitOf(key);
+        var keys = compared.Where(k => EquipmentCatalog.Find(k) is not null && EquipmentCatalog.UnitOf(k) == unit).ToList();
+        if (keys.Count == 0) keys.Add(EquipmentCatalog.Get(unit).Readings[0].Key);
+        if (!keys.Remove(key)) keys.Add(key);
+        while (keys.Count > MaxCompared) keys.RemoveAt(0);
+        return [.. keys];
+    }
 }
 
 /// <summary>One reading in the inspector: a button that adds it to, or removes it from, the trends.</summary>
@@ -42,11 +69,21 @@ public sealed record ConnectionView(UnitId Id, string Title)
     public override string ToString() => Title;
 }
 
-/// <summary>A valve slot in the Control tab: shown only on the equipment it belongs to.</summary>
-public sealed record ValveSlotView(int Id, string Number, bool Open, bool IsHere, string AutomationName)
+/// <summary>A valve in the Control tab of the equipment it belongs to.</summary>
+public sealed record ValveSlotView(int Id, string Number, bool Open, string AutomationName)
 {
     /// <summary>"Open", "Shut", "Opening…" or "Closing…": the actual position, which lags the command while the valve travels.</summary>
     public string State { get; init; } = "";
+}
+
+/// <summary>
+/// One row of the synchronized trends: a series, its value at the shared cursor, and what every row shares (the
+/// cursor, the latest alert onset and the time axis), so one row template serves every row.
+/// </summary>
+public sealed record TrendRowView(TrendSeries Series, string Value, int Cursor, int EventIndex, string TimeStart, string TimeMid, string TimeEnd)
+{
+    public string Label => Series.Label;
+    public string Unit => Series.Unit;
 }
 
 /// <summary>The console page v3 (SPEC-CONSOLE.md): status strip, systems, inspector, synchronized trends.</summary>
@@ -79,14 +116,18 @@ public sealed partial record ConsoleView
         s => s,
         s => EquipmentCatalog.All.Where(e => PlantSystems.Contains(s, e.Id)).Select(e => new ConnectionView(e.Id, e.Title)).ToArray());
 
-    // Under Active alarms the choices are the units in alarm: one array per set of units, for the same reason.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> AlarmChoices = new();
+    // Under Active alarms the choices are the units in alarm, and any view adds the selected unit when it falls
+    // outside (Active alarms keeps the selection when its alarm clears), so the picker always names the unit
+    // the inspector shows. One array per combination, for the same reason.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ConnectionView[]> MixedChoices = new();
 
-    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting) =>
-        system != PlantSystem.Alarms
-            ? Choices[system]
-            : AlarmChoices.GetOrAdd(string.Join(",", alerting), _ =>
-                [.. EquipmentCatalog.All.Where(e => alerting.Contains(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+    private static ConnectionView[] ChoicesFor(PlantSystem system, ImmutableArray<UnitId> alerting, UnitId selected)
+    {
+        bool Listed(UnitId u) => u == selected || PlantSystems.Contains(system, u, alerting);
+        if (system != PlantSystem.Alarms && PlantSystems.Contains(system, selected)) return Choices[system];
+        return MixedChoices.GetOrAdd($"{system}|{string.Join(",", alerting)}|{selected}", _ =>
+            [.. EquipmentCatalog.All.Where(e => Listed(e.Id)).Select(e => new ConnectionView(e.Id, e.Title))]);
+    }
 
     /// <summary>The picker's choices: the equipment of the system in view.</summary>
     public IReadOnlyList<ConnectionView> EquipmentChoices { get; init; } = [];
@@ -97,49 +138,31 @@ public sealed partial record ConsoleView
     public string InspectorName { get; init; } = "";
     public string InspectorDescription { get; init; } = "";
     public string InspectorState { get; init; } = "";
+
+    // The state word in its tone, as two runs of which one is empty: a Run's converter brush does not repaint on a live
+    // theme switch, and a ThemeResource on each run does.
+    public string InspectorStateAlert => SelectedIsAlert ? InspectorState : "";
+    public string InspectorStateNominal => SelectedIsAlert ? "" : InspectorState;
     public string ServiceText { get; init; } = "";
     public ImmutableArray<ReadingTileView> OverviewTiles { get; init; } = [];
     public ImmutableArray<ReadingTileView> ConditionTiles { get; init; } = [];
     public ImmutableArray<ConnectionView> Connections { get; init; } = [];
+
+    /// <summary>False for equipment with no connections: the inspector then says so instead of an empty row.</summary>
+    public bool HasConnections => !Connections.IsEmpty;
+
+    /// <summary>The valves on the selected equipment, in plant order.</summary>
     public ImmutableArray<ValveSlotView> ValveSlots { get; init; } = [];
     public string ValvesNote { get; init; } = "";
 
-    // Fixed slots (see the TempTile note in ConsoleView): buttons and charts stay put while their
-    // records update in place.
-    public ReadingTileView? Overview0 => At(OverviewTiles, 0);
-    public ReadingTileView? Overview1 => At(OverviewTiles, 1);
-    public ReadingTileView? Overview2 => At(OverviewTiles, 2);
-    public ReadingTileView? Overview3 => At(OverviewTiles, 3);
-    public ReadingTileView? Overview4 => At(OverviewTiles, 4);
-    public ReadingTileView? Overview5 => At(OverviewTiles, 5);
-    public ReadingTileView? Condition0 => At(ConditionTiles, 0);
-    public ReadingTileView? Condition1 => At(ConditionTiles, 1);
-    public ReadingTileView? Condition2 => At(ConditionTiles, 2);
-    public ConnectionView? Connection0 => At(Connections, 0);
-    public ConnectionView? Connection1 => At(Connections, 1);
-    public ValveSlotView? Slot1 => At(ValveSlots, 0);
-    public ValveSlotView? Slot2 => At(ValveSlots, 1);
-    public ValveSlotView? Slot3 => At(ValveSlots, 2);
-    public ValveSlotView? Slot4 => At(ValveSlots, 3);
-    public ValveSlotView? Slot5 => At(ValveSlots, 4);
-    public ValveSlotView? Slot6 => At(ValveSlots, 5);
-    public ValveSlotView? Slot7 => At(ValveSlots, 6);
-    public ValveSlotView? Slot8 => At(ValveSlots, 7);
-    public ValveSlotView? Slot9 => At(ValveSlots, 8);
-
     // Synchronized trends
     public TrendSet? Trends { get; init; }
-    public TrendSeries? Trend0 => Trends is { } t && t.Series.Length > 0 ? t.Series[0] : null;
-    public TrendSeries? Trend1 => Trends is { } t && t.Series.Length > 1 ? t.Series[1] : null;
-    public TrendSeries? Trend2 => Trends is { } t && t.Series.Length > 2 ? t.Series[2] : null;
-    public TrendSeries? Trend3 => Trends is { } t && t.Series.Length > 3 ? t.Series[3] : null;
     public int CursorIndex => Trends?.Cursor ?? TrendSet.Samples - 1;
     public string CursorTime { get; init; } = "";
     public bool CursorIsLatest { get; init; } = true;
-    public string Trend0Value => ValueAtCursor(Trend0);
-    public string Trend1Value => ValueAtCursor(Trend1);
-    public string Trend2Value => ValueAtCursor(Trend2);
-    public string Trend3Value => ValueAtCursor(Trend3);
+
+    /// <summary>One row per series (net generation first), each with the shared cursor and time axis.</summary>
+    public ImmutableArray<TrendRowView> TrendRows => Trends is { } t ? [.. t.Series.Select(Row)] : [];
     public string TimeStart { get; init; } = "";
     public string TimeMid { get; init; } = "";
     public string TimeEnd { get; init; } = "";
@@ -147,14 +170,20 @@ public sealed partial record ConsoleView
 
     /// <summary>The sample index of the latest alert onset in the range, or -1: every trend marks it.</summary>
     public int EventIndex => Trends is { Events.IsEmpty: false } t ? t.Events[^1].Index : -1;
+    /// <summary>The shared cursor slider's maximum: the last sample index.</summary>
+    public int CursorMax => TrendSet.Samples - 1;
     public TrendRange Range { get; init; }
     public bool IsRange15 => Range == TrendRange.Minutes15;
     public bool IsRange1h => Range == TrendRange.Hour1;
     public bool IsRange8h => Range == TrendRange.Hours8;
 
-    private static T? At<T>(ImmutableArray<T> items, int i) where T : class => i < items.Length ? items[i] : null;
+    public ThemeChoice Theme { get; init; }
+    public bool IsThemeSystem => Theme == ThemeChoice.System;
+    public bool IsThemeLight => Theme == ThemeChoice.Light;
+    public bool IsThemeGraphite => Theme == ThemeChoice.Graphite;
 
-    private string ValueAtCursor(TrendSeries? s) => s is null ? "" : s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]);
+    private TrendRowView Row(TrendSeries s) =>
+        new(s, s.Format1(s.Values[Math.Clamp(CursorIndex, 0, s.Values.Length - 1)]), CursorIndex, EventIndex, TimeStart, TimeMid, TimeEnd);
 
     /// <summary>Which valves sit on which equipment: steam admission, condensate, cooling water, fuel, damper bypass.</summary>
     public static UnitId? ValveOwner(int id) => id switch
@@ -169,7 +198,7 @@ public sealed partial record ConsoleView
 
     /// <summary>Adds the v3 page's fields to a composed view.</summary>
     private static ConsoleView WithV3(ConsoleView view, PlantSnapshot snapshot, Setpoints setpoints, PlantOps ops,
-        ControlMode mode, ImmutableArray<UnitReading> readings, AlarmBook book, double netMw, DateTimeOffset now, int age, ViewInputs inputs)
+        ControlMode mode, ImmutableArray<UnitReading> readings, AlarmBook book, double netMw, int age, ViewInputs inputs)
     {
         var selected = view.Selected;
         var equipment = EquipmentCatalog.Get(selected);
@@ -204,7 +233,8 @@ public sealed partial record ConsoleView
             };
         }
 
-        var trends = TrendSet.Compose(tick, now, setpoints, ops, inputs.Range, compared, inputs.Cursor);
+        var choices = ChoicesFor(inputs.System, view.AlertingUnits, selected);
+        var trends = TrendSet.Compose(tick, snapshot.At, setpoints, ops, inputs.Range, compared, inputs.Cursor);
         var gap = (int)Math.Round(netMw - setpoints.TargetMw);
         var alarmCount = book.ActiveCount;
         var here = ops.Valves.Where(v => ValveOwner(v.Id) == selected).ToList();
@@ -226,8 +256,8 @@ public sealed partial record ConsoleView
             SystemTitle = PlantSystems.Title(inputs.System),
 
             ActiveAlarmCount = alarmCount,
-            EquipmentChoices = ChoicesFor(inputs.System, view.AlertingUnits),
-            SelectedIndex = Array.FindIndex(ChoicesFor(inputs.System, view.AlertingUnits), c => c.Id == selected),
+            EquipmentChoices = choices,
+            SelectedIndex = Array.FindIndex(choices, c => c.Id == selected),
 
             InspectorCode = info.Code,
             InspectorName = info.Name,
@@ -237,10 +267,10 @@ public sealed partial record ConsoleView
             OverviewTiles = [.. equipment.Readings.Where(r => r.Group == ReadingGroup.Overview).Select(Tile)],
             ConditionTiles = [.. equipment.Readings.Where(r => r.Group == ReadingGroup.Condition).Select(Tile)],
             Connections = [.. equipment.Connections.Select(c => new ConnectionView(c, EquipmentCatalog.Get(c).Title))],
-            ValveSlots = [.. ops.Valves.Select(v =>
+            ValveSlots = [.. here.Select(v =>
             {
                 var state = PlantEffects.ValveState(ops, v, tick);
-                return new ValveSlotView(v.Id, v.Id.ToString(CultureInfo.InvariantCulture), v.Open, ValveOwner(v.Id) == selected,
+                return new ValveSlotView(v.Id, v.Id.ToString(CultureInfo.InvariantCulture), v.Open,
                     $"Valve {v.Code} {state.ToLowerInvariant()}. Select to {(v.Open ? "close" : "open")}") { State = state };
             })],
             ValvesNote = here.Count == 0
@@ -249,6 +279,7 @@ public sealed partial record ConsoleView
 
             Trends = trends,
             Range = inputs.Range,
+            Theme = inputs.Theme,
             CursorTime = trends.Times[trends.Cursor].ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             CursorIsLatest = trends.Cursor == TrendSet.Samples - 1,
             TimeStart = trends.Times[0].ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),

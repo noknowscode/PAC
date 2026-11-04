@@ -90,8 +90,12 @@ public sealed record AlarmTransition(long Tick, string Key, UnitId Unit, bool Ra
 /// <summary>
 /// The alarm summary at one tick: alarms standing now and those that returned to normal without an
 /// acknowledgement, with their state. Derived by replaying the last <see cref="WindowTicks"/> ticks
-/// through the simulation with the operator's actions, so nothing but acknowledgements and shelves
-/// needs to be stored.
+/// through the simulation with the operator's actions, so nothing but acknowledgements, shelves and
+/// setpoint changes needs to be stored. It is a 15-minute view, not a historian: an alarm standing since
+/// before the window dates from its edge ("before 18:13"), and one that returned to normal unacknowledged
+/// drops off once its onset leaves the window. The replay reads the limit and damper in force at each tick
+/// (<see cref="PlantOps.SetpointsAt"/>); a ramp keeps only its latest command, so ticks before a
+/// retarget read the value it started from.
 /// </summary>
 public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArray<AlarmTransition> Transitions)
 {
@@ -135,15 +139,16 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
             var since = onset[a.Key];
             var acked = ops.Acks.TryGetValue(a.Key, out var ack) && ack >= since;
             var state = ops.IsShelved(a.Key, tick) ? AlarmState.Shelved : acked ? AlarmState.Acknowledged : AlarmState.Unacknowledged;
-            entries.Add(Entry(a.Key, spec, a.Value, a.Limit, since, since == start, state, ops, tick));
+            entries.Add(Entry(a.Key, spec, a.Value, a.Limit, since, since == start, state, ops));
         }
-        // Returned to normal in the window without an acknowledgement since it came in: it stays until acknowledged.
+        // Returned to normal in the window without an acknowledgement since it came in: it stays until acknowledged,
+        // or until its onset leaves the window.
         foreach (var (key, since) in lastOnset.Where(kv => now.All(a => a.Key != kv.Key)))
         {
             if (ops.Acks.TryGetValue(key, out var ack) && ack >= since) continue;
             if (ops.IsShelved(key, tick)) continue;
             var spec = EquipmentCatalog.Find(key)!;
-            entries.Add(Entry(key, spec, double.NaN, spec.Limit!(setpoints), since, since == start, AlarmState.ReturnedUnacknowledged, ops, tick));
+            entries.Add(Entry(key, spec, double.NaN, spec.Limit!(setpoints), since, since == start, AlarmState.ReturnedUnacknowledged, ops));
         }
 
         var ordered = entries
@@ -154,7 +159,7 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
         return new AlarmBook(ordered, transitions.ToImmutable());
     }
 
-    private static AlarmEntry Entry(string key, ReadingSpec spec, double value, double limit, long since, bool beforeWindow, AlarmState state, PlantOps ops, long tick) =>
+    private static AlarmEntry Entry(string key, ReadingSpec spec, double value, double limit, long since, bool beforeWindow, AlarmState state, PlantOps ops) =>
         new(key, EquipmentCatalog.UnitOf(key), spec.Alarm!.Priority, Title(key), value, limit, spec.Format, spec.Unit, since, beforeWindow, state,
             ops.Shelves.TryGetValue(key, out var until) ? until : 0);
 
@@ -182,5 +187,4 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
 
     public int ActiveCount => Entries.Count(e => e.IsActive);
     public int UnacknowledgedCount => Entries.Count(e => e.NeedsAck);
-    public int ShelvedCount => Entries.Count(e => e.State == AlarmState.Shelved);
 }

@@ -4,17 +4,33 @@ using PacConsole.Core.Telemetry;
 
 namespace PacConsole.Core.Console;
 
-/// <summary>One row of the alarm summary.</summary>
+/// <summary>One row of the alarm summary, or of the shelved alarms (<see cref="IsShelved"/>: Time then reads "until …").</summary>
 public sealed record AlarmRowView(string Key, UnitId Unit, string Priority, string Time, string Title, string Detail, string State, string Tone, bool CanAck)
 {
-    public string AutomationName => $"{Priority} priority, {State}, {Title}, {Detail}, since {Time}";
+    /// <summary>On the shelf: the row offers Unshelve instead of Shelve.</summary>
+    public bool IsShelved { get; init; }
+
+    public string AutomationName => $"{Priority} priority, {State}, {Title}, {Detail}, {(IsShelved ? Time : "since " + Time)}";
+
+    // Each row button names its action and its alarm (SPEC-OPERATIONS: every button names its action and target).
+    public string SelectName => $"Select {UnitCatalog.Get(Unit).Code} for {Title}";
+    public string AcknowledgeName => $"Acknowledge {Title}";
+    public string ShelveName => $"Shelve {Title} for 1 hour";
+    public string UnshelveName => $"Unshelve {Title}";
 }
 
 /// <summary>The response to the selected unit's alarm: cause, numbered steps, consequence.</summary>
-public sealed record ResponseView(string Key, string Title, string Priority, string State, string Cause, string Steps, string Consequence, bool CanAck);
+public sealed record ResponseView(string Key, string Title, string Priority, string State, string Cause, string Steps, string Consequence, bool CanAck)
+{
+    public string AcknowledgeName => $"Acknowledge {Title}";
+}
 
-/// <summary>A selected command waiting for Confirm, or a refusal with its reason.</summary>
-public sealed record PendingView(string Text, string Reason, bool IsRefused);
+/// <summary>A selected command waiting for Confirm, or a refusal with its reason; <see cref="Command"/> in words.</summary>
+public sealed record PendingView(string Text, string Reason, bool IsRefused, string Command)
+{
+    public string ConfirmName => $"Confirm: {Command}";
+    public string CancelName => $"Cancel: {Command}";
+}
 
 /// <summary>A device on the selected unit's faceplate. Selecting it selects its start or stop.</summary>
 public sealed record DeviceView(string Id, string Name, string State, string Detail, string Action, string Tone)
@@ -30,16 +46,18 @@ public sealed partial record ConsoleView
 {
     public long Tick { get; init; }
 
-    // Alarm summary
+    // Alarm summary: the first rows; "Show all" opens the rest below them.
+    public const int AlarmRowsShown = 4;
     public string AlarmSummaryText { get; init; } = "";
-    public bool HasAlarmRows => !AlarmRows.IsEmpty;
     public ImmutableArray<AlarmRowView> AlarmRows { get; init; } = [];
-    public AlarmRowView? Alarm0 => At(AlarmRows, 0);
-    public AlarmRowView? Alarm1 => At(AlarmRows, 1);
-    public AlarmRowView? Alarm2 => At(AlarmRows, 2);
-    public AlarmRowView? Alarm3 => At(AlarmRows, 3);
-    public string AlarmMoreText { get; init; } = "";
-    public bool HasMoreAlarms => AlarmMoreText.Length > 0;
+    public ImmutableArray<AlarmRowView> ShownAlarmRows => [.. AlarmRows.Take(AlarmRowsShown)];
+    public ImmutableArray<AlarmRowView> MoreAlarmRows => [.. AlarmRows.Skip(AlarmRowsShown)];
+    public bool HasMoreAlarms => AlarmRows.Length > AlarmRowsShown;
+    public string ShowAllAlarmsText => $"Show all {AlarmRows.Length}";
+
+    /// <summary>Alarms on the shelf, soonest back first; each can be unshelved before its hour is up.</summary>
+    public ImmutableArray<AlarmRowView> ShelvedRows { get; init; } = [];
+    public bool HasShelvedRows => !ShelvedRows.IsEmpty;
     public bool CanAckAll { get; init; }
 
     // Response to the selected unit's alarm
@@ -51,12 +69,6 @@ public sealed partial record ConsoleView
     // Faceplate
     public ImmutableArray<DeviceView> Devices { get; init; } = [];
     public bool HasDevices => !Devices.IsEmpty;
-    public DeviceView? Device0 => At(Devices, 0);
-    public DeviceView? Device1 => At(Devices, 1);
-    public DeviceView? Device2 => At(Devices, 2);
-    public DeviceView? Device3 => At(Devices, 3);
-    public DeviceView? Device4 => At(Devices, 4);
-    public DeviceView? Device5 => At(Devices, 5);
     public bool ShowFanSpeed => Selected == UnitId.Clg;
     public bool ShowLoad => Selected == UnitId.Trb;
     public bool ShowReactive => Selected == UnitId.Gen;
@@ -67,16 +79,23 @@ public sealed partial record ConsoleView
     public string ReactiveText { get; init; } = "";
     public string DamperText { get; init; } = "";
 
-    // Operator log
+    // What the mode does to the setpoints, in words beside the controls it changes.
+    public string ModeHint => Mode switch
+    {
+        ControlMode.Manual => "Manual: the ramps hold where they are, and a setpoint you apply takes effect at once.",
+        ControlMode.Hold => "Hold: the console keeps the last snapshot until you leave Hold.",
+        _ => "Auto: setpoints ramp to the value you apply.",
+    };
+    public string FanSpeedHint => Hint(SetpointRange.FanSpeed, "%", "ramps 1 % every 2 s");
+    public string LoadHint => Hint(SetpointRange.Load, "MW", "ramps 5 MW a minute");
+    public string ReactiveHint => Hint(SetpointRange.Reactive, "MVAr", "ramps 2 MVAr every 2 s");
+
+    private string Hint(SetpointRange range, string unit, string ramp) =>
+        $"{range.Min.ToString("0", Inv)} to {range.Max.ToString("0", Inv)} {unit}; {(IsManual ? "applies at once in Manual" : ramp)}.";
+
+    // Operator log: the latest lines, newest first (the model keeps 200).
+    public const int LogRowsShown = 8;
     public ImmutableArray<LogRowView> LogRows { get; init; } = [];
-    public LogRowView? Log0 => At(LogRows, 0);
-    public LogRowView? Log1 => At(LogRows, 1);
-    public LogRowView? Log2 => At(LogRows, 2);
-    public LogRowView? Log3 => At(LogRows, 3);
-    public LogRowView? Log4 => At(LogRows, 4);
-    public LogRowView? Log5 => At(LogRows, 5);
-    public LogRowView? Log6 => At(LogRows, 6);
-    public LogRowView? Log7 => At(LogRows, 7);
     public bool LogIsEmpty => LogRows.IsEmpty;
 
     /// <summary>Adds the operations fields: alarm summary, response, pending command, faceplate and log.</summary>
@@ -107,10 +126,20 @@ public sealed partial record ConsoleView
             e.State switch { AlarmState.Unacknowledged => "unacked", AlarmState.ReturnedUnacknowledged => "returned", _ => "acked" },
             e.NeedsAck)).ToImmutableArray();
 
+        // On the shelf for its hour, whether it still stands or has returned to normal since.
+        var shelved = ops.Shelves.Where(s => s.Value > tick).OrderBy(s => s.Value).ThenBy(s => s.Key, StringComparer.Ordinal).Select(s =>
+        {
+            var standing = book.Entries.FirstOrDefault(e => e.Key == s.Key);
+            return new AlarmRowView(s.Key, EquipmentCatalog.UnitOf(s.Key), PriorityWord(EquipmentCatalog.Find(s.Key)!.Alarm!.Priority),
+                $"until {TimeOf(s.Value)}", AlarmBook.Title(s.Key),
+                standing is { } e ? $"{Value(e, e.Value)} / {Value(e, e.Limit)} {e.UnitOfMeasure}".TrimEnd() : "Returned to normal",
+                StateWord(AlarmState.Shelved), "acked", CanAck: false) { IsShelved = true };
+        }).ToImmutableArray();
+
         var summary = new List<string>();
         if (book.ActiveCount > 0) summary.Add($"{book.ActiveCount} active");
         if (book.UnacknowledgedCount > 0) summary.Add($"{book.UnacknowledgedCount} unacknowledged");
-        if (book.ShelvedCount > 0) summary.Add($"{book.ShelvedCount} shelved");
+        if (shelved.Length > 0) summary.Add($"{shelved.Length} shelved");
 
         var mine = book.Entries.FirstOrDefault(e => e.Unit == view.Selected && e.State != AlarmState.Shelved);
         ResponseView? response = null;
@@ -123,8 +152,8 @@ public sealed partial record ConsoleView
 
         PendingView? pending = ops.Pending is { } p && !p.IsExpired(tick)
             ? p.Refusal is { } reason
-                ? new PendingView($"Cannot {p.Command.Describe()}", reason, true)
-                : new PendingView($"Confirm: {p.Command.Describe()}?", "Select-before-operate: confirm within 10 s.", false)
+                ? new PendingView($"Cannot {p.Command.Describe()}", reason, true, p.Command.Describe())
+                : new PendingView($"Confirm: {p.Command.Describe()}?", "Select-before-operate: confirm within 10 s, or press Esc to cancel.", false, p.Command.Describe())
             : null;
 
         var devices = ops.DevicesOf(view.Selected).Select(d =>
@@ -137,14 +166,23 @@ public sealed partial record ConsoleView
                 state.EndsWith('…') ? "moving" : d.Running ? "running" : "stopped");
         }).ToImmutableArray();
 
-        static string RampText(Ramp r, long t, string unit, string format) => r.IsMoving(t)
-            ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
+        // A step (Manual) reaches its target at the next scan: it shows the target, never a minute of ramp.
+        static string RampText(Ramp r, long t, string unit, string format) =>
+            r.IsMoving(t) && !r.IsStep ? $"{r.ValueAt(t).ToString(format, Inv)} → {r.To.ToString(format, Inv)} {unit} · {Math.Max(1, r.MinutesLeft(t))} min"
+            : r.IsHeld(t) ? $"{r.ValueAt(t).ToString(format, Inv)} {unit} · held, target {r.To.ToString(format, Inv)}"
             : $"{r.To.ToString(format, Inv)} {unit}";
 
-        var log = ops.Log.Select(e => (e.Tick, Row: new LogRowView(e.At.ToLocalTime().ToString("HH:mm:ss", Inv), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant())))
-            .Concat(book.Transitions.Select(t => (t.Tick, Row: new LogRowView(TimeOf(t.Tick), t.Raised ? "Alarm" : "Normal", t.Text, t.Raised ? "alarm" : "normal"))))
+        // Newest first, by tick and then by the order the lines were written: lines often share a tick (Acknowledge
+        // all writes one per alarm, and under HOLD the tick stands still), and the latest of them must lead. The
+        // operator acts on a snapshot after its alarms came in, and a command takes effect from the next scan, so a
+        // tick's own lines follow its alarm transitions and an action always precedes what it caused. Every line reads
+        // the plant's clock, the time of its tick's snapshot, so the times agree with that order.
+        var log = book.Transitions.Select(t => (t.Tick, Row: new LogRowView(TimeOf(t.Tick), t.Raised ? "Alarm" : "Normal", t.Text, t.Raised ? "alarm" : "normal")))
+            .Concat(ops.Log.Select(e => (e.Tick, Row: new LogRowView(TimeOf(e.Tick), KindWord(e.Kind), WithUnit(e.Unit, e.Text), e.Kind.ToString().ToLowerInvariant()))))
+            .Select((x, written) => (x.Tick, x.Row, Written: written))
             .OrderByDescending(x => x.Tick)
-            .Take(8)
+            .ThenByDescending(x => x.Written)
+            .Take(LogRowsShown)
             .Select(x => x.Row)
             .ToImmutableArray();
 
@@ -153,7 +191,7 @@ public sealed partial record ConsoleView
             Tick = tick,
             AlarmSummaryText = summary.Count == 0 ? "No standing alarms" : string.Join(" · ", summary),
             AlarmRows = rows,
-            AlarmMoreText = rows.Length > 4 ? $"+{rows.Length - 4} more" : "",
+            ShelvedRows = shelved,
             CanAckAll = rows.Any(r => r.CanAck),
             Response = response,
             Pending = pending,
@@ -171,6 +209,7 @@ public sealed partial record ConsoleView
     {
         LogKind.Acknowledge => "Ack",
         LogKind.Shelve => "Shelved",
+        LogKind.Unshelve => "Unshelved",
         _ => kind.ToString(),
     };
 

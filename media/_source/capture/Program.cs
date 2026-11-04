@@ -15,6 +15,7 @@ using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Solids;
 using PacConsole.Rendering;
+using PacConsole.Styles;
 using SkiaSharp;
 
 var shotsPath = args.Length > 0 ? args[0] : throw new ArgumentException("usage: PacArt <shots.json> <outDir> [repoRoot]");
@@ -22,14 +23,14 @@ var outDir = args.Length > 1 ? args[1] : throw new ArgumentException("usage: Pac
 var repo = args.Length > 2 ? args[2] : FindRepo(AppContext.BaseDirectory);
 Directory.CreateDirectory(outDir);
 
-var light = Tokens(Path.Combine(repo, "PacConsole", "Styles", "Tokens.xaml"));
-var dark = new ResourceDictionary();
-foreach (var (k, v) in light) dark[k] = v;
-foreach (var (k, v) in Tokens(Path.Combine(repo, "PacConsole", "Styles", "Palette.Dark.xaml"))) dark[k] = v;
+// The product's palette: its colours per theme from Styles/Palette.xaml, its stroke widths from Styles/Tokens.xaml,
+// mapped by the product's own SolidPalette.For.
+LoadPalette(Path.Combine(repo, "PacConsole", "Styles", "Palette.xaml"));
+LoadDoubles(Path.Combine(repo, "PacConsole", "Styles", "Tokens.xaml"));
 var palettes = new Dictionary<string, (SolidPalette Palette, SKColor Ground)>
 {
-    ["light"] = (SolidPalette.FromResources(light), ColorOf(light["GroundBrush"])),
-    ["dark"] = (SolidPalette.FromResources(dark), ColorOf(dark["GroundBrush"])),
+    ["light"] = (SolidPalette.For(ElementTheme.Light), ColorOf(ThemeBrushes.Color("GroundBrush", ElementTheme.Light))),
+    ["dark"] = (SolidPalette.For(ElementTheme.Dark), ColorOf(ThemeBrushes.Color("GroundBrush", ElementTheme.Dark))),
 };
 
 var shots = JsonSerializer.Deserialize<List<Shot>>(File.ReadAllText(shotsPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
@@ -45,8 +46,8 @@ foreach (var shot in shots)
     // Framing on a few units crops the whole plant around them; the rest still draws, cut by the edge.
     IReadOnlyList<SolidPart> framed = shot.Fit is { Length: > 0 } fit ? [.. fit.SelectMany(u => PlantSolids.Default.UnitWithPad(Unit(u)))] : parts;
     var projection = shot.Framing == "orbit"
-        ? PlantSolids.ViewProjection(pose, w, h, shot.Padding)
-        : PlantSolids.Fit(pose, framed, w, h, shot.Padding);
+        ? PlantFraming.ViewProjection(pose, w, h, shot.Padding)
+        : PlantFraming.Fit(pose, framed, w, h, shot.Padding);
     if (shot.Offset is { Length: 2 } o) projection = new OrbitProjection(pose, projection.Scale * shot.Zoom, projection.CenterX + o[0], projection.CenterY + o[1]);
     else if (shot.Zoom != 1) projection = new OrbitProjection(pose, projection.Scale * shot.Zoom, projection.CenterX, projection.CenterY);
 
@@ -89,7 +90,7 @@ static byte[] Render(SKImageInfo info, int scale, SKColor ground, SolidPalette p
     var canvas = surface.Canvas;
     canvas.Clear(ground);
     canvas.Scale(scale);
-    using (var renderer = new SolidRenderer { Palette = palette, Scale = scale }) renderer.Draw(canvas, parts, projection, frame);
+    using (var renderer = new SolidRenderer(palette) { Scale = scale }) renderer.Draw(canvas, parts, projection, frame);
     canvas.Flush();
     var bytes = new byte[info.BytesSize];
     using var pixmap = surface.PeekPixels();
@@ -140,28 +141,30 @@ static UnitId Unit(string code) =>
     UnitCatalog.All.FirstOrDefault(u => u.Code.Equals(code, StringComparison.OrdinalIgnoreCase) || u.ShortCode.Equals(code, StringComparison.OrdinalIgnoreCase))?.Id
     ?? Enum.Parse<UnitId>(code, ignoreCase: true);
 
-// The keyed colours and numbers of a theme dictionary, as the app's merged resources hold them.
-static ResourceDictionary Tokens(string path)
+// Styles/Palette.xaml: each theme dictionary's colours, as the app's ThemeBrushes reads them.
+static void LoadPalette(string path)
 {
     XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
-    var dict = new ResourceDictionary();
-    foreach (var e in XDocument.Load(path).Descendants())
+    foreach (var theme in XDocument.Load(path).Descendants().Where(e => e.Name.LocalName == "ResourceDictionary" && e.Attribute(x + "Key") is not null))
     {
-        if (e.Attribute(x + "Key")?.Value is not { } key) continue;
-        switch (e.Name.LocalName)
+        var colors = theme.Attribute(x + "Key")!.Value == "Dark" ? ThemeBrushes.Dark : ThemeBrushes.Light;
+        foreach (var e in theme.Elements())
         {
-            case "SolidColorBrush" when e.Attribute("Color")?.Value is { } c:
-                dict[key] = new SolidColorBrush { Color = Hex(c) };
-                break;
-            case "Color":
-                dict[key] = Hex(e.Value.Trim());
-                break;
-            case "Double":
-                dict[key] = double.Parse(e.Value.Trim(), System.Globalization.CultureInfo.InvariantCulture);
-                break;
+            if (e.Attribute(x + "Key")?.Value is not { } key) continue;
+            if (e.Name.LocalName == "SolidColorBrush" && e.Attribute("Color")?.Value is { } c) colors[key] = Hex(c);
+            else if (e.Name.LocalName == "Color") colors[key] = Hex(e.Value.Trim());
         }
     }
-    return dict;
+}
+
+// Styles/Tokens.xaml: the theme-invariant numbers (stroke widths), as the app's resources hold them.
+static void LoadDoubles(string path)
+{
+    XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
+    foreach (var e in XDocument.Load(path).Descendants().Where(e => e.Name.LocalName == "Double"))
+    {
+        if (e.Attribute(x + "Key")?.Value is { } key) Application.Current.Resources[key] = double.Parse(e.Value.Trim(), System.Globalization.CultureInfo.InvariantCulture);
+    }
 }
 
 static Windows.UI.Color Hex(string s)
@@ -172,12 +175,7 @@ static Windows.UI.Color Hex(string s)
         : new((byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v);
 }
 
-static SKColor ColorOf(object value) => value switch
-{
-    SolidColorBrush b => new SKColor(b.Color.R, b.Color.G, b.Color.B, b.Color.A),
-    Windows.UI.Color c => new SKColor(c.R, c.G, c.B, c.A),
-    _ => SKColors.Magenta,
-};
+static SKColor ColorOf(Windows.UI.Color c) => new(c.R, c.G, c.B, c.A);
 
 static string FindRepo(string from)
 {

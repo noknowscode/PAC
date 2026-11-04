@@ -3,10 +3,14 @@ using PacConsole.Core.Telemetry;
 namespace PacConsole.Core.Operations;
 
 /// <summary>One tick of the simulated plant under given setpoints and operator actions.</summary>
-public sealed class PlantSample(ImmutableArray<UnitReading> readings, double netMw)
+public sealed class PlantSample(ImmutableArray<UnitReading> readings, double netMw, Setpoints setpoints)
 {
     public ImmutableArray<UnitReading> Readings { get; } = readings;
     public double NetMw { get; } = netMw;
+
+    /// <summary>The setpoints in force at this tick (<see cref="PlantOps.SetpointsAt"/>).</summary>
+    public Setpoints Setpoints { get; } = setpoints;
+
     internal ImmutableArray<Alarm>? Alarms { get; set; }
 }
 
@@ -37,9 +41,11 @@ public static class SampleMemo
                 _setpoints = setpoints;
             }
             if (Samples.TryGetValue(tick, out var hit)) return hit;
+            var applied = ops.SetpointsAt(tick, setpoints);
             var sample = new PlantSample(
-                Simulation.Readings(tick, setpoints.DamperPct, ops),
-                Simulation.OutputMw(tick, PlantEffects.OpenValves(ops, tick), ops));
+                Simulation.Readings(tick, applied.DamperPct, ops),
+                Simulation.OutputMw(tick, PlantEffects.OpenValves(ops, tick), ops),
+                applied);
             Samples[tick] = sample;
             return sample;
         }
@@ -51,7 +57,7 @@ public static class SampleMemo
         var sample = At(tick, setpoints, ops);
         lock (Gate)
         {
-            return sample.Alarms ??= AlarmRules.Evaluate(tick, sample.Readings, sample.NetMw, setpoints, ops);
+            return sample.Alarms ??= AlarmRules.Evaluate(tick, sample.Readings, sample.NetMw, sample.Setpoints, ops);
         }
     }
 }

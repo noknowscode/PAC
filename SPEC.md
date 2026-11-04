@@ -3,12 +3,16 @@
 Status: draft for approval · 2026-10-15 · reference figure `docs/anatomy/plant/` (commits `8ad26ec`, `f08fc42`), published at https://claude.ai/artifact/3ZUDmNh8CpXUqVtdbw5nyy
 
 Goal: replace the console's wireframe plant (main viewport, three preset thumbnails, unit preview) with the solid, shaded, depth-ordered look of the reference figure, keep every current behaviour (orbit, drag, presets, tags, selection, alert), and turn the unit preview into a close-up with a live vibration gauge.
+*Superseded by console v3 (SPEC-CONSOLE.md):* the unit preview was dropped; the text below that plans it is history,
+and the capability table says what was built.
 
-Out of scope: new routes, new telemetry, theme switching (the app is dark-only, `RequestedTheme="Dark"`), WebAssembly/mobile heads (the app ships `net10.0-desktop` only today).
+Out of scope: new routes, new telemetry, theme switching (the app is dark-only, `RequestedTheme="Dark"`), WebAssembly/mobile heads (the app ships `net10.0-desktop` only today). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
+
+> **Update 2026-10-28:** the app now has System, Light and Graphite themes (`docs/SPEC-THEME.md`). Phase 7 cleanup is done: the wireframe renderer, `PlantGeometry` and their projection helpers are deleted.
 
 ## Architecture Brief
 
-**Targets.** `net10.0-desktop` (Skia, Win32 host), Uno.Sdk **6.7.30** pinned in `global.json`. Bundled SkiaSharp 3.119.2; no opt-in to SkiaSharp 4 (nothing here needs a v4-only API).
+**Targets.** `net10.0-desktop` (Skia, Win32 host), Uno.Sdk **6.7.30** pinned in `global.json`. Bundled SkiaSharp 3.119.2; no opt-in to SkiaSharp 4 (nothing here needs a v4-only API). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 
 **UnoFeatures.** Unchanged: `SimpleTheme; Hosting; Toolkit; Logging; MVUX; Navigation; SkiaRenderer`. `SkiaRenderer` already brings `Uno.WinUI.Graphics2DSK` (`SKCanvasElement`).
 
@@ -39,7 +43,7 @@ Out of scope: new routes, new telemetry, theme switching (the app is dark-only, 
 
 **Platform constraints.**
 - `SKCanvasElement` ignores XAML `Opacity` (gotcha G38): the lift halo and any fade bake alpha into paints.
-- `UISettings.AnimationsEnabled` is hardcoded true on Skia desktop: reduced motion stays the in-app `AnimationsEnabled()` check already in `PlantViewport`, and the spec adds no new claim of OS reduced-motion support.
+- `UISettings.AnimationsEnabled` is hardcoded true on Skia desktop: reduced motion stays the in-app `MotionPreference.AnimationsEnabled()` check the viewport and the status dots share, and the spec adds no new claim of OS reduced-motion support.
 - `CompositionTarget.Rendering` pumps frames forever (gotcha): the existing `DispatcherTimer` loop stays, and it stops when nothing moves (fan spin counts as moving only while the preview is visible).
 - A whitespace-only or zero-height `Path` draws nothing (gotchas): not applicable, all drawing is Skia.
 
@@ -59,10 +63,10 @@ Out of scope: new routes, new telemetry, theme switching (the app is dark-only, 
 | Pipework between units (rack, steam, fuel) | implemented | straight tubes on piers, base layer |
 | Turning condenser fans | implemented | blade lines rebuilt per frame on CND fan tops, only while visible and animations on |
 | Three preset thumbnails | implemented | same renderer, static camera per preset |
-| Unit preview close-up | implemented | selected unit's solids, fitted, plus a vibration gauge bound to `SelectedVib` |
-| CND fan-cell mechanism (motor, gearbox, sensor, cable) in the preview | **substituted** | the preview shows the selected unit's own solids for every unit; the fan-cell drive train exists only in the reference figure |
-| Interactive fan speed (Fig 5) | **omitted** | the console has no fan-speed telemetry or control; showing a speed slider would impersonate a capability |
-| Light theme | **omitted** | app is dark-only |
+| Unit preview close-up | **omitted** | console v3 dropped it (SPEC-CONSOLE.md: not in the mock; the plant callout and the inspector carry the unit) |
+| CND fan-cell mechanism (motor, gearbox, sensor, cable) in the preview | **omitted** | went with the preview; the fan-cell drive train exists only in the reference figure |
+| Interactive fan speed (Fig 5) | implemented, as a control | the cooling bank's fan speed setpoint on the Control tab: typed, applied, ramped in Auto (SPEC-OPERATIONS); the drawn blades keep the figure's 1.6 rad/s |
+| Light theme | implemented | System, Light or Graphite from the … menu, kept between launches (`docs/SPEC-THEME.md`) |
 | Hover-to-lift (reference figure) | **substituted** | hover draws an outline; click on a unit (or its tag, or keyboard) selects; lift follows the bound selection |
 
 ## Design Brief
@@ -188,7 +192,7 @@ Motion (constants in PlantCanvas, not resources): lift τ 0.28 s, needle τ 0.4 
 | Motion | PASS | each motion names duration and reduced-motion fallback | |
 | Type assets | PASS (n/a) | no fonts | |
 | UnoFeatures | PASS | SkiaRenderer present | |
-| Targets | PASS | desktop only, stated | |
+| Targets | PASS | desktop only, stated (superseded 2026-10-30: five heads) | |
 | Pending | PASS | none | |
 | Capabilities | PASS | substituted and omitted rows repeated below | |
 
@@ -227,8 +231,8 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 
 ## Decisions (2026-10-15, delegated by the user)
 
-- **Unit preview: one design for all units.** Selected unit's solids plus the vibration gauge. The CND fan-cell drive train stays in the reference figure only; deferred, not planned. Reason: the gauge carries the alert meaning for every unit; the drive train is ~30 solids for one unit of six.
-- **Fan speed: omitted.** No fan-speed telemetry exists; a speed control would impersonate a capability (`capability-coverage.md`, step 3).
+- **Unit preview: one design for all units.** Selected unit's solids plus the vibration gauge. The CND fan-cell drive train stays in the reference figure only; deferred, not planned. Reason: the gauge carries the alert meaning for every unit; the drive train is ~30 solids for one unit of six. *Superseded:* console v3 dropped the preview.
+- **Fan speed: omitted.** No fan-speed telemetry exists; a speed control would impersonate a capability (`capability-coverage.md`, step 3). *Superseded:* SPEC-OPERATIONS built a fan speed setpoint on the Control tab.
 - **Hover: outline, not selection.** Hovering a unit's solid draws a `MutedBrush` outline on it; clicking it executes `SelectCommand` (tags keep working). Lift follows selection. Reason: hover-to-select would rewrite the telemetry panels whenever the pointer crosses the plant. Adds to phase 4: a per-unit hit test against each unit's rest-pose screen hull (the figure's `HULLS` approach), frontmost by pad depth; drag past 4 px cancels the click as today.
 - **Accent: `AccentBrush` (orange).** Matches the tags' selected state; the figure's white is its own palette.
 - **Verification: rooted session.** Implementation runs in a session opened with `Open-RootedSession.ps1`, which seeds `.mcp.json`, resuming from `HANDOFF.md`.
@@ -298,6 +302,50 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 
 ## Unresolved Questions
 
-- **Omitted (accepted):** light theme (app is dark-only); interactive fan speed (see Decisions).
-- **Substituted (accepted):** fan-cell preview → generic unit preview; hover-to-lift → hover outline + click/lift on selection.
+- **Omitted (accepted):** the unit preview and its fan-cell close-up (console v3, SPEC-CONSOLE.md). The light theme and
+  a fan speed control, once omitted here, were built later (the capability table above).
+- **Substituted (accepted):** hover-to-lift → hover outline + click/lift on selection.
 - **Skills not loaded for this spec:** `uno-navigation` (no route changes), `xaml-art-direction` (direction fixed by the reference figure) and `xaml-design-polish` (motion constants copied from the figure). Load `xaml-design-polish` in phase 4 before finalising motion.
+
+## Decisions (A pass, 2026-11-04, proposed)
+
+- **The page model is tested on the app's own build.** `PacConsole` gains a plain `net10.0` target (Uno's reference
+  assemblies), which `PacConsole.Tests` references, instead of moving `ConsoleModel` into a library of its own. Reason:
+  the MVUX generator and the app's own types (the journal, the renderer, the viewport's helpers) run under test exactly
+  as the app compiles them, with no project split and no second copy of the model's dependencies; the same pattern runs
+  trace's model tests. Tradeoff: the test build compiles the app (about a minute), and CI's test job passes
+  `-p:PacTargetFrameworks=net10.0` so restore stays off the mobile workloads.
+- **Test-only package: `SkiaSharp.NativeAssets.Linux` 4.151.1**, the version Uno.Sdk resolves, so the renderer's
+  reference-frame tests draw on the Linux test host. The app heads bring their own natives.
+- **Renderer and viewport split** (UNO-AUDIT plan): `SolidRenderer` orchestrates `SolidGeometry`, `PartPainter`,
+  `StillFrameCache` and `SystemMotion`; the camera's rules are `Core/Geometry/CameraRig`; `PlantViewport` keeps input
+  and wiring, with `FrameClock` and `TagOverlay` beside it.
+
+## Decisions (A pass 2, 2026-11-04, proposed)
+
+- **The art capture tool is fixed, not cut** (`media/_source/capture`). Owner rule "build small, cut large": the fix was
+  small. It links the renderer's split files instead of the old single `SolidRenderer.cs`, runs on SkiaSharp 4.151.1
+  (the version the app runs on, with Windows and Linux natives), and builds the palette with the product's
+  `SolidPalette.For` from `Styles/Palette.xaml` and `Styles/Tokens.xaml`; `Shim.cs` stands in for the app types those
+  files read. Checked: it builds and renders `08-plant-paper`, `12-trb` and `grid-Alarms` here. The prints already in
+  `media/art/` are not re-rendered: they keep the look of the palette they were made with.
+- **Full screen is a model command over an injected window service.** `IFullScreen` wraps the window that
+  `IApplicationBuilder.Configure` hands over and is registered in DI; `ConsoleModel.ToggleFullScreen` and
+  `CanGoFullScreen` replace the page's command class and the static `App.Shell`. Reason: the review's service-locator
+  finding; the same shape as the theme switch over `IThemeService`. Tradeoff: the model takes a fifth dependency, and a
+  head that cannot go full screen registers `NoFullScreen`, so the header hides the button there.
+- **The plant model's framing and hit results are pinned** in `PacConsole.Tests/Fixtures/framing.txt`
+  (`PAC_PIN_WRITE=write` redraws it, only for an intended change), like the renderer's reference frames.
+
+## Decisions (pre-transfer, 2026-11-04, proposed)
+
+- **A custom app icon replaces the Uno template's.** `Assets/Icons/icon.svg` is PAC's primary colour, the slate-teal
+  `#2F5D73` (`PrimaryColor` and `AccentBrush`, Light); `icon_foreground.svg` is one flat white glyph, a cooling tower
+  and a stack on a base plate, in the template's viewBox with its margins inside, so the Resizetizer's scales (1.0 on
+  desktop, WinAppSDK and WebAssembly, 0.8 on iOS, 0.65 on Android) keep it clear of the edges; `Assets/Splash/
+  splash_screen.svg` is the same glyph in the slate-teal on the default white splash. Checked at 48 px and in the
+  Android build's generated mipmaps. The owner approved a simple custom icon; this one is proposed.
+- **The `.studiolive` URLs are absolute**, under
+  `https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/`, as the format guide's
+  example has them. They resolve only after the move to Uno.Samples. Whether relative paths can be used instead is
+  question 1 in uno-private#2444.

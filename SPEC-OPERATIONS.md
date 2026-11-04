@@ -6,7 +6,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 
 ## Architecture Brief
 
-- **Targets and features:** unchanged (Uno.Sdk 6.7.30, `net10.0-desktop`, MVUX, Simple + Toolkit, Skia).
+- **Targets and features:** unchanged (Uno.Sdk 6.7.30, `net10.0-desktop`, MVUX, Simple + Toolkit, Skia). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 - **MVUX stays.**
   - Decision: one new state, `IState<PlantOps> Ops`. It is the operator-side plant, and every operator action is a pure `PlantOps.Apply(command, tick, now)`.
   - Reason: actions, acknowledgements and the log are durable data; one record keeps them consistent and testable.
@@ -14,7 +14,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 - **Alarms are derived, not stored.**
   - Decision: `AlarmBook.Compose` replays the last 450 ticks (15 min) through the ops-aware simulation, finds each alarm's onset, clear and active state, and joins acknowledgements and shelves from `PlantOps`.
   - Reason: the simulation is deterministic, so a replay is exact and needs no per-tick memory in the model, which MVUX does not offer for stream feeds.
-  - Tradeoff: the replay uses current setpoints, so a limit change re-reads history. About 450 × 7 unit evaluations a second.
+  - Tradeoff: the replay uses current setpoints, so a limit change re-reads history. About 450 × 7 unit evaluations a second. *Revised 2026-11-01:* limit and damper changes are kept with their tick (`PlantOps.SetpointChanges`), so the replay reads the values in force at each tick; ramps keep their latest command only. The book stays a 15-minute view: an alarm that returned to normal unacknowledged drops off once its onset leaves the window.
 - **Alarm rules join the readings.** A `ReadingSpec` may carry an `Alarm` (limit, direction, priority, guidance). `AlertRules` gives way to `AlarmRules.Evaluate`, so tiles, trends, events and the alarm list all use one definition.
 - **Select-before-operate (SBO).** Every device command and valve move is first selected (`PlantOps.Pending`, which expires after 5 ticks or 10 s), then confirmed or cancelled from one confirm bar in the faceplate. Permissives can refuse a command with a reason, and the reason is shown.
 - **Setpoints are typed and applied.** Each setpoint uses a `NumberBox` bound two-way to a draft state, plus Apply. Load and reactive power ramp at fixed rates; the alarm limit and damper apply at once. The global sliders go.
@@ -28,8 +28,9 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 
 | Capability | Status | Note |
 |---|---|---|
-| Alarm summary: priority, time, value / limit, state | implemented | an alarm band under the status strip, 4 fixed rows and a "+N more" line |
-| Acknowledge, acknowledge all, shelve | implemented | shelve is 1 h with the reason "Shelved by operator"; notes carry more |
+| Alarm summary: priority, time, value / limit, state | implemented | an alarm band under the status strip, 4 fixed rows and a "+N more" line. *Moved 2026-10-19: the list now opens at the top of the inspector under the Active alarms view. 2026-11-01: the first four rows, then "Show all N" opens the rest in place.* |
+| Acknowledge, acknowledge all, shelve | implemented | shelve is 1 h with the reason "Shelved by operator"; notes carry more. *2026-11-01:* shelved alarms are listed under the alarm list until their hour is up, each with Unshelve (logged) |
+| Plant mode: Auto, Manual, Hold | implemented | *2026-11-01:* Manual holds the load, fan speed and reactive power ramps where they are, and a setpoint applied in Manual takes effect at once (logged "at once, Manual"); Auto carries the ramps on toward their targets. Hold pauses the telemetry and keeps the last snapshot. The faceplate says which applies |
 | Alarm states: unacknowledged, acknowledged, returned unacknowledged, shelved | implemented | ISA-18.2 lifecycle, reduced |
 | Alarm response guidance | implemented | per rule: cause, steps, consequence; in the inspector while the unit is in alarm |
 | Per-equipment faceplates | implemented | CLG cells + fan speed; TRB load + alarm limit; GEN reactive power; CND CW pumps A/B; TKA transfer pumps; STK damper; SIL unloading; each unit's valves |
@@ -37,7 +38,9 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 | Commanded vs actual, travel and ramps | implemented | devices take 2–5 ticks to start or stop; valves travel 5 ticks; load ramps at 5 MW/min |
 | A plant that responds | implemented | effects listed under Interaction Brief |
 | Range bars on reading tiles | implemented | normal band, alarm limit, value marker |
-| Event log and shift notes | implemented | operator entries plus alarm transitions in the window; the last 8, fixed rows |
+| Event log and shift notes | implemented | operator entries plus alarm transitions in the window; the latest 8, newest first (lines that share a tick, as under HOLD, in the order written). *2026-11-04:* every line reads the plant's clock (its tick's snapshot time), so an action always lists before what it caused |
+| Durable operator data | implemented | *2026-11-04:* the log, acknowledgements, shelves, setpoints, devices, valves and mode are saved after every action and restored on launch (`operator/operator.json` in LocalFolder); see Decisions (A pass) |
+| Esc cancels select-before-operate | implemented | *2026-11-04:* a KeyboardAccelerator on the confirm bar's Cancel |
 | Operator identity and permissions | substituted | a fixed "Operator 04"; no login |
 | Fans stop turning in the drawing | omitted | the drawing's fan animation is not per cell |
 | Alarm history beyond 15 min | omitted | the replay window bounds it |
@@ -49,7 +52,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
   - A pending command bar uses the accent tint with the command in words.
   - Range bars use a 4 px hairline track, a 4 px normal band in `FillStrongBrush`, a limit tick in `AlertBrush` and a 2 px value marker in ink. The marker turns alert when out of band.
 - **Layout:**
-  - The alarm band sits under the status strip.
+  - The alarm band sits under the status strip. *(Since 2026-10-19 it is the Active alarms list at the top of the inspector.)*
   - The faceplate replaces the Control tab's contents.
   - The operator log is a section under the trends.
   - Nothing new floats; all panels are in the page flow.
@@ -93,7 +96,7 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 ConsolePage ← ConsoleViewModel
 └─ FeedView(View)
    ├─ Header, StatusStrip (as v3)
-   ├─ AlarmBand     ← Data.Alarm0..3, AlarmSummary · Ack → Acknowledge(key) · Shelve → Shelve(key) · AckAll
+   ├─ AlarmBand     ← Data.ShownAlarmRows, MoreAlarmRows (Show all), ShelvedRows, AlarmSummary · Ack → Acknowledge(key) · Shelve → Shelve(key) · Unshelve → Unshelve(key) · AckAll
    ├─ SystemsBar, PlantPanel (as v3)
    ├─ Inspector
    │  ├─ AlarmResponse  ← Data.Response (visible while the unit is in alarm) · Ack
@@ -101,7 +104,7 @@ ConsolePage ← ConsoleViewModel
    │  └─ Control: PendingBar ← Data.Pending (Confirm / Cancel)
    │     └─ Faceplate per unit (CLG cells + speed · TRB load + limit · GEN reactive · CND pumps · TKA pumps · STK damper · SIL unload) + valves
    ├─ Trends (as v3; events from AlarmRules)
-   └─ OperatorLog   ← Data.Log0..7 · NoteDraft ⇒ AddNote
+   └─ OperatorLog   ← Data.LogRows · NoteDraft ⇒ AddNote
 ```
 
 Data flow: `Ops` joins the View combine (8 sources). Commands write `Ops` (single writer per action). Drafts are written by their NumberBox only, and read by their Apply.
@@ -170,9 +173,34 @@ Phases 1 to 5 done: `c52f64e` (operations), the deadband fix commit, verified vi
 
 - **Replay cost per recomposition:** the Compose budget is under 5 ms; measure in Core.
 - **NumberBox two-way inside the FeedView template:** bind `Parent.X` like the sliders do (verified for sliders in this app).
-- **Many fixed slots:** keep each slot a record MVUX updates in place.
+- **Many fixed slots:** keep each slot a record MVUX updates in place. *Since 2026-11-01 the lists fill their panels through `Controls/Slots`, which keeps each row's element across recompositions the way the fixed slots did.*
 
 ## Unresolved Questions
 
 - **Substituted:** operator identity is fixed ("Operator 04"); no login or permission levels.
 - **Omitted:** per-cell fan animation; alarm history beyond 15 min.
+
+## Decisions (A pass, 2026-11-04, proposed)
+
+Made in the A pass to close the completeness audit's functional Majors (`docs/COMPLETENESS.md`); the owner rule was
+"build small, cut large". Each stands until the owner says otherwise.
+
+- **Operator data persists.** One JSON file, `operator/operator.json` in the app's LocalFolder, holds `PlantOps` (devices,
+  valves, ramps, the applied setpoints, acknowledgements, shelves, the log, setpoint changes), the mode, and the tick and
+  wall time it was saved at. It is written after every action, whole, to a temporary file that replaces the last in one
+  move; a file that cannot be read is set aside (`.unreadable-<time>`) and the console starts fresh.
+  - A pending select-before-operate is never saved: it lapses in 10 s, and a relaunch must not leave a command one
+    press from running.
+  - The simulated plant resumes at the saved tick plus one tick per 2 s the console was closed, so shelves run out, ramps
+    finish and starts complete as if time had passed. Telemetry stays simulated (README).
+  - A console closed in Hold opens in Hold.
+  - Reason: SPEC-OPERATIONS calls actions, acknowledgements and the log durable data. Tradeoff: a format version; a file
+    of another version is set aside, not migrated.
+- **Commands take effect from the next scan.** A Manual setpoint step, a new alarm limit and a new damper position apply
+  from the tick after the snapshot the operator acted on, as device and valve commands already did. Reason: the log was
+  listing an effect (a returned alarm) before the action that caused it. The faceplate shows a step's target at once.
+- **The applied setpoints live in `PlantOps`.** Reason: as separate states, MVUX could compose a view with a new alarm
+  limit before the change that dates it (2 of 6 test runs), back-dating an alarm for one recomposition.
+- **Esc cancels through the confirm bar.** A `KeyboardAccelerator` on Cancel invokes the model's `CancelPending`, so Esc
+  works anywhere on the page while the bar shows (it shows on the Control tab). No code-behind.
+
