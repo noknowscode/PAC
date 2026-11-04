@@ -36,10 +36,11 @@
       </StackPanel>
     </DataTemplate>
 
+    <!-- Wraps rather than clips when its column is narrower than the line (a phone's header row). -->
     <DataTemplate x:Key="HeaderTargetTemplate">
       <StackPanel VerticalAlignment="Center">
-        <TextBlock Text="{Binding Data.TargetGapText}" Style="{StaticResource TypeBody}" />
-        <TextBlock Text="{Binding Data.TargetText}" Style="{StaticResource TypeMicro}" />
+        <TextBlock Text="{Binding Data.TargetGapText}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
+        <TextBlock Text="{Binding Data.TargetText}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
       </StackPanel>
     </DataTemplate>
 
@@ -103,9 +104,11 @@
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderBrandTemplate}" IsTabStop="False" VerticalAlignment="Center" />
               <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource HeaderActionsTemplate}" IsTabStop="False" />
             </Grid>
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+            <!-- The target takes the room the output leaves, and wraps in it: at 390 px "15 MW below target" was clipped. -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space12}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderOutputTemplate}" IsTabStop="False" />
-              <ContentControl Grid.Column="2" Content="{Binding}" ContentTemplate="{StaticResource HeaderTargetTemplate}" IsTabStop="False" VerticalAlignment="Center" />
+              <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource HeaderTargetTemplate}" IsTabStop="False" VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" />
             </Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderStatusInlineTemplate}" IsTabStop="False" HorizontalContentAlignment="Stretch" />
           </StackPanel>
