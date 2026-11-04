@@ -336,3 +336,16 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
   head that cannot go full screen registers `NoFullScreen`, so the header hides the button there.
 - **The plant model's framing and hit results are pinned** in `PacConsole.Tests/Fixtures/framing.txt`
   (`PAC_PIN_WRITE=write` redraws it, only for an intended change), like the renderer's reference frames.
+
+## Decisions (pre-transfer, 2026-11-04, proposed)
+
+- **A custom app icon replaces the Uno template's.** `Assets/Icons/icon.svg` is PAC's primary colour, the slate-teal
+  `#2F5D73` (`PrimaryColor` and `AccentBrush`, Light); `icon_foreground.svg` is one flat white glyph, a cooling tower
+  and a stack on a base plate, in the template's viewBox with its margins inside, so the Resizetizer's scales (1.0 on
+  desktop, WinAppSDK and WebAssembly, 0.8 on iOS, 0.65 on Android) keep it clear of the edges; `Assets/Splash/
+  splash_screen.svg` is the same glyph in the slate-teal on the default white splash. Checked at 48 px and in the
+  Android build's generated mipmaps. The owner approved a simple custom icon; this one is proposed.
+- **The `.studiolive` URLs are absolute**, under
+  `https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/`, as the format guide's
+  example has them. They resolve only after the move to Uno.Samples. Whether relative paths can be used instead is
+  question 1 in uno-private#2444.
