@@ -45,8 +45,8 @@ public sealed partial class PlantCanvas : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            if (_renderer is null) Swap(CreateRenderer());
-            OnPaletteChanged(_renderer!.Palette);
+            if (_renderer is not { } renderer) Swap(renderer = CreateRenderer());
+            OnPaletteChanged(renderer.Palette);
             Invalidate();
         };
         Unloaded += (_, _) => Swap(null);
@@ -92,7 +92,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
 
     private SolidRenderer CreateRenderer()
     {
-        var renderer = new SolidRenderer { Palette = SolidPalette.For(ActualTheme) };
+        var renderer = new SolidRenderer(SolidPalette.For(ActualTheme));
         var queue = DispatcherQueue;
         // Cached still layers arrive on a worker; one more frame puts them on screen.
         renderer.StillLayersReady += () => queue.TryEnqueue(() => { if (ReferenceEquals(_renderer, renderer)) Invalidate(); });

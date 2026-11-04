@@ -29,7 +29,7 @@ public sealed partial class PlantThumb : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            if (_renderer is null) Swap(new() { Palette = SolidPalette.For(ActualTheme) });
+            if (_renderer is null) Swap(new(SolidPalette.For(ActualTheme)));
             Invalidate();
         };
         Unloaded += (_, _) => Swap(null);
@@ -67,7 +67,7 @@ public sealed partial class PlantThumb : SKCanvasElement
     private void OnThemeChanged()
     {
         if (_renderer is null) return;
-        Swap(new() { Palette = SolidPalette.For(ActualTheme) });
+        Swap(new(SolidPalette.For(ActualTheme)));
         Invalidate();
     }
 

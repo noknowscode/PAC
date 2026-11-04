@@ -65,7 +65,7 @@ public class SolidRendererTests
     [Test]
     public async Task A_still_plant_draws_the_same_directly_recorded_and_from_its_cached_layers()
     {
-        using var renderer = new SolidRenderer { Palette = Light };
+        using var renderer = new SolidRenderer(Light);
         var ready = new SemaphoreSlim(0);
         renderer.StillLayersReady += () => ready.Release();
         var frame = new SolidFrame(UnitId.Trb, Alerting, Lifts(), Seconds: 2.5);
@@ -88,7 +88,7 @@ public class SolidRendererTests
     [Test]
     public void A_lift_at_a_still_camera_draws_the_lifted_unit()
     {
-        using var renderer = new SolidRenderer { Palette = Light };
+        using var renderer = new SolidRenderer(Light);
         var projection = PlantFraming.ViewProjection(CameraPose.Iso, Width, Height);
         Draw(renderer, projection, new SolidFrame(UnitId.Gen, Alerting, Lifts(), Seconds: 1));
 
@@ -104,7 +104,7 @@ public class SolidRendererTests
     [TestCase(PlantSystem.Alarms)]
     public void An_isolated_system_draws_in_its_ink_with_its_motion(PlantSystem system)
     {
-        using var renderer = new SolidRenderer { Palette = Light };
+        using var renderer = new SolidRenderer(Light);
         var pose = new CameraPose(0.9f, 0.55f);
         var projection = PlantFraming.ViewProjection(pose, Width, Height);
 
@@ -116,7 +116,7 @@ public class SolidRendererTests
     [Test]
     public void The_plan_view_without_details_or_motion()
     {
-        using var renderer = new SolidRenderer { Palette = Light };
+        using var renderer = new SolidRenderer(Light);
         var preset = CameraPresets.All.Single(p => p.Key == "plan");
         var projection = PlantFraming.ViewProjection(preset.Pose, Width, Height);
 

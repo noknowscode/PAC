@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using PacConsole.Core.Geometry;
 using SkiaSharp;
 
@@ -60,14 +61,14 @@ internal sealed class PartImageCache : IDisposable
     }
 
     /// <summary>Part <paramref name="index"/>'s image at no lift, when one exists for <paramref name="look"/>.</summary>
-    public bool TryPartImage(int index, PartLook look, out SKImage image, out SKRect dest)
+    public bool TryPartImage(int index, PartLook look, [NotNullWhen(true)] out SKImage? image, out SKRect dest)
     {
         if (_partImages[index] is { } cached && _partLooks[index] == look)
         {
             (image, dest) = cached;
             return true;
         }
-        (image, dest) = (null!, default);
+        (image, dest) = (null, default);
         return false;
     }
 

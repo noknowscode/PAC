@@ -18,29 +18,23 @@ public sealed class SolidRenderer : IDisposable
     private readonly SolidGeometry _geometry = new();
     private readonly StillRunCache _still = new();
     private readonly PartImageCache _partImages = new();
-    private readonly SolidPalette _palette = null!;
-    private PartPainter _painter = null!;
-    private SystemMotion _motion = null!;
+    private readonly PartPainter _painter;
+    private readonly SystemMotion _motion;
 
     private int[]? _sequenceOrder;
     private readonly List<int> _sequence = [];
 
-    public SolidRenderer()
+    public SolidRenderer(SolidPalette palette)
     {
+        Palette = palette;
+        _painter = new PartPainter(palette, _geometry);
+        _motion = new SystemMotion(palette);
         _still.Ready += () => StillLayersReady?.Invoke();
         _partImages.Ready += () => StillLayersReady?.Invoke();
     }
 
-    public required SolidPalette Palette
-    {
-        get => _palette;
-        init
-        {
-            _palette = value;
-            _painter = new PartPainter(value, _geometry);
-            _motion = new SystemMotion(value);
-        }
-    }
+    /// <summary>The theme's colours; a theme change makes a new renderer.</summary>
+    public SolidPalette Palette { get; }
 
     /// <summary>Device pixels per drawing unit (the window's rasterization scale), so cached still layers match the screen 1:1.</summary>
     public float Scale { get; set; } = 1;
