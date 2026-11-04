@@ -41,7 +41,7 @@ Out of scope: new routes, new telemetry, theme switching (the app is dark-only, 
 
 **Platform constraints.**
 - `SKCanvasElement` ignores XAML `Opacity` (gotcha G38): the lift halo and any fade bake alpha into paints.
-- `UISettings.AnimationsEnabled` is hardcoded true on Skia desktop: reduced motion stays the in-app `AnimationsEnabled()` check already in `PlantViewport`, and the spec adds no new claim of OS reduced-motion support.
+- `UISettings.AnimationsEnabled` is hardcoded true on Skia desktop: reduced motion stays the in-app `MotionPreference.AnimationsEnabled()` check the viewport and the status dots share, and the spec adds no new claim of OS reduced-motion support.
 - `CompositionTarget.Rendering` pumps frames forever (gotcha): the existing `DispatcherTimer` loop stays, and it stops when nothing moves (fan spin counts as moving only while the preview is visible).
 - A whitespace-only or zero-height `Path` draws nothing (gotchas): not applicable, all drawing is Skia.
 

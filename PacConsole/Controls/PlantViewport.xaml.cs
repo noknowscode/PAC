@@ -17,7 +17,7 @@ namespace PacConsole.Controls;
 /// </summary>
 public sealed partial class PlantViewport : UserControl
 {
-    private readonly CameraRig _rig = new(AnimationsEnabled());
+    private readonly CameraRig _rig = new(MotionPreference.AnimationsEnabled());
     private readonly FrameClock _clock;
     private readonly TagOverlay _tags;
     private readonly PlantThumb[] _thumbs;
@@ -382,18 +382,5 @@ public sealed partial class PlantViewport : UserControl
             default: return;
         }
         e.Handled = true;
-    }
-
-    private static bool AnimationsEnabled()
-    {
-        try
-        {
-            return new Windows.UI.ViewManagement.UISettings().AnimationsEnabled;
-        }
-        catch
-        {
-            // Not every host implements UISettings; default to motion on.
-            return true;
-        }
     }
 }

@@ -27,7 +27,7 @@ public static class Pulse
 
     private static void OnChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not FrameworkElement element || !AnimationsEnabled()) return;
+        if (d is not FrameworkElement element || !MotionPreference.AnimationsEnabled()) return;
         if (e.NewValue is true)
         {
             // Loaded and Unloaded can repeat (re-parenting), so each one adds or removes the dot.
@@ -65,11 +65,5 @@ public static class Pulse
         var phase = (DateTimeOffset.Now - Start).TotalSeconds / PeriodSeconds * 2 * Math.PI;
         var opacity = Low + (1 - Low) * (0.5 + 0.5 * Math.Cos(phase));
         foreach (var dot in Dots) dot.Opacity = opacity;
-    }
-
-    private static bool AnimationsEnabled()
-    {
-        try { return new Windows.UI.ViewManagement.UISettings().AnimationsEnabled; }
-        catch { return true; }
     }
 }
