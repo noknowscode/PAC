@@ -38,7 +38,9 @@ Source: the user, 2026-10-16: "could a real plant operator use this? ... there a
 | Commanded vs actual, travel and ramps | implemented | devices take 2–5 ticks to start or stop; valves travel 5 ticks; load ramps at 5 MW/min |
 | A plant that responds | implemented | effects listed under Interaction Brief |
 | Range bars on reading tiles | implemented | normal band, alarm limit, value marker |
-| Event log and shift notes | implemented | operator entries plus alarm transitions in the window; the latest 8, newest first (lines that share a tick, as under HOLD, in the order written) |
+| Event log and shift notes | implemented | operator entries plus alarm transitions in the window; the latest 8, newest first (lines that share a tick, as under HOLD, in the order written). *2026-11-04:* every line reads the plant's clock (its tick's snapshot time), so an action always lists before what it caused |
+| Durable operator data | implemented | *2026-11-04:* the log, acknowledgements, shelves, setpoints, devices, valves and mode are saved after every action and restored on launch (`operator/operator.json` in LocalFolder); see Decisions (A pass) |
+| Esc cancels select-before-operate | implemented | *2026-11-04:* a KeyboardAccelerator on the confirm bar's Cancel |
 | Operator identity and permissions | substituted | a fixed "Operator 04"; no login |
 | Fans stop turning in the drawing | omitted | the drawing's fan animation is not per cell |
 | Alarm history beyond 15 min | omitted | the replay window bounds it |
@@ -177,3 +179,28 @@ Phases 1 to 5 done: `c52f64e` (operations), the deadband fix commit, verified vi
 
 - **Substituted:** operator identity is fixed ("Operator 04"); no login or permission levels.
 - **Omitted:** per-cell fan animation; alarm history beyond 15 min.
+
+## Decisions (A pass, 2026-11-04, proposed)
+
+Made in the A pass to close the completeness audit's functional Majors (`docs/COMPLETENESS.md`); the owner rule was
+"build small, cut large". Each stands until the owner says otherwise.
+
+- **Operator data persists.** One JSON file, `operator/operator.json` in the app's LocalFolder, holds `PlantOps` (devices,
+  valves, ramps, the applied setpoints, acknowledgements, shelves, the log, setpoint changes), the mode, and the tick and
+  wall time it was saved at. It is written after every action, whole, to a temporary file that replaces the last in one
+  move; a file that cannot be read is set aside (`.unreadable-<time>`) and the console starts fresh.
+  - A pending select-before-operate is never saved: it lapses in 10 s, and a relaunch must not leave a command one
+    press from running.
+  - The simulated plant resumes at the saved tick plus one tick per 2 s the console was closed, so shelves run out, ramps
+    finish and starts complete as if time had passed. Telemetry stays simulated (README).
+  - A console closed in Hold opens in Hold.
+  - Reason: SPEC-OPERATIONS calls actions, acknowledgements and the log durable data. Tradeoff: a format version; a file
+    of another version is set aside, not migrated.
+- **Commands take effect from the next scan.** A Manual setpoint step, a new alarm limit and a new damper position apply
+  from the tick after the snapshot the operator acted on, as device and valve commands already did. Reason: the log was
+  listing an effect (a returned alarm) before the action that caused it. The faceplate shows a step's target at once.
+- **The applied setpoints live in `PlantOps`.** Reason: as separate states, MVUX could compose a view with a new alarm
+  limit before the change that dates it (2 of 6 test runs), back-dating an alarm for one recomposition.
+- **Esc cancels through the confirm bar.** A `KeyboardAccelerator` on Cancel invokes the model's `CancelPending`, so Esc
+  works anywhere on the page while the bar shows (it shows on the Control tab). No code-behind.
+

@@ -1,13 +1,66 @@
 # Completeness audit: PacConsole (2026-11-04, Uno.Sdk 7.0.0-dev.115, heads: desktop, wasm, android, ios, winappsdk)
 
-Audited head: `feat/production-readiness` at `9fdaae1`. Report mode: no code changed.
+Audited head: `feat/production-readiness` at `9fdaae1`; re-checked after the A pass at `40bae01` (section below). The
+audit's original findings follow unchanged below the re-check, each marked with what became of it.
 
-Verdict: **Complete with gaps** (0 Blockers, 3 functional Majors, 4 head Majors, 6 Minors)
+Verdict: **Complete with gaps** (0 Blockers, 0 functional Majors, 3 head Majors, 2 Minors)
 
-Safe to show (`R` on desktop, X11): the CLG-05 alarm story end to end, select-before-operate with Confirm, Cancel, refusal and expiry, typed setpoints with Apply (Auto ramp, Manual at once, out-of-range clamped), Hold and resume, Acknowledge all, Shelve and Unshelve, the systems filter, picker, plant views and orbit, trends (range, compare, shared cursor, Latest), shift notes, a telemetry fault with Retry, the theme kept across a relaunch, and the 900 px and 390 px layouts.
-Keep off screen: pressing Esc on a pending command (it does nothing); relaunching after operator actions (the log, acknowledgements, shelves and setpoints are gone).
+Safe to show (`R` on desktop, X11): the CLG-05 alarm story end to end, select-before-operate with Confirm, Cancel, Esc,
+refusal and expiry, typed setpoints with Apply (Auto ramp, Manual at once, out-of-range clamped), Hold and resume,
+Acknowledge all, Shelve and Unshelve, the systems filter, picker, plant views and orbit, trends (range, compare, shared
+cursor, Latest), shift notes, a telemetry fault with Retry, the theme kept across a relaunch, operator data kept across a
+relaunch, and the 1440, 900 and 390 px layouts. In Chromium (Release WebAssembly): select-before-operate with Confirm and
+Esc, and the log kept across a page reload.
+Keep off screen: nothing known.
+
+## Re-check after the A pass (2026-11-04, `40bae01`)
+
+### Fixed
+
+| Finding (below) | Fix | Commit | Evidence |
+|---|---|---|---|
+| Major: Esc does not cancel a pending command | A `KeyboardAccelerator` (Escape) on the confirm bar's Cancel invokes the model's `CancelPending`; the bar says "or press Esc to cancel" | `0b5d9bb` | R desktop (`docs/evidence/2026-11-04-a-pass/desktop-esc-cancels.png`); R Chromium (`wasm-esc-cancels.png`: the bar gone 7.4 s after selecting, before its 10 s expiry; without Esc it stays) |
+| Major: operator data is lost on relaunch | `operator/operator.json` in LocalFolder, written atomically after every action, restored before the first navigation; the simulated plant resumes at the saved tick plus the time closed (SPEC-OPERATIONS, Decisions, A pass) | `2d5afbb` | R desktop: acknowledge, start cell 6, stop cell 3, relaunch: the log, the stopped cell and the cleared alarm are back, then a note (`desktop-log-after-relaunch.png`); R Chromium: the log after a page reload (`wasm-log-after-reload.png`); 8 store and journal tests, 6 model persistence tests |
+| Minor: the log mixes two clocks | Every line reads the plant clock (its tick's snapshot time), and Manual steps, limits and dampers take effect from the next scan, as devices and valves did | `2d5afbb` | R: "Fan speed setpoint 100 → 75 % (at once, Manual) 16:01:43" now sits under "Returned to normal 16:01:45" (`desktop-log-cause-then-effect.png`) |
+| Minor: "Nominal" keeps its Light ink after a live switch to Graphite | Two runs with ThemeResource inks, one empty, in place of a converter brush on a Run | `0b5d9bb` | R: Light → Graphite live, "Nominal" reads rgb(140,146,154) beside "Up 287 d" (`desktop-nominal-light-to-graphite.png`) |
+| Minor: header gap text clips at 390 px | The target takes the room the output leaves and wraps | `d9d5075` | R at 390×844 (`desktop-390-header.png`); the Android window dump: "4 MW below target" at [483,154][1058,207] |
+| Minor: row buttons do not name their target | Acknowledge, Shelve 1 h, Unshelve, the alarm title, the response's Acknowledge, the five Apply buttons, Acknowledge all, Add note, Retry, Confirm and Cancel all name their target | `0b5d9bb` | C; R: the Tab walk reads "Acknowledge CLG-05 cooling fan vibration high", "Apply fan speed setpoint" (`desktop-tab-walk.txt`) |
+| Minor: the model layer has no tests | The test project references the app's net10.0 build: 41 model tests (telemetry Retry loop, Hold, Apply order, systems, theme, select-before-operate, persistence), 11 camera tests, 10 renderer reference frames | `2d5afbb`, `69a98ad`, `5500a52` | 360 tests pass (was 294) |
+| WebAssembly: Confirm "pressed twice, no effect" | Root cause: the IBM Plex faces reached the browser after the first frames, so the page reflowed under the pointer (a press aimed at the Control tab landed on the alarm callout; measured). The fonts now load before the first navigation. Also: in headless Chromium the page draws about one frame a second, so a Confirm can arrive after the 10 s expiry; such a Confirm is now logged "Lapsed: … was not confirmed within 10 s" instead of doing nothing silently | `2ecd8e1`, `7a79e0f` | R Chromium: Control on the first press, Start cell 6, Confirm → "Starting…" (`wasm-confirm-sequence.png`) |
+
+Also in this pass (not audit findings): the page keeps inside the phone's safe area (the emulator's dump had "PAC" under
+the status bar, `9c09b43`); six unnamed containers left the Tab cycle (`40bae01`); a new limit and the change that dates it
+reach the view in one update (a race the model tests found, `2d5afbb`).
+
+### Workflows re-run
+
+| Workflow | desktop (X11) | wasm (Chromium) | android (emulator, CI) |
+|---|---|---|---|
+| 1. CLG-05 story + note | R: Ack 15:58:00, Start Cell 6 15:58:42, Stop Cell 3 15:59:06, Normal 15:59:16, note 16:00:22 after a relaunch | Partial: R for Start cell 6 with Confirm | Launch only (first screen, "Net output") |
+| 2. Select-before-operate | R: Confirm, Cancel, Esc (keyboard: Tab to Cell 6, Space, Esc) | R: Confirm, Esc | X |
+| 3. Setpoints and mode | R: Manual, fan speed 75 % typed and applied by keyboard; vibration 5.1 → 3.8 mm/s | X | X |
+| 6. Fault → Retry | R (`PAC_TELEMETRY_FAULT=3`) | X | X |
+| 7. Theme | R: Light → Graphite live | X | X |
+| Persistence (new) | R: relaunch keeps log, devices, acknowledgements and mode | R: reload keeps the log | X |
+
+Keyboard: a Tab walk at 1440×900 reaches all 40 interactive stops in order and wraps (`desktop-tab-walk.txt`); the plant
+takes arrow keys and Home; Space activates; Esc cancels a pending command.
+
+### Counts now
+
+- Functional Majors: 0. Telemetry stays simulated by design (README; GRADING does not count it).
+- Head Majors: 3. iOS and WinAppSDK are built by CI and never run. WebAssembly is proven for launch, select-before-operate
+  (Confirm, Esc) and the log across a reload, not yet for workflows 3, 4, 6 and 7. Android now runs on an x86_64 API 34
+  emulator in CI (`android-emulator` job: install, launch, the first screen's "Net output", no crash, not blank).
+- Minors: 2. The ghost faceplate after a unit change (software renderer only, unconfirmed on a GPU host). Headless
+  Chromium with software GL draws about one frame a second (measured: 1.0–1.7 rAF/s), so every press takes seconds to show;
+  a desktop browser with a GPU has not been tried here.
+
+## Original audit (at `9fdaae1`)
 
 Runtime method: `net10.0-desktop` Debug on Linux X11 under Xvfb with `PAC_X11_RENDERER=software` and an isolated `XDG_DATA_HOME`. Driven with xdotool (150 ms presses, Tab and keyboard), the `--pac-*` hooks (`VERIFY` lines) and `PAC_TELEMETRY_FAULT=5`; post-state read from captures, the operator log and the settings file. WebAssembly: Release publish served locally and driven in headless Chromium (Playwright, 150 ms presses). The App MCP has no tools in this container. Tests: 294/294 (`dotnet test PacConsole.Tests`). Build: 0 warnings, 0 errors.
+
+Original verdict: Complete with gaps (0 Blockers, 3 functional Majors, 4 head Majors, 6 Minors).
 
 ## Inventory
 
@@ -64,9 +117,9 @@ None.
 
 ### Majors (functional)
 
-- [Interactions] Esc does not cancel a pending command - promised in SPEC-OPERATIONS ("It expires in 10 s; Esc cancels"); no Escape handling anywhere in `PacConsole/` (the only `KeyDown` is `PlantViewport.xaml.cs:595`, arrows and Home) - evidence R - with "Confirm: start Cell 6 (standby) on CLG-05?" showing, Esc left the bar in place; Cancel works - owner: mvux (a `KeyboardAccelerator` or page `KeyDown` calling `CancelPending`)
-- [Data] Operator data is lost on relaunch - `ConsoleModel.Ops` is `State.Value(this, () => PlantOps.Initial)` (`PacConsole/Presentation/ConsoleModel.cs:58`) - evidence R - after acknowledging, applying 640 MW and adding a note, a relaunch showed CLG-05 Unacknowledged, target 620 and an empty log. SPEC-OPERATIONS calls actions, acknowledgements and the log "durable data"; deferred by the user ("persistence later") - owner: uno-extensions-services
-- [Data] Telemetry is simulated - `SimulatedTelemetry` is the only `ITelemetryService` (`App.xaml.cs` ConfigureServices) - evidence R - disclosed in the footer ("Readings, trends and sensor assignments are simulated") and the README; stays a Major until confirmed as the product (HANDOFF open question) - owner: product decision
+- **Fixed (`0b5d9bb`).** [Interactions] Esc does not cancel a pending command - promised in SPEC-OPERATIONS ("It expires in 10 s; Esc cancels"); no Escape handling anywhere in `PacConsole/` (the only `KeyDown` is `PlantViewport.xaml.cs:595`, arrows and Home) - evidence R - with "Confirm: start Cell 6 (standby) on CLG-05?" showing, Esc left the bar in place; Cancel works - owner: mvux (a `KeyboardAccelerator` or page `KeyDown` calling `CancelPending`)
+- **Fixed (`2d5afbb`).** [Data] Operator data is lost on relaunch - `ConsoleModel.Ops` is `State.Value(this, () => PlantOps.Initial)` (`PacConsole/Presentation/ConsoleModel.cs:58`) - evidence R - after acknowledging, applying 640 MW and adding a note, a relaunch showed CLG-05 Unacknowledged, target 620 and an empty log. SPEC-OPERATIONS calls actions, acknowledgements and the log "durable data"; deferred by the user ("persistence later") - owner: uno-extensions-services
+- **By design (README), not counted.** [Data] Telemetry is simulated - `SimulatedTelemetry` is the only `ITelemetryService` (`App.xaml.cs` ConfigureServices) - evidence R - disclosed in the footer ("Readings, trends and sensor assignments are simulated") and the README; stays a Major until confirmed as the product (HANDOFF open question) - owner: product decision
 
 ### Majors (head)
 
@@ -75,12 +128,12 @@ None.
 
 ### Minors
 
-- [Logic] The operator log mixes two clocks, so an effect can be listed before its cause - operator entries carry wall-clock time (`ConsoleModel.cs`, `_time.GetLocalNow()`), alarm transitions carry the tick's snapshot time (`PacConsole.Core/Console/ConsoleView.Ops.cs:93`) - R - "Returned to normal 01:42:30" sits under "Fan speed setpoint 100 → 75 % (at once, Manual) 01:42:32" that caused it - owner: mvux
-- [Visual] A converter brush on a `Run` does not repaint on a live theme switch - `EquipmentInspector.xaml:215` (`InspectorState` through `ToneConverter`) - R - after Light → Graphite the word "Nominal" stayed the Light muted ink (about #5A6573 on #33373D) until the selection changed the text - owner: gold-standard-pass
-- [Visual] A collapsed faceplate can stay painted - R - after TRB-04 → GEN-03 (picker), TRB-04's "Load setpoint 620 MW / Apply" stayed drawn below the generator's inspector, over the Overview tab too, until the next pointer press there; seen with the software renderer under Xvfb, so check on a GPU host before treating it as the app's - owner: uno-verify
-- [Responsive] The header's gap text clips at 390 px - `ConsoleHeader.xaml:41` (`TargetGapText`) - R - "15 MW below targe" at 390×844 - owner: gold-standard-pass
-- [Accessibility] Row buttons do not name their target - `EquipmentInspector.xaml:103-116` (Acknowledge, Shelve 1 h, Unshelve) and the five Apply buttons have only their caption; SPEC-OPERATIONS asks that every button name its action and target - C - owner: winui-xaml
-- [Testing] The model layer has no tests - `PacConsole.Tests` references Core only; `ConsoleModel` commands and the `Telemetry`/`RetryTelemetry` message loop (`ConsoleModel.cs:262-305`) are covered only by this runtime pass; no UI test project - C - owner: uno-app-ui-testing
+- **Fixed (`2d5afbb`).** [Logic] The operator log mixes two clocks, so an effect can be listed before its cause - operator entries carry wall-clock time (`ConsoleModel.cs`, `_time.GetLocalNow()`), alarm transitions carry the tick's snapshot time (`PacConsole.Core/Console/ConsoleView.Ops.cs:93`) - R - "Returned to normal 01:42:30" sits under "Fan speed setpoint 100 → 75 % (at once, Manual) 01:42:32" that caused it - owner: mvux
+- **Fixed (`0b5d9bb`).** [Visual] A converter brush on a `Run` does not repaint on a live theme switch - `EquipmentInspector.xaml:215` (`InspectorState` through `ToneConverter`) - R - after Light → Graphite the word "Nominal" stayed the Light muted ink (about #5A6573 on #33373D) until the selection changed the text - owner: gold-standard-pass
+- **Open (unconfirmed off the software renderer).** [Visual] A collapsed faceplate can stay painted - R - after TRB-04 → GEN-03 (picker), TRB-04's "Load setpoint 620 MW / Apply" stayed drawn below the generator's inspector, over the Overview tab too, until the next pointer press there; seen with the software renderer under Xvfb, so check on a GPU host before treating it as the app's - owner: uno-verify
+- **Fixed (`d9d5075`).** [Responsive] The header's gap text clips at 390 px - `ConsoleHeader.xaml:41` (`TargetGapText`) - R - "15 MW below targe" at 390×844 - owner: gold-standard-pass
+- **Fixed (`0b5d9bb`).** [Accessibility] Row buttons do not name their target - `EquipmentInspector.xaml:103-116` (Acknowledge, Shelve 1 h, Unshelve) and the five Apply buttons have only their caption; SPEC-OPERATIONS asks that every button name its action and target - C - owner: winui-xaml
+- **Fixed (`2d5afbb`).** [Testing] The model layer has no tests - `PacConsole.Tests` references Core only; `ConsoleModel` commands and the `Telemetry`/`RetryTelemetry` message loop (`ConsoleModel.cs:262-305`) are covered only by this runtime pass; no UI test project - C - owner: uno-app-ui-testing
 
 ## Not checked (X)
 

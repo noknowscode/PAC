@@ -156,12 +156,14 @@ clicks. Screenshots in `docs/audit/2026-11-04-uno-audit/`:
 
 ## Remaining
 
-| Item | Why not now | Size |
-|---|---|---|
-| Split `Rendering/SolidRenderer.cs` (1,227 lines, five jobs). Plan: `SolidPalette` + `SolidFrame` to their own file (~95 lines); a per-camera geometry cache (shapes, details, depth order, shadows, `PathsOf`, system membership, ~320 lines); a part painter (`DrawPart`, `DrawShape`, `DrawDetails`, fills, strokes, flow dashes, `LookOf`, ~300); a still-frame cache (recorded runs, `StillKey`, both rasterizer workers, `Rasterize`, ~360); system motion (`DrawMotion`, emitters, conductors, the alarm halo, ~220); `SolidRenderer.Draw` stays as the orchestrator (~120). No behaviour change; re-check with the timing tests and the orbit and still measurements above. | Owner approved for the next pass; structural | M, 1 day |
-| Split the `PlantViewport` code-behind (654 lines). Plan: the camera rig (pose, tween, orbit, drag deltas, lift follow) to a plain class in Core, unit-tested; the frame clock (Rendering, ambient, in-view, host visibility) to a small helper; the tag overlay (`UpdateOverlay`, `ApplyTagState`, `TagLabel`) to its own class; and replace the switcher and orbit-toggle Loaded/Unloaded registration with two dependency properties (`RestingPreset`, `IsAutoOrbit`) bound from the templates, which removes 6 of its 15 `allow codebehind` handlers. Pointer and key input stay (allowed). | Owner approved for the next pass; structural | M, 1 day |
-| `ConsoleModel` has no tests: the telemetry retry loop (`Telemetry`, `RetryTelemetry`), HOLD pausing the stream (`SetMode`), the Apply order (ops before the setpoint state), `SelectSystem` ordering and the theme mapping. The test project references Core only; testing the model needs MVUX's reactive runtime in a test project (or the model moved to a net10.0 library). | Next pass, as planned | M, half a day |
-| Orbit frames rebuild all part geometry (2.7 MB, 4.7 ms a frame). Build into reused buffers in `SolidBuilder` and `DepthOrder` (or pool `SolidShape`), then re-measure. | Core refactor with fixture tests to keep green | M |
-| `FallbackValue=Collapsed` on the 30 converter-based `Visibility` bindings, checked on Android. | Not reproduced on desktop; Android not run here | S, 30 min |
-| Pre-build `PlantSolids.Default` off the UI thread at startup (65 ms). | Small; needs an observed task like the workers | S |
-| FluentAssertions 8 (licence) | Owner decision | S |
+Updated after the A pass (2026-11-04, `40bae01`): every item but the licence decision is done.
+
+| Item | Status |
+|---|---|
+| Split `Rendering/SolidRenderer.cs` (1,227 lines, five jobs) | Done, `5500a52`: `SolidRenderer` (134 lines) orchestrates `SolidGeometry` (323), `PartPainter` (249), `StillFrameCache` (390) and `SystemMotion` (214), with `SolidPalette.cs` (95). Ten reference frames drawn before the split match after it (`PacConsole.Tests/Rendering`). |
+| Split the `PlantViewport` code-behind (654 lines) | Done, `69a98ad`: the camera rules are `Core/Geometry/CameraRig` (206 lines, 11 tests); `FrameClock` (114) and `TagOverlay` (112) sit beside the control (396); the switcher, thumbnails and orbit toggles bind `RestingPreset` and `IsAutoOrbit` two-way and the camera tools bind commands, which removed the six Loaded/Unloaded/Click handlers (4 `allow codebehind` left, from 15). |
+| `ConsoleModel` has no tests | Done, `2d5afbb`: the test project references the app's plain `net10.0` build (SPEC.md, Decisions, A pass), 41 model tests. |
+| Orbit frames rebuild all part geometry | Done, `28b34c6`: scratch buffers for the hull sort, the lathe's rings and silhouette, and the depth sort's pairs and queue: 1.2 MB a frame (from about 2.6 MB), checked by `OrbitAllocationTests`. |
+| `FallbackValue=Collapsed` on the 30 converter-based `Visibility` bindings | Done, `0b5d9bb` (31 with the new save-failure line). |
+| Pre-build `PlantSolids.Default` off the UI thread | Done, `2d5afbb`: built on a worker while the operator record loads; a fault is logged. |
+| FluentAssertions 8 (licence) | Owner decision; unchanged. |

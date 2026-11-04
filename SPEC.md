@@ -303,3 +303,17 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 - **Omitted (accepted):** light theme (app is dark-only); interactive fan speed (see Decisions).
 - **Substituted (accepted):** fan-cell preview → generic unit preview; hover-to-lift → hover outline + click/lift on selection.
 - **Skills not loaded for this spec:** `uno-navigation` (no route changes), `xaml-art-direction` (direction fixed by the reference figure) and `xaml-design-polish` (motion constants copied from the figure). Load `xaml-design-polish` in phase 4 before finalising motion.
+
+## Decisions (A pass, 2026-11-04, proposed)
+
+- **The page model is tested on the app's own build.** `PacConsole` gains a plain `net10.0` target (Uno's reference
+  assemblies), which `PacConsole.Tests` references, instead of moving `ConsoleModel` into a library of its own. Reason:
+  the MVUX generator and the app's own types (the journal, the renderer, the viewport's helpers) run under test exactly
+  as the app compiles them, with no project split and no second copy of the model's dependencies; the same pattern runs
+  trace's model tests. Tradeoff: the test build compiles the app (about a minute), and CI's test job passes
+  `-p:PacTargetFrameworks=net10.0` so restore stays off the mobile workloads.
+- **Test-only package: `SkiaSharp.NativeAssets.Linux` 4.151.1**, the version Uno.Sdk resolves, so the renderer's
+  reference-frame tests draw on the Linux test host. The app heads bring their own natives.
+- **Renderer and viewport split** (UNO-AUDIT plan): `SolidRenderer` orchestrates `SolidGeometry`, `PartPainter`,
+  `StillFrameCache` and `SystemMotion`; the camera's rules are `Core/Geometry/CameraRig`; `PlantViewport` keeps input
+  and wiring, with `FrameClock` and `TagOverlay` beside it.

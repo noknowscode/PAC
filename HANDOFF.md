@@ -1,5 +1,51 @@
-# HANDOFF: PacConsole audit, Retry, theme, minors
-Updated: 2026-11-01
+# HANDOFF: PacConsole A pass
+Updated: 2026-11-04
+
+## 2026-11-04: A pass (branch `feat/production-readiness`, `d522a09` → `40bae01` + docs)
+Brief: the shared A-pass brief (uno-lab `A-GRADE-PLAN.md`), plus the Android emulator smoke job. Done:
+- **Refactors:** `SolidRenderer` split into `SolidGeometry`, `PartPainter`, `StillFrameCache`, `SystemMotion` and an
+  orchestrator, pinned by ten reference frames (`PacConsole.Tests/Rendering`, `Fixtures/render`). `PlantViewport`'s camera
+  rules moved to `Core/Geometry/CameraRig` (tested); `FrameClock` and `TagOverlay` beside it; the switcher, thumbnails and
+  orbit toggles bind `RestingPreset`/`IsAutoOrbit` two-way, the camera tools bind commands.
+- **Model tests:** the test project references the app's plain `net10.0` build (`PacTargetFrameworks=net10.0`); 41 tests of
+  `ConsoleModel` over a fake clock. They found a real race (a new limit composed before the change that dates it), fixed by
+  keeping the applied setpoints in `PlantOps`.
+- **Functional Majors built:** Esc cancels select-before-operate (KeyboardAccelerator on Cancel); operator data persists
+  (`operator/operator.json`, atomic writes, restored before the first navigation, the simulated plant resumes at the saved
+  tick plus the time closed). Decisions recorded as proposed in `SPEC-OPERATIONS.md` and `SPEC.md` (Decisions, A pass).
+- **Accessibility:** row, Apply, Confirm/Cancel, Retry buttons name their target (34.3 names per 1,000 XAML lines);
+  "Nominal" repaints on a live theme switch; the 390 px header wraps; the log reads one clock (commands act from the next
+  scan); no unnamed Tab stops (Tab walk in `docs/evidence/2026-11-04-a-pass/desktop-tab-walk.txt`).
+- **Performance:** orbit geometry allocations halved (scratch buffers); the plant model builds off the UI thread;
+  `FallbackValue=Collapsed` on converter Visibility bindings.
+- **WebAssembly:** the "Confirm did nothing" was the page reflowing when the IBM Plex faces arrived after the first frames
+  (presses landed on the wrong element). Fonts now load before the first navigation; a late Confirm logs "Lapsed". Proven in
+  headless Chromium: Confirm, Esc, the log after a reload. Unused ChakraPetch and Plex Mono fonts removed.
+- **Android:** `android-emulator` CI job from the shared recipe; green on runs 14 and 15 (marker "Net output" after 20 s, 76
+  app nodes, not blank, no crash). The page now keeps to the safe area (the dump had the header under the status bar).
+- **CI:** test job uses `-p:PacTargetFrameworks=net10.0`; `concurrency` cancels superseded runs (owner decision).
+
+Open:
+- iOS and WinAppSDK are still CI builds only; WebAssembly workflows 3, 4, 6 and 7 not driven in a browser.
+- Headless Chromium with software GL draws about one frame a second (rAF 1.0–1.7/s); a GPU browser was not tried.
+- The ghost faceplate after a unit change (software renderer only) is unconfirmed on a GPU host.
+- Proposed decisions await the owner (SPEC-OPERATIONS, SPEC.md: Decisions, A pass).
+
+## Last verified state (2026-11-04)
+- **Build:** desktop Debug and the tests' net10.0 build, 0 warnings; Release WebAssembly publish, trim warnings only (Uno's).
+- **Tests:** 360/360 (`dotnet test PacConsole.Tests -p:PacTargetFrameworks=net10.0`).
+- **Lint:** every gating rule 0.
+- **Runtime:** X11 under Xvfb (`:472`, `PAC_X11_RENDERER=software`, isolated `XDG_DATA_HOME`); Chromium via Playwright.
+  Evidence: `docs/evidence/2026-11-04-a-pass/`.
+
+## Relaunch
+```
+dotnet build PacConsole/PacConsole.csproj -f net10.0-desktop -p:PacTargetFrameworks=net10.0-desktop
+dotnet test PacConsole.Tests -p:PacTargetFrameworks=net10.0
+# Debug hooks: --pac-unit=clg --pac-tab=control --pac-section=log --pac-theme=graphite --pac-focus=log; PAC_TELEMETRY_FAULT=5
+# Fresh state: an isolated XDG_DATA_HOME, or delete LocalState/operator/operator.json.
+# Renderer references: PAC_RENDER_GOLDEN=write redraws PacConsole.Tests/Fixtures/render (only for an intended change).
+```
 
 ## 2026-11-01: code-review fixes (branch `feat/production-readiness`)
 From `CODE-REVIEW-2026-11-01` (uno-lab). Done:

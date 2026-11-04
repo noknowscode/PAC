@@ -1,0 +1,44 @@
+ focus=Button name=More
+ focus=Button name=Full screen
+ focus=PlantViewport name=Plant 3D model
+ focus=RadioButton name=All systems
+ focus=RadioButton name=Steam and water
+ focus=RadioButton name=Cooling
+ focus=RadioButton name=Fuel and flue gas
+ focus=RadioButton name=Electrical
+ focus=RadioButton name=Active alarms
+ focus=Button name=Select STK-01 Exhaust stacks
+ focus=Button name=Select TKA-02 Fuel tank farm
+ focus=Button name=Select GEN-03 Generator
+ focus=Button name=Select TRB-04 Steam turbine
+ focus=Button name=Select CLG-05 Cooling bank
+ focus=Button name=Select SIL-06 Ash silo
+ focus=Button name=Select CND-07 Condenser
+ focus=RadioButton name=Isometric view
+ focus=RadioButton name=Elevation view
+ focus=RadioButton name=Plan view
+ focus=ComboBox name=Equipment
+ focus=ToggleButton name=Auto orbit
+ focus=Button name=Rotate left 45 degrees
+ focus=Button name=Rotate right 45 degrees
+ focus=Button name=Reset view
+ focus=Button name=Acknowledge CLG-05 cooling fan vibration high
+ focus=RadioButton name=Overview
+ focus=RadioButton name=Condition
+ focus=RadioButton name=Control
+ focus=Button name=Basin temperature 24.3 °C. In the trends; select to remove
+ focus=Button name=Return water temperature 33.1 °C. Select to compare in the trends
+ focus=Button name=Circulating flow 18,359 m³/h. Select to compare in the trends
+ focus=Button name=Fan power 615 kW. Select to compare in the trends
+ focus=Button name=CND-07 · Condenser
+ focus=RadioButton name=15 min
+ focus=RadioButton name=1 hour
+ focus=RadioButton name=8 hours
+ focus=Slider name=Shared trend cursor
+ focus=Button name=Move the cursor to the latest sample
+ focus=TextBox name=Shift note
+ focus=Button name=Add shift note
+ focus=Button name=More
+ focus=Button name=Full screen
+ focus=PlantViewport name=Plant 3D model
+ focus=RadioButton name=All systems
