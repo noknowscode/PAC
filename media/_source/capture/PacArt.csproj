@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Capture-only tool for the art set (media/README.md). It compiles the product's own plant renderer,
-    PacConsole/Rendering/SolidRenderer.cs, linked unchanged, and drives it offscreen into SkiaSharp raster
-    surfaces. Nothing here ships with the app.
+    Capture-only tool for the art set (media/_source/README.md). It compiles the product's own plant renderer, the files
+    of PacConsole/Rendering linked unchanged, and drives it offscreen into SkiaSharp raster surfaces. Nothing here
+    ships with the app.
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,12 +13,26 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\..\PacConsole\Rendering\SolidRenderer.cs" Link="Product\SolidRenderer.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\SolidGeometry.cs" Link="Product\SolidGeometry.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\PartPainter.cs" Link="Product\PartPainter.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\StillRunCache.cs" Link="Product\StillRunCache.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\PartImageCache.cs" Link="Product\PartImageCache.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\LayerRaster.cs" Link="Product\LayerRaster.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\SystemMotion.cs" Link="Product\SystemMotion.cs" />
+    <Compile Include="..\..\..\PacConsole\Rendering\SolidPalette.cs" Link="Product\SolidPalette.cs" />
+    <!-- The usings the app's linked files take from its global usings. -->
     <Using Include="System.Collections.Immutable" />
+    <Using Include="Microsoft.Extensions.Logging" />
+    <Using Include="Microsoft.UI.Xaml" />
+    <Using Include="Uno.Extensions" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\PacConsole.Core\PacConsole.Core.csproj" />
-    <!-- The SkiaSharp the app runs on (bundled by Uno.Sdk 6.7.30). -->
-    <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
+    <!-- The SkiaSharp the app runs on (Uno.Sdk 7.0.0-dev.115), with the Windows and Linux natives. -->
+    <PackageReference Include="SkiaSharp" Version="4.151.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.151.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.151.1" />
+    <!-- ILogger, for the renderer's worker-fault report. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
   </ItemGroup>
 </Project>

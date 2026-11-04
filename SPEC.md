@@ -317,3 +317,12 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 - **Renderer and viewport split** (UNO-AUDIT plan): `SolidRenderer` orchestrates `SolidGeometry`, `PartPainter`,
   `StillFrameCache` and `SystemMotion`; the camera's rules are `Core/Geometry/CameraRig`; `PlantViewport` keeps input
   and wiring, with `FrameClock` and `TagOverlay` beside it.
+
+## Decisions (A pass 2, 2026-11-04, proposed)
+
+- **The art capture tool is fixed, not cut** (`media/_source/capture`). Owner rule "build small, cut large": the fix was
+  small. It links the renderer's split files instead of the old single `SolidRenderer.cs`, runs on SkiaSharp 4.151.1
+  (the version the app runs on, with Windows and Linux natives), and builds the palette with the product's
+  `SolidPalette.For` from `Styles/Palette.xaml` and `Styles/Tokens.xaml`; `Shim.cs` stands in for the app types those
+  files read. Checked: it builds and renders `08-plant-paper`, `12-trb` and `grid-Alarms` here. The prints already in
+  `media/art/` are not re-rendered: they keep the look of the palette they were made with.
