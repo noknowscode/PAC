@@ -1,6 +1,4 @@
-using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
-using PacConsole.Core.Solids;
 using SkiaSharp;
 
 namespace PacConsole.Rendering;
@@ -19,11 +17,10 @@ internal readonly record struct StillKey(
 /// <summary>
 /// What a still plant is drawn from instead of its ~2,500 paths. Once the view holds, the static runs between live parts
 /// are recorded once and replayed (trace: a still plant otherwise drew every path each frame); after two still frames a
-/// worker rasterizes each run into an image of its device pixels, which the GPU keeps as a texture. For a lift at a still
-/// camera, each part is also kept as an image at no lift, so a selection redraws only the two units whose look changed.
-/// Workers are never waited for: WebAssembly has one thread and runs a worker only after the current call returns.
+/// worker rasterizes each run into an image of its device pixels, which the GPU keeps as a texture. The worker is never
+/// waited for: WebAssembly has one thread and runs a worker only after the current call returns.
 /// </summary>
-internal sealed class StillFrameCache : IDisposable
+internal sealed class StillRunCache : IDisposable
 {
     // A recorded run is still vector work: each frame the render thread rasterizes its paths again
     // inside the damage region, and the fans and flow marks damage the plant's whole rect 20 times a
@@ -32,7 +29,6 @@ internal sealed class StillFrameCache : IDisposable
     // pixels; an immutable raster image is uploaded to the GPU once and then drawn as a texture.
     // Picture-backed images (SKImage.FromPicture) were tried first: they re-rendered every frame.
     private const int StillFramesBeforeLayers = 2;
-    public static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest);
 
     private float[] _stillLift = [];
     private StillKey _stillKey;
@@ -48,7 +44,7 @@ internal sealed class StillFrameCache : IDisposable
     private (int Generation, SKImage?[] Images, SKRect[] Dests)? _readyLayers;
     private readonly List<SKPicture> _retired = [];
 
-    /// <summary>Raised on a worker thread when cached layers or part images are ready; the owner should redraw.</summary>
+    /// <summary>Raised on a worker thread when cached layers are ready; the owner should redraw.</summary>
     public event Action? Ready;
 
     /// <summary>True when the camera or a lift moved since the last frame, which drops the recorded runs.</summary>
@@ -104,7 +100,8 @@ internal sealed class StillFrameCache : IDisposable
 
     /// <summary>
     /// A frame at the recorded key: swaps in layers a worker finished, and after two such frames starts rasterizing the
-    /// runs. True when it started, so the owner can make the part images a coming selection will lift from.
+    /// runs. True when it started, so the owner can make the part images a coming selection will lift from
+    /// (<see cref="PartImageCache"/>).
     /// </summary>
     public bool Hold(float scale)
     {
@@ -119,7 +116,7 @@ internal sealed class StillFrameCache : IDisposable
     {
         foreach (var (picture, image, dest, index) in _segments)
         {
-            if (image is not null) canvas.DrawImage(image, dest, Nearest);
+            if (image is not null) canvas.DrawImage(image, dest, LayerRaster.Nearest);
             else if (picture is not null) canvas.DrawPicture(picture);
             else motion(canvas, index);
         }
@@ -165,12 +162,12 @@ internal sealed class StillFrameCache : IDisposable
             {
                 for (var i = 0; i < pictures.Length && !_disposed; i++)
                 {
-                    if (pictures[i] is { } picture) (images[i], dests[i]) = Rasterize(picture, scale);
+                    if (pictures[i] is { } picture) (images[i], dests[i]) = LayerRaster.Rasterize(picture, scale);
                 }
             }
             catch (Exception ex)
             {
-                Failed(images, ex);
+                LayerRaster.Failed(images, ex);
                 return;
             }
             lock (_layerGate)
@@ -209,165 +206,13 @@ internal sealed class StillFrameCache : IDisposable
         }
     }
 
-    // ---------------------------------------------------------------- part images
-
-    // One image per part at the current camera, for lift frames: a selection changes the look of two
-    // units only, so only their parts are drawn again (trace, 2026-10-16: lift frames redrew all
-    // ~2,500 paths at display rate, 11 s of render-thread time in 14 s with eight selections).
-    private object? _partKey;
-    private (SKImage Image, SKRect Dest)?[] _partImages = [];
-    private PartLook?[] _partLooks = [];
-    private PartLook?[] _partRequested = [];
-    private Task? _partTask;
-    private (object Key, int[] Indices, PartLook[] Looks, SKImage?[] Images, SKRect[] Dests)? _readyParts;
-
-    /// <summary>Starts over when the camera, palette or scale changed; swaps in images a worker finished.</summary>
-    public void TakePartImages(int count, OrbitProjection p, SolidPalette palette, float scale)
-    {
-        var key = (p.SinYaw, p.CosYaw, p.SinElevation, p.Scale, p.CenterX, p.CenterY, palette, scale, count);
-        if (!key.Equals(_partKey))
-        {
-            ClearPartImages();
-            _partKey = key;
-            _partImages = new (SKImage, SKRect)?[count];
-            _partLooks = new PartLook?[count];
-            _partRequested = new PartLook?[count];
-        }
-        (object Key, int[] Indices, PartLook[] Looks, SKImage?[] Images, SKRect[] Dests)? ready;
-        lock (_layerGate)
-        {
-            ready = _readyParts;
-            _readyParts = null;
-        }
-        if (ready is not { } r) return;
-        for (var k = 0; k < r.Indices.Length; k++)
-        {
-            if (r.Images[k] is not { } image) continue;
-            var i = r.Indices[k];
-            if (!r.Key.Equals(_partKey))
-            {
-                image.Dispose();
-                continue;
-            }
-            _partImages[i]?.Image.Dispose();
-            _partImages[i] = (image, r.Dests[k]);
-            _partLooks[i] = r.Looks[k];
-        }
-    }
-
-    /// <summary>Part <paramref name="index"/>'s image at no lift, when one exists for <paramref name="look"/>.</summary>
-    public bool TryPartImage(int index, PartLook look, out SKImage image, out SKRect dest)
-    {
-        if (_partImages[index] is { } cached && _partLooks[index] == look)
-        {
-            (image, dest) = cached;
-            return true;
-        }
-        (image, dest) = (null!, default);
-        return false;
-    }
-
-    /// <summary>
-    /// Records each part whose look has no image yet, at no lift, and rasterizes them on a worker. <paramref name="draw"/>
-    /// draws one part unlifted in the given pass: a live part's body only, its moving marks being drawn each frame.
-    /// </summary>
-    public void StartPartImages(SKRect bounds, int count, Func<int, PartLook> lookOf, bool[] live, Action<SKCanvas, int, PartPass> draw, float scale)
-    {
-        if (_partTask is { IsCompleted: false } || _partKey is not { } key) return;
-        var indices = new List<int>();
-        var looks = new List<PartLook>();
-        var pictures = new List<SKPicture>();
-        for (var i = 0; i < count; i++)
-        {
-            var look = lookOf(i);
-            if (_partLooks[i] == look || _partRequested[i] == look) continue;
-            _partRequested[i] = look;
-            using var recorder = new SKPictureRecorder();
-            var recording = recorder.BeginRecording(bounds, useRTree: true);
-            draw(recording, i, live[i] ? PartPass.Body : PartPass.All);
-            indices.Add(i);
-            looks.Add(look);
-            pictures.Add(recorder.EndRecording());
-        }
-        if (indices.Count == 0) return;
-        _partTask = Task.Run(() =>
-        {
-            var images = new SKImage?[pictures.Count];
-            var dests = new SKRect[pictures.Count];
-            try
-            {
-                for (var k = 0; k < pictures.Count && !_disposed; k++) (images[k], dests[k]) = Rasterize(pictures[k], scale);
-            }
-            catch (Exception ex)
-            {
-                Failed(images, ex);
-                return;
-            }
-            finally
-            {
-                // This worker owns these recordings: each is disposed here, rasterized or not.
-                foreach (var picture in pictures) picture.Dispose();
-            }
-            lock (_layerGate)
-            {
-                if (_disposed)
-                {
-                    foreach (var image in images) image?.Dispose();
-                    return;
-                }
-                if (_readyParts is { } stale) foreach (var image in stale.Images) image?.Dispose();
-                _readyParts = (key, [.. indices], [.. looks], images, dests);
-            }
-            Ready?.Invoke();
-        });
-    }
-
-    private void ClearPartImages()
-    {
-        foreach (var cached in _partImages) cached?.Image.Dispose();
-        _partImages = [];
-        _partLooks = [];
-        _partRequested = [];
-    }
-
-    /// <summary>
-    /// A worker's fault: frees what it made and logs it, where a fire-and-forget task would drop it unobserved.
-    /// Nothing waits for these images, so the plant keeps drawing those runs and parts as vectors.
-    /// </summary>
-    private static void Failed(SKImage?[] images, Exception ex)
-    {
-        foreach (var image in images) image?.Dispose();
-        typeof(SolidRenderer).Log().LogError(ex, "Rasterizing the plant's cached layers failed; they stay vector drawings");
-    }
-
-    /// <summary>A picture as an image of exactly its device pixels: its cull rect snapped outward to the pixel grid.</summary>
-    private static (SKImage? Image, SKRect Dest) Rasterize(SKPicture picture, float scale)
-    {
-        var cull = picture.CullRect;
-        if (cull.IsEmpty) return (null, default);
-        var left = MathF.Floor(cull.Left * scale);
-        var top = MathF.Floor(cull.Top * scale);
-        var right = MathF.Ceiling(cull.Right * scale);
-        var bottom = MathF.Ceiling(cull.Bottom * scale);
-        using var surface = SKSurface.Create(new SKImageInfo((int)(right - left), (int)(bottom - top), SKColorType.Rgba8888, SKAlphaType.Premul));
-        if (surface is null) return (null, default);
-        surface.Canvas.Clear(SKColors.Transparent);
-        surface.Canvas.Translate(-left, -top);
-        surface.Canvas.Scale(scale);
-        surface.Canvas.DrawPicture(picture);
-        return (surface.Snapshot(), new SKRect(left / scale, top / scale, right / scale, bottom / scale));
-    }
-
     public void Dispose()
     {
-        ClearPartImages();
         lock (_layerGate)
         {
             _disposed = true;
             foreach (var image in _readyLayers?.Images ?? []) image?.Dispose();
             _readyLayers = null;
-            foreach (var image in _readyParts?.Images ?? []) image?.Dispose();
-            _readyParts = null;
         }
         // The still runs' recordings, and runs retired while a worker read them, go once the layer
         // worker is done with them: now if it is idle, else when it finishes. Never a blocking wait.
