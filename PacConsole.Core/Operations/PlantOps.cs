@@ -222,10 +222,18 @@ public sealed record PlantOps(
 
     public PlantOps Cancel() => this with { Pending = null };
 
-    /// <summary>Carries out the pending command if it is still valid; a lapsed or refused one is dropped (and a refusal logged).</summary>
+    /// <summary>
+    /// Carries out the pending command if it is still valid; a lapsed or refused one is dropped and logged, so a Confirm
+    /// that arrives too late (a slow screen, a long reach) says why nothing ran.
+    /// </summary>
     public PlantOps Confirm(long tick, DateTimeOffset now)
     {
-        if (Pending is not { } p || p.IsExpired(tick)) return Cancel();
+        if (Pending is not { } p) return this;
+        if (p.IsExpired(tick))
+        {
+            return Cancel().Logged(tick, now, LogKind.Refused, p.Command.Unit,
+                $"Lapsed: {p.Command.Describe()} was not confirmed within {Operations.Pending.ExpiresAfterTicks * 2} s");
+        }
         if (p.Refusal is { } reason) return Cancel().Logged(tick, now, LogKind.Refused, p.Command.Unit, $"Refused: {p.Command.Describe()}. {reason}");
         // A permissive can change between select and confirm (another cell stopped meanwhile).
         if (Permissive(p.Command) is { } late) return Cancel().Logged(tick, now, LogKind.Refused, p.Command.Unit, $"Refused: {p.Command.Describe()}. {late}");

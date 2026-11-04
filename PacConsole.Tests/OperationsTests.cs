@@ -36,7 +36,9 @@ public class OperationsTests
         var lapsed = PlantOps.Initial.Select(Start("clg.cell6"), 200).Confirm(206, Now);
         lapsed.Device("clg.cell6").Running.Should().BeFalse();
         lapsed.Pending.Should().BeNull();
-        lapsed.Log.Should().BeEmpty();
+        lapsed.Log.Should().ContainSingle().Which.Should().Match<LogEntry>(e =>
+            e.Kind == LogKind.Refused && e.Text == "Lapsed: start clg.cell6 on CLG-05 was not confirmed within 10 s");
+        PlantOps.Initial.Confirm(206, Now).Should().Be(PlantOps.Initial, "with nothing selected, Confirm does nothing");
     }
 
     [Test]
