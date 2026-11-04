@@ -12,7 +12,7 @@ Nothing is painted over, generated or mocked up. UI pixels are captures of the r
 
 ## The app prints (`ui_art2.py`)
 
-**Capture.** A scratch copy of the app, never committed, adds a capture-only `--capture <outDir>` switch (`Capture/CaptureRunner.cs`, outside this repo). It runs the operator story from SPEC-OPERATIONS.md through the page's own generated commands:
+**Capture.** A scratch copy of the app, never committed, adds a capture-only `--capture <outDir>` switch (`capture-app/CaptureRunner.cs.txt`, kept here as text so the app never compiles it; `capture-app/README.md` says how to add it). It runs the operator story from SPEC-OPERATIONS.md through the page's own generated commands:
 
 1. Active alarms;
 2. Acknowledge CLG-05;
