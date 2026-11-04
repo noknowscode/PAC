@@ -14,9 +14,6 @@ namespace PacConsole.Rendering;
 /// </summary>
 public sealed class SolidRenderer : IDisposable
 {
-    /// <summary>Lift at which a unit is fully raised, in world units (the figure's LIFT).</summary>
-    public const float FullLift = 10;
-
     private readonly SolidGeometry _geometry = new();
     private readonly StillFrameCache _still = new();
     private readonly SolidPalette _palette = null!;

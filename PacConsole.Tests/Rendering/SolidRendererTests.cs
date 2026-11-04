@@ -92,7 +92,7 @@ public class SolidRendererTests
         var projection = PlantSolids.ViewProjection(CameraPose.Iso, Width, Height);
         Draw(renderer, projection, new SolidFrame(UnitId.Gen, Alerting, Lifts(), Seconds: 1));
 
-        var lifted = Draw(renderer, projection, new SolidFrame(UnitId.Gen, Alerting, Lifts(UnitId.Gen, SolidRenderer.FullLift * 0.6f), Seconds: 1, Hovered: UnitId.Trb));
+        var lifted = Draw(renderer, projection, new SolidFrame(UnitId.Gen, Alerting, Lifts(UnitId.Gen, CameraRig.FullLift * 0.6f), Seconds: 1, Hovered: UnitId.Trb));
 
         Match("lift", lifted);
     }
@@ -108,7 +108,7 @@ public class SolidRendererTests
         var pose = new CameraPose(0.9f, 0.55f);
         var projection = PlantSolids.ViewProjection(pose, Width, Height);
 
-        var bitmap = Draw(renderer, projection, new SolidFrame(UnitId.Clg, Alerting, Lifts(UnitId.Clg, SolidRenderer.FullLift), Seconds: 1.3, System: system));
+        var bitmap = Draw(renderer, projection, new SolidFrame(UnitId.Clg, Alerting, Lifts(UnitId.Clg, CameraRig.FullLift), Seconds: 1.3, System: system));
 
         Match($"system-{system}", bitmap);
     }

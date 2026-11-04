@@ -4,6 +4,7 @@
              xmlns:rendering="using:PacConsole.Rendering"
              xmlns:controls="using:PacConsole.Controls"
              xmlns:utu="using:Uno.Toolkit.UI"
+             x:Name="Viewport"
              IsTabStop="True"
              UseSystemFocusVisuals="True"
              FocusVisualPrimaryBrush="{ThemeResource AccentBrush}"
@@ -18,9 +19,13 @@
       Normal   the switcher sits beside the title; the filter wraps on its own row; the footer keeps two rows.
       Wide     thumbnails replace the switcher; the footer is one row of 32 px pointer tools.
       Widest   as Wide; from 1280 px (PlantHeaderLayout) the filter moves beside the title.
-    The switcher and the camera tools change shape, so they are ResponsiveViews; their buttons register with the
-    viewport as they load (template content has no fields).
+    The switcher and the camera tools change shape, so they are ResponsiveViews. Their buttons reach the viewport by
+    binding (template content has no fields): each view segment and thumbnail binds RestingPreset two-way, the orbit
+    toggle IsAutoOrbit, and the camera tools its commands.
   -->
+  <UserControl.Resources>
+    <controls:PresetConverter x:Key="PresetIs" />
+  </UserControl.Resources>
   <Grid x:Name="Root" RowDefinitions="Auto,*,Auto" Background="Transparent">
 
     <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space20}"
@@ -45,22 +50,22 @@
             <Border Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1"
                     CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource Inset3}">
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}">
-                <RadioButton Tag="iso" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}" AutomationProperties.Name="Isometric view"
-                             Loaded="OnViewLoaded" Unloaded="OnViewUnloaded" Click="OnViewClick">
+                <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
+                             IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=iso}" AutomationProperties.Name="Isometric view">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
                     <FontIcon Glyph="&#xE7B8;" FontSize="{StaticResource IconSizeSm}" />
                     <TextBlock Text="Isometric" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton Grid.Column="1" Tag="elevation" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}" AutomationProperties.Name="Elevation view"
-                             Loaded="OnViewLoaded" Unloaded="OnViewUnloaded" Click="OnViewClick">
+                <RadioButton Grid.Column="1" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
+                             IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=elevation}" AutomationProperties.Name="Elevation view">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
                     <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeSm}" />
                     <TextBlock Text="Elevation" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton Grid.Column="2" Tag="plan" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}" AutomationProperties.Name="Plan view"
-                             Loaded="OnViewLoaded" Unloaded="OnViewUnloaded" Click="OnViewClick">
+                <RadioButton Grid.Column="2" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
+                             IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=plan}" AutomationProperties.Name="Plan view">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
                     <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeSm}" />
                     <TextBlock Text="Plan" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
@@ -77,22 +82,22 @@
             <Border Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1"
                     CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource Inset3}">
               <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space2}">
-                <RadioButton Tag="iso" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}" AutomationProperties.Name="Isometric view"
-                             Loaded="OnViewLoaded" Unloaded="OnViewUnloaded" Click="OnViewClick">
+                <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
+                             IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=iso}" AutomationProperties.Name="Isometric view">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
                     <FontIcon Glyph="&#xE7B8;" FontSize="{StaticResource IconSizeSm}" />
                     <TextBlock Text="Isometric" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton Tag="elevation" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}" AutomationProperties.Name="Elevation view"
-                             Loaded="OnViewLoaded" Unloaded="OnViewUnloaded" Click="OnViewClick">
+                <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
+                             IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=elevation}" AutomationProperties.Name="Elevation view">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
                     <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeSm}" />
                     <TextBlock Text="Elevation" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton Tag="plan" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}" AutomationProperties.Name="Plan view"
-                             Loaded="OnViewLoaded" Unloaded="OnViewUnloaded" Click="OnViewClick">
+                <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
+                             IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=plan}" AutomationProperties.Name="Plan view">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
                     <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeSm}" />
                     <TextBlock Text="Plan" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
@@ -147,19 +152,22 @@
       <StackPanel Grid.Column="1" Spacing="{StaticResource Space10}" Margin="{StaticResource ThumbColumnMargin}" VerticalAlignment="Top"
                   AutomationProperties.Name="Standard views"
                   Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=Collapsed, Wide=Visible}">
-        <RadioButton x:Name="ThumbIso" Tag="iso" GroupName="PlantThumbs" Style="{StaticResource ThumbRadioButton}" Width="{StaticResource ThumbWidth}" AutomationProperties.Name="Isometric view">
+        <RadioButton GroupName="PlantThumbs"
+                     IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=iso}" Style="{StaticResource ThumbRadioButton}" Width="{StaticResource ThumbWidth}" AutomationProperties.Name="Isometric view">
           <Grid RowDefinitions="Auto,Auto">
             <rendering:PlantThumb x:Name="ThumbIsoDrawing" PresetKey="iso" Height="{StaticResource ThumbDrawingHeight}" IsHitTestVisible="False" />
             <TextBlock Grid.Row="1" Text="Isometric" Style="{StaticResource ControlLabel}" Margin="{StaticResource ThumbLabelMargin}" />
           </Grid>
         </RadioButton>
-        <RadioButton x:Name="ThumbElevation" Tag="elevation" GroupName="PlantThumbs" Style="{StaticResource ThumbRadioButton}" Width="{StaticResource ThumbWidth}" AutomationProperties.Name="Elevation view">
+        <RadioButton GroupName="PlantThumbs"
+                     IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=elevation}" Style="{StaticResource ThumbRadioButton}" Width="{StaticResource ThumbWidth}" AutomationProperties.Name="Elevation view">
           <Grid RowDefinitions="Auto,Auto">
             <rendering:PlantThumb x:Name="ThumbElevationDrawing" PresetKey="elevation" Height="{StaticResource ThumbDrawingHeight}" IsHitTestVisible="False" />
             <TextBlock Grid.Row="1" Text="Elevation" Style="{StaticResource ControlLabel}" Margin="{StaticResource ThumbLabelMargin}" />
           </Grid>
         </RadioButton>
-        <RadioButton x:Name="ThumbPlan" Tag="plan" GroupName="PlantThumbs" Style="{StaticResource ThumbRadioButton}" Width="{StaticResource ThumbWidth}" AutomationProperties.Name="Plan view">
+        <RadioButton GroupName="PlantThumbs"
+                     IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=plan}" Style="{StaticResource ThumbRadioButton}" Width="{StaticResource ThumbWidth}" AutomationProperties.Name="Plan view">
           <Grid RowDefinitions="Auto,Auto">
             <rendering:PlantThumb x:Name="ThumbPlanDrawing" PresetKey="plan" Height="{StaticResource ThumbDrawingHeight}" IsHitTestVisible="False" />
             <TextBlock Grid.Row="1" Text="Plan" Style="{StaticResource ControlLabel}" Margin="{StaticResource ThumbLabelMargin}" />
@@ -184,13 +192,13 @@
             <DataTemplate>
               <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" AutomationProperties.Name="Camera">
                 <ToggleButton Style="{StaticResource ToolbarToggleButtonTouch}" AutomationProperties.Name="Auto orbit"
-                              Loaded="OnOrbitToggleLoaded" Unloaded="OnOrbitToggleUnloaded" Click="OnOrbitToggleClick">
+                              IsChecked="{Binding IsAutoOrbit, ElementName=Viewport, Mode=TwoWay}">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                     <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" Fill="{Binding Foreground, ElementName=OrbitLabel}" VerticalAlignment="Center" />
                     <TextBlock x:Name="OrbitLabel" Text="{utu:AncestorBinding AncestorType=controls:PlantViewport, Path=OrbitStatus}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </ToggleButton>
-                <Button Style="{StaticResource IconButtonTouch}" Click="OnRotateLeftClick"
+                <Button Style="{StaticResource IconButtonTouch}" Command="{Binding RotateLeftCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate left 45 degrees" ToolTipService.ToolTip="Rotate left">
                   <!-- Fluent "Rotate" glyph, mirrored for the anticlockwise turn. -->
                   <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" RenderTransformOrigin="0.5,0.5">
@@ -199,12 +207,12 @@
                     </FontIcon.RenderTransform>
                   </FontIcon>
                 </Button>
-                <Button Style="{StaticResource IconButtonTouch}" Click="OnRotateRightClick"
+                <Button Style="{StaticResource IconButtonTouch}" Command="{Binding RotateRightCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate right 45 degrees" ToolTipService.ToolTip="Rotate right">
                   <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" />
                 </Button>
                 <!-- Below 600 px the label goes and the Home glyph carries Reset; its name still says it. -->
-                <Button Style="{StaticResource ToolbarButtonTouch}" Click="OnResetClick" AutomationProperties.Name="Reset view"
+                <Button Style="{StaticResource ToolbarButtonTouch}" Command="{Binding ResetViewCommand, ElementName=Viewport}" AutomationProperties.Name="Reset view"
                         ToolTipService.ToolTip="Back to the isometric view (Home)">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                     <FontIcon Glyph="&#xE80F;" FontSize="{StaticResource IconSizeSm}" />
@@ -219,13 +227,13 @@
             <DataTemplate>
               <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" AutomationProperties.Name="Camera">
                 <ToggleButton Style="{StaticResource ToolbarToggleButton}" AutomationProperties.Name="Auto orbit"
-                              Loaded="OnOrbitToggleLoaded" Unloaded="OnOrbitToggleUnloaded" Click="OnOrbitToggleClick">
+                              IsChecked="{Binding IsAutoOrbit, ElementName=Viewport, Mode=TwoWay}">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                     <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" Fill="{Binding Foreground, ElementName=OrbitLabel}" VerticalAlignment="Center" />
                     <TextBlock x:Name="OrbitLabel" Text="{utu:AncestorBinding AncestorType=controls:PlantViewport, Path=OrbitStatus}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </ToggleButton>
-                <Button Style="{StaticResource IconButton}" Click="OnRotateLeftClick"
+                <Button Style="{StaticResource IconButton}" Command="{Binding RotateLeftCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate left 45 degrees" ToolTipService.ToolTip="Rotate left">
                   <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" RenderTransformOrigin="0.5,0.5">
                     <FontIcon.RenderTransform>
@@ -233,11 +241,11 @@
                     </FontIcon.RenderTransform>
                   </FontIcon>
                 </Button>
-                <Button Style="{StaticResource IconButton}" Click="OnRotateRightClick"
+                <Button Style="{StaticResource IconButton}" Command="{Binding RotateRightCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate right 45 degrees" ToolTipService.ToolTip="Rotate right">
                   <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" />
                 </Button>
-                <Button Style="{StaticResource ToolbarButton}" Click="OnResetClick" AutomationProperties.Name="Reset view"
+                <Button Style="{StaticResource ToolbarButton}" Command="{Binding ResetViewCommand, ElementName=Viewport}" AutomationProperties.Name="Reset view"
                         ToolTipService.ToolTip="Back to the isometric view (Home)">
                   <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                     <!-- Fluent "Home": the camera's home pose, the same as the Home key. -->

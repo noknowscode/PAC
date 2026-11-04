@@ -1,115 +1,58 @@
 using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using PacConsole.Core.Geometry;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Solids;
 using PacConsole.Rendering;
-using PacConsole.Styles;
 using Windows.System;
 
 namespace PacConsole.Controls;
 
 /// <summary>
-/// The orbiting 3D plant plus its floating unit tags and toolbar.
-/// Owns the camera state machine (Orbiting, Paused, Idle, Tweening, Dragging) because the
-/// camera changes every frame and is view state, not domain data. The render loop runs only
-/// while something moves; Idle and Paused redraw only when a bound property changes. Nothing moves
-/// while nobody can see it: the plant scrolled out of the page, or the window hidden.
+/// The orbiting 3D plant plus its floating unit tags and toolbar. The camera is a <see cref="CameraRig"/> (Core, tested):
+/// it changes every frame and is view state, not domain data. <see cref="FrameClock"/> runs frames only while something
+/// moves, and nothing while nobody can see the plant; <see cref="TagOverlay"/> lays the tags out. This class wires them to
+/// input and to the bindings: the view switcher, the thumbnails and the orbit toggle bind <see cref="RestingPreset"/> and
+/// <see cref="IsAutoOrbit"/> two-way, and the camera tools bind its commands.
 /// </summary>
 public sealed partial class PlantViewport : UserControl
 {
-    private const float OrbitRadPerSecond = 0.12f;
-    private const float DragYawPerPx = 0.008f;
-    private const float DragElevationPerPx = 0.005f;
-    private const double DragThresholdPx = 4;
-    private static readonly TimeSpan TweenDuration = TimeSpan.FromMilliseconds(600);
-
-    // The selected unit lifts off its pad: exponential follow, so a new selection mid-lift just
-    // retargets (the figure's tau 0.28 s). Reduced motion snaps.
-    private const double LiftTau = 0.28;
-
-    // While something moves, frames come from CompositionTarget.Rendering, in step with the display. A 16 ms
-    // DispatcherTimer ticked on Windows' 15.6 ms timer grid, alternating 16 and 31 ms frames
-    // (measured p90 31 ms), which read as judder. Time comes from a Stopwatch, not the wall clock.
-    private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
-    private bool _looping;
-    private double _lastFrameSeconds;
-    private readonly Dictionary<UnitId, Button> _tags = [];
-    private readonly bool _animationsEnabled = AnimationsEnabled();
-
-    // The view switcher's segments and thumbnails, read on every drawn frame. The thumbnails are fixed; the
-    // switcher's segments and the auto-orbit toggle live in ResponsiveView templates, so they join as they load
-    // and leave as the window crosses a breakpoint.
-    private readonly List<RadioButton> _views = [];
+    private readonly CameraRig _rig = new(AnimationsEnabled());
+    private readonly FrameClock _clock;
+    private readonly TagOverlay _tags;
     private readonly PlantThumb[] _thumbs;
-    private readonly List<ToggleButton> _orbitToggles = [];
 
-    private CameraPose _pose = CameraPose.Iso;
-    private bool _auto;
-    private bool _hover;
-
-    // Whether any of the plant is inside the page's scroll viewport (EffectiveViewportChanged).
-    private bool _inView = true;
-    private readonly Action _onHostVisibility;
-
-    // Plant motion: per-unit lift toward its target, and a clock for fans and pipe flow. The lift table goes to the
-    // render thread with each frame, so it is replaced, never changed in place (SetItem returns the same table
-    // when nothing moved).
-    private ImmutableDictionary<UnitId, float> _lift = UnitCatalog.All.ToImmutableDictionary(u => u.Id, _ => 0f);
-
-    // The unit under the pointer (outlined), and whether the current press began on a tag button.
+    // The unit under the pointer (outlined), and the current press: where, whether it began on a tag, and by touch.
     private UnitId? _hovered;
-    private bool _pressOnTag;
-    private double _seconds;
-
-    // Tween
-    private CameraPose _tweenFrom, _tweenTo;
-    private DateTimeOffset _tweenStart;
-    private bool _tweening;
-
-    // Drag
     private Windows.Foundation.Point? _pressAt;
-    private CameraPose _pressPose;
-    private bool _dragging;
+    private bool _pressOnTag;
     private bool _pressIsTouch;
+
+    // Set while the viewport writes its own state properties, so their callbacks do not read them as requests.
+    private bool _syncing;
 
     public PlantViewport()
     {
         InitializeComponent();
-        _ambient = OnFrame;
-        _onHostVisibility = Refresh;
-
-        // Opens still: the full-detail drawing is cached while the camera holds, and fans and flow
-        // keep moving. Orbiting is opt-in (the toggle) or a drag.
-        _auto = false;
-
-        foreach (var unit in UnitCatalog.All)
-        {
-            var tag = new Button
-            {
-                Style = (Style)Application.Current.Resources["TagButton"],
-                Tag = unit.Id,
-            };
-            AutomationProperties.SetName(tag, $"Select {unit.Code} {unit.Name}");
-            tag.Click += (_, _) => SelectCommand?.Execute(unit.Id);
-            // A label that measures differently once its font has loaded moves the tags again.
-            tag.SizeChanged += (_, _) => { _overlay = null; Draw(); };
-            _tags[unit.Id] = tag;
-            TagLayer.Children.Add(tag);
-        }
-
-        // An array, not a collection expression: CsWinRT gives a collection expression aimed at IEnumerable no concrete type (CsWinRT1032).
-        _views.AddRange(new[] { ThumbIso, ThumbElevation, ThumbPlan });
+        _clock = new FrameClock(this, OnFrame, Refresh);
+        _tags = new TagOverlay(TagLayer, unit => SelectCommand?.Execute(unit), () => { _overlay = null; Draw(); });
         _thumbs = [ThumbIsoDrawing, ThumbElevationDrawing, ThumbPlanDrawing];
-        foreach (var view in _views) view.Click += OnViewClick;
 
-        Root.PointerEntered += (_, _) => { _hover = true; Refresh(); };
+        RotateLeftCommand = new ViewCommand(() => Move(r => r.Rotate(-1, _clock.Now)));
+        RotateRightCommand = new ViewCommand(() => Move(r => r.Rotate(1, _clock.Now)));
+        ResetViewCommand = new ViewCommand(() => Move(r => r.GoTo(CameraPresets.All[0], _clock.Now)));
+
+        Root.PointerEntered += (_, _) => Hold(true);
         // Fallback: a pointer that arrives by warp (no enter event on some X11 setups) still pauses the orbit.
-        Root.PointerMoved += (_, _) => { if (!_hover) { _hover = true; Refresh(); } };
-        Root.PointerExited += (_, _) => { _hover = false; _hovered = null; Refresh(); };
-        GotFocus += (_, _) => { _hover = true; Refresh(); };
-        LostFocus += (_, _) => { _hover = false; Refresh(); };
+        Root.PointerMoved += (_, _) => { if (!_rig.IsHeld) Hold(true); };
+        Root.PointerExited += (_, _) =>
+        {
+            _rig.IsHeld = false;
+            _hovered = null;
+            Refresh();
+        };
+        GotFocus += (_, _) => Hold(true);
+        LostFocus += (_, _) => Hold(false);
 
         // handledEventsToo: a child (the canvas element) marks presses handled on Skia hosts,
         // which would otherwise hide them from the drag logic.
@@ -122,21 +65,10 @@ public sealed partial class PlantViewport : UserControl
         KeyDown += OnKeyDown;
 
         SizeChanged += (_, _) => Draw();
-        EffectiveViewportChanged += OnEffectiveViewportChanged;
-        Loaded += (_, _) =>
-        {
-            AmbientClock.HostVisibilityChanged += _onHostVisibility;
-            Refresh();
-        };
-        Unloaded += (_, _) =>
-        {
-            StopLoop();
-            AmbientClock.Unsubscribe(_ambient);
-            AmbientClock.HostVisibilityChanged -= _onHostVisibility;
-        };
+        Loaded += (_, _) => Refresh();
     }
 
-    /// <summary>The selected unit (a <see cref="UnitId"/>), drawn in the accent.</summary>
+    /// <summary>The selected unit (a <see cref="UnitId"/>), drawn in the accent and lifted off its pad.</summary>
     public object? SelectedUnit
     {
         get => GetValue(SelectedUnitProperty);
@@ -144,7 +76,13 @@ public sealed partial class PlantViewport : UserControl
     }
 
     public static readonly DependencyProperty SelectedUnitProperty =
-        DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) => { if (!SameValue(e.OldValue, e.NewValue)) ((PlantViewport)d).Refresh(); }));
+        DependencyProperty.Register(nameof(SelectedUnit), typeof(object), typeof(PlantViewport), new PropertyMetadata(null, (d, e) =>
+        {
+            if (SameValue(e.OldValue, e.NewValue)) return;
+            var view = (PlantViewport)d;
+            view._rig.Selected = e.NewValue as UnitId?;
+            view.Refresh();
+        }));
 
     /// <summary>The panel title (the system in view, as the page names it).</summary>
     public string Title
@@ -165,6 +103,49 @@ public sealed partial class PlantViewport : UserControl
 
     public static readonly DependencyProperty OrbitStatusProperty =
         DependencyProperty.Register(nameof(OrbitStatus), typeof(string), typeof(PlantViewport), new PropertyMetadata("Auto orbit"));
+
+    /// <summary>Auto orbit on or off. The toggles bind it two-way; a drag, a tween or a view change turns it off here.</summary>
+    public bool IsAutoOrbit
+    {
+        get => (bool)GetValue(IsAutoOrbitProperty);
+        set => SetValue(IsAutoOrbitProperty, value);
+    }
+
+    public static readonly DependencyProperty IsAutoOrbitProperty =
+        DependencyProperty.Register(nameof(IsAutoOrbit), typeof(bool), typeof(PlantViewport), new PropertyMetadata(false, (d, e) =>
+        {
+            var view = (PlantViewport)d;
+            if (view._syncing || e.NewValue is not bool on || on == view._rig.IsAuto) return;
+            view.Move(r => r.SetAuto(on));
+        }));
+
+    /// <summary>
+    /// The key of the standard view the camera rests in ("iso", "elevation", "plan"), or null between them. The switcher
+    /// segments and the thumbnails bind it two-way: one is checked while the camera rests in its view, and checking one
+    /// moves the camera there.
+    /// </summary>
+    public string? RestingPreset
+    {
+        get => (string?)GetValue(RestingPresetProperty);
+        set => SetValue(RestingPresetProperty, value);
+    }
+
+    public static readonly DependencyProperty RestingPresetProperty =
+        DependencyProperty.Register(nameof(RestingPreset), typeof(string), typeof(PlantViewport), new PropertyMetadata(null, (d, e) =>
+        {
+            var view = (PlantViewport)d;
+            if (view._syncing || e.NewValue is not string key || CameraPresets.All.FirstOrDefault(p => p.Key == key) is not { } preset) return;
+            view.Move(r => r.GoTo(preset, view._clock.Now));
+        }));
+
+    /// <summary>Turns the camera 45° to the left (the camera tools).</summary>
+    public ICommand RotateLeftCommand { get; }
+
+    /// <summary>Turns the camera 45° to the right.</summary>
+    public ICommand RotateRightCommand { get; }
+
+    /// <summary>Back to the isometric view (the Home key does the same).</summary>
+    public ICommand ResetViewCommand { get; }
 
     /// <summary>What the page puts at the left of the panel's footer bar (the equipment picker).</summary>
     public object? FooterContent
@@ -213,7 +194,7 @@ public sealed partial class PlantViewport : UserControl
     internal static bool SameValue(object? a, object? b) =>
         Equals(a, b) || (a is ImmutableArray<UnitId> x && b is ImmutableArray<UnitId> y && x.SequenceEqual(y));
 
-    /// <summary>Executed with a <see cref="UnitId"/> when a tag is clicked.</summary>
+    /// <summary>Executed with a <see cref="UnitId"/> when a tag or a unit's drawing is clicked.</summary>
     public ICommand? SelectCommand
     {
         get => (ICommand?)GetValue(SelectCommandProperty);
@@ -223,212 +204,52 @@ public sealed partial class PlantViewport : UserControl
     public static readonly DependencyProperty SelectCommandProperty =
         DependencyProperty.Register(nameof(SelectCommand), typeof(ICommand), typeof(PlantViewport), new PropertyMetadata(null));
 
-    /// <summary>Eases the camera to <paramref name="pose"/> and switches auto-orbit off.</summary>
-    private void GoTo(CameraPose pose)
+    /// <summary>Changes the camera, then refreshes the frame loop and the drawing.</summary>
+    private void Move(Action<CameraRig> change)
     {
-        SetAuto(false);
-        TweenTo(pose);
-    }
-
-    /// <summary>Auto orbit on or off, shown on whichever toggle the current layout has.</summary>
-    private void SetAuto(bool on)
-    {
-        _auto = on;
-        foreach (var toggle in _orbitToggles)
-        {
-            if (toggle.IsChecked != on) toggle.IsChecked = on;
-        }
-    }
-
-    // xaml-lint: allow codebehind - the camera tools live in ResponsiveView templates (no fields); camera moves are view state.
-    private void OnRotateLeftClick(object sender, RoutedEventArgs e) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw - MathF.PI / 4 });
-
-    // xaml-lint: allow codebehind - see OnRotateLeftClick.
-    private void OnRotateRightClick(object sender, RoutedEventArgs e) => TweenTo(_pose with { Yaw = TargetOrCurrent().Yaw + MathF.PI / 4 });
-
-    // xaml-lint: allow codebehind - see OnRotateLeftClick.
-    private void OnResetClick(object sender, RoutedEventArgs e) => GoTo(CameraPose.Iso);
-
-    // xaml-lint: allow codebehind - a standard view (switcher segment or thumbnail) moves the camera to its preset.
-    private void OnViewClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is RadioButton { Tag: string key } && CameraPresets.All.FirstOrDefault(p => p.Key == key) is { } preset) GoTo(preset.Pose);
-    }
-
-    // xaml-lint: allow codebehind - template-hosted switcher segments join the set Draw keeps in step with the camera.
-    private void OnViewLoaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is RadioButton view && !_views.Contains(view))
-        {
-            _views.Add(view);
-            _overlay = null;
-            Draw();
-        }
-    }
-
-    // xaml-lint: allow codebehind - see OnViewLoaded.
-    private void OnViewUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is RadioButton view) _views.Remove(view);
-    }
-
-    // xaml-lint: allow codebehind - the auto-orbit toggle lives in a ResponsiveView template; it joins on load.
-    private void OnOrbitToggleLoaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is ToggleButton toggle && !_orbitToggles.Contains(toggle))
-        {
-            _orbitToggles.Add(toggle);
-            toggle.IsChecked = _auto;
-        }
-    }
-
-    // xaml-lint: allow codebehind - see OnOrbitToggleLoaded.
-    private void OnOrbitToggleUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is ToggleButton toggle) _orbitToggles.Remove(toggle);
-    }
-
-    // xaml-lint: allow codebehind - see OnOrbitToggleLoaded.
-    private void OnOrbitToggleClick(object sender, RoutedEventArgs e)
-    {
-        SetAuto(sender is ToggleButton { IsChecked: true });
-        _tweening = false;
+        change(_rig);
         Refresh();
     }
 
-    private CameraPose TargetOrCurrent() => _tweening ? _tweenTo : _pose;
-
-    private void TweenTo(CameraPose target)
+    private void Hold(bool held)
     {
-        SetAuto(false);
-        target = target.Clamped();
-        if (!_animationsEnabled)
-        {
-            _pose = target;
-            _tweening = false;
-            Refresh();
-            return;
-        }
-        _tweenFrom = _pose;
-        // Take the short way round, but keep accumulated turns so yaw never jumps.
-        _tweenTo = target with { Yaw = _pose.Yaw + CameraPose.Wrap(target.Yaw - _pose.Yaw) };
-        _tweenStart = DateTimeOffset.Now;
-        _tweening = true;
+        if (_rig.IsHeld == held) return;
+        _rig.IsHeld = held;
         Refresh();
     }
 
-    private bool IsOrbiting => _auto && !_hover && !_dragging;
-
-    private float LiftTarget(UnitId id) => SelectedUnit as UnitId? == id ? SolidRenderer.FullLift : 0;
-
-    private bool LiftSettled
-    {
-        get
-        {
-            foreach (var unit in UnitCatalog.All)
-            {
-                if (_lift[unit.Id] != LiftTarget(unit.Id)) return false;
-            }
-            return true;
-        }
-    }
-
-    /// <summary>Starts or stops the frame loop to match the state, then draws once.</summary>
+    /// <summary>Starts or stops the frame loop to match the camera, mirrors its state to the bindings, then draws once.</summary>
     private void Refresh()
     {
-        if (!_animationsEnabled)
+        _rig.Settle();
+        // Display-rate frames only while the camera or a lift moves. Fans and pipe flow keep turning on the shared
+        // 20 fps ambient clock (the same tick as the status-dot pulse). Out of sight, neither runs; a tween or a lift
+        // picks up where it is when the plant shows again.
+        _clock.Run(_rig.IsMoving, _rig.AnimationsEnabled && IsLoaded);
+        Sync(() =>
         {
-            foreach (var unit in UnitCatalog.All) _lift = _lift.SetItem(unit.Id, LiftTarget(unit.Id));
-        }
-        // Display-rate frames only while the camera or a lift moves. Fans and pipe flow keep turning
-        // on the shared 20 fps ambient clock (the same tick as the status-dot pulse), not on a held
-        // Rendering subscription, which would force frames at display rate forever. Out of sight,
-        // neither runs; a tween or a lift picks up where it is when the plant shows again.
-        var seen = _inView && AmbientClock.HostVisible;
-        var moving = seen && (IsOrbiting || _tweening || !LiftSettled);
-        if (moving) StartLoop(); else StopLoop();
-        if (!moving && seen && _animationsEnabled && IsLoaded)
-        {
-            if (!_ambientOn) _lastFrameSeconds = _clock.Elapsed.TotalSeconds;
-            _ambientOn = true;
-            AmbientClock.Subscribe(_ambient);
-        }
-        else
-        {
-            _ambientOn = false;
-            AmbientClock.Unsubscribe(_ambient);
-        }
-
-        var status = !_auto ? "Auto orbit" : _hover || _dragging ? "Orbit paused" : "Orbiting";
-        if (OrbitStatus != status) OrbitStatus = status;
+            if (OrbitStatus != _rig.Status) OrbitStatus = _rig.Status;
+            if (IsAutoOrbit != _rig.IsAuto) IsAutoOrbit = _rig.IsAuto;
+        });
         Draw();
     }
 
-    private void StartLoop()
+    private void Sync(Action write)
     {
-        if (_looping) return;
-        _looping = true;
-        _lastFrameSeconds = _clock.Elapsed.TotalSeconds;
-        CompositionTarget.Rendering += OnRendering;
+        _syncing = true;
+        try
+        {
+            write();
+        }
+        finally
+        {
+            _syncing = false;
+        }
     }
 
-    private void StopLoop()
+    private void OnFrame(double dt)
     {
-        if (!_looping) return;
-        _looping = false;
-        CompositionTarget.Rendering -= OnRendering;
-    }
-
-    // xaml-lint: allow codebehind - the frame loop of a Skia viewport; it has no XAML surface.
-    private void OnRendering(object? sender, object e) => OnFrame();
-
-    // xaml-lint: allow codebehind - whether the plant is on screen decides whether its motion runs; it has no XAML surface.
-    private void OnEffectiveViewportChanged(FrameworkElement sender, EffectiveViewportChangedEventArgs e)
-    {
-        // The viewport arrives in this control's coordinates (empty once it is scrolled out): in view while they overlap.
-        var v = e.EffectiveViewport;
-        var inView = v.Width > 0 && v.Height > 0 && v.X < ActualWidth && v.Y < ActualHeight && v.Right > 0 && v.Bottom > 0;
-        if (inView == _inView) return;
-        _inView = inView;
-        Refresh();
-    }
-
-    private readonly Action _ambient;
-    private bool _ambientOn;
-
-    private void OnFrame()
-    {
-        var now = DateTimeOffset.Now;
-        var nowSeconds = _clock.Elapsed.TotalSeconds;
-        // Capped so a hitch (GC, a telemetry refresh) never makes the camera or a lift jump; the cap
-        // sits above the ambient clock's 50 ms so fans keep their speed on it.
-        var dt = (float)Math.Min(nowSeconds - _lastFrameSeconds, 0.1);
-        _lastFrameSeconds = nowSeconds;
-
-        _seconds += dt;
-        var follow = (float)(1 - Math.Exp(-dt / LiftTau));
-        foreach (var unit in UnitCatalog.All)
-        {
-            var id = unit.Id;
-            var target = LiftTarget(id);
-            var next = _lift[id] + (target - _lift[id]) * follow;
-            _lift = _lift.SetItem(id, Math.Abs(target - next) < 0.02f ? target : next);
-        }
-
-        if (_tweening)
-        {
-            var t = Math.Clamp((now - _tweenStart) / TweenDuration, 0, 1);
-            var e = 1 - Math.Pow(1 - t, 3); // cubic ease-out
-            _pose = new CameraPose(
-                (float)(_tweenFrom.Yaw + (_tweenTo.Yaw - _tweenFrom.Yaw) * e),
-                (float)(_tweenFrom.Elevation + (_tweenTo.Elevation - _tweenFrom.Elevation) * e));
-            if (t >= 1) _tweening = false;
-        }
-        else if (IsOrbiting)
-        {
-            _pose = _pose with { Yaw = _pose.Yaw + OrbitRadPerSecond * dt };
-        }
-
+        _rig.Step(dt, _clock.Now);
         Refresh();
     }
 
@@ -440,8 +261,6 @@ public sealed partial class PlantViewport : UserControl
         ImmutableArray<UnitId> Alerting, PlantSystem System, float Width, float Height);
 
     private OverlayInputs? _overlay;
-    private ImmutableArray<TagPlacement> _placements = [];
-    private readonly List<TagRequest> _requests = new(UnitCatalog.All.Length);
 
     private void Draw()
     {
@@ -452,87 +271,28 @@ public sealed partial class PlantViewport : UserControl
         var selected = SelectedUnit as UnitId?;
         var system = ShownSystem is PlantSystem shown ? shown : PlantSystem.All;
         var alerting = AlertingUnits is ImmutableArray<UnitId> a ? a : ImmutableArray<UnitId>.Empty;
-        var inputs = new OverlayInputs(_pose, _lift, selected, alerting, system, width, height);
+        var inputs = new OverlayInputs(_rig.Pose, _rig.Lift, selected, alerting, system, width, height);
         if (inputs != _overlay)
         {
             _overlay = inputs;
             UpdateOverlay(inputs);
         }
-        PlantDrawing.Show(_pose, selected, alerting, _placements, _lift, _seconds, _hovered, system, _animationsEnabled);
+        PlantDrawing.Show(_rig.Pose, selected, alerting, _tags.Placements, _rig.Lift, _rig.Seconds, _hovered, system, _rig.AnimationsEnabled);
     }
 
     private void UpdateOverlay(OverlayInputs inputs)
     {
-        var (selected, alerting, system) = (inputs.Selected, inputs.Alerting, inputs.System);
-        // One projection for the drawing and the tags, so leaders land on their units at any pose.
-        var projection = PlantSolids.ViewProjection(inputs.Pose, inputs.Width, inputs.Height);
+        _tags.Layout(inputs.Pose, inputs.Lift, inputs.Selected, inputs.Alerting, inputs.System, inputs.Width, inputs.Height);
 
-        // Each tag is laid out at the size its button measures with its label, in the font it draws with and at the
-        // system's text size. Only touch what changed: a new Content string re-measures and re-shapes the label's
-        // text (an unchanged button's Measure returns at once).
-        var tagHeight = 0f;
-        _requests.Clear();
-        foreach (var u in UnitCatalog.All)
-        {
-            var tag = _tags[u.Id];
-            var label = TagLabel(u, selected == u.Id, alerting.Contains(u.Id));
-            if (!Equals(tag.Content, label)) tag.Content = label;
-            tag.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
-            tagHeight = Math.Max(tagHeight, (float)tag.DesiredSize.Height);
-            var anchor = PlantSolids.Default.Anchors[u.Id];
-            _requests.Add(new TagRequest(u.Id, projection.Project(anchor with { Y = anchor.Y + inputs.Lift[u.Id] }), (float)tag.DesiredSize.Width));
-        }
-        _placements = TagLayout.Solve(_requests, inputs.Width, Math.Max(tagHeight, TagLayout.Height));
-
-        foreach (var p in _placements)
-        {
-            var tag = _tags[p.Unit];
-            var isAlert = alerting.Contains(p.Unit);
-            var isSelected = selected == p.Unit;
-            Canvas.SetLeft(tag, p.Left);
-            Canvas.SetTop(tag, p.Top);
-            ApplyTagState(tag, isSelected, isAlert);
-            // Tags of equipment outside the system recede with their drawing.
-            var opacity = isSelected || PlantSystems.Contains(system, p.Unit, alerting) ? 1.0 : 0.4;
-            if (tag.Opacity != opacity) tag.Opacity = opacity;
-        }
-
-        // The view switcher shows the standard view the camera rests in, if any.
-        var preset = CameraPresets.All.FirstOrDefault(p => inputs.Pose.IsNear(p.Pose));
-        foreach (var view in _views)
-        {
-            var on = Equals(view.Tag, preset?.Key);
-            if (view.IsChecked != on) view.IsChecked = on;
-        }
+        // The switcher and the thumbnails show the standard view the camera rests in, if any.
+        var preset = _rig.RestingPreset;
+        Sync(() => { if (RestingPreset != preset?.Key) RestingPreset = preset?.Key; });
         // Each thumbnail redraws only when the selection, alerts or system actually changed.
-        foreach (var thumb in _thumbs) thumb.Show(selected, alerting, system);
-        var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
-        var help = $"{UnitCatalog.All.Length} units, {preset?.Label ?? "Free orbit"} view. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
-            $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";
+        foreach (var thumb in _thumbs) thumb.Show(inputs.Selected, inputs.Alerting, inputs.System);
+        var alertNames = string.Join(", ", inputs.Alerting.Select(u => UnitCatalog.Get(u).Code));
+        var help = $"{UnitCatalog.All.Length} units, {preset?.Label ?? "Free orbit"} view. {(inputs.Alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
+            $"{(inputs.Selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";
         if (AutomationProperties.GetHelpText(this) != help) AutomationProperties.SetHelpText(this, help);
-    }
-
-    /// <summary>The callout text: the code alone, the name with it when selected, and the word "Alert" when in alert.</summary>
-    private static string TagLabel(UnitInfo unit, bool selected, bool alert) =>
-        (selected, alert) switch
-        {
-            (true, true) => $"{unit.Code} · {unit.Name} · Alert",
-            (true, false) => $"{unit.Code} · {unit.Name}",
-            (false, true) => $"{unit.Code} · Alert",
-            _ => unit.Code,
-        };
-
-    private static void ApplyTagState(Button tag, bool selected, bool alert)
-    {
-        var key = selected ? (alert ? "SelectedAlert" : "Selected") : alert ? "Alert" : "Normal";
-        if (Equals(tag.DataContext, key)) return; // avoid restyling every frame
-        tag.DataContext = key;
-        // A plate in the ground colour (so the label reads over line work). The selected plate takes the
-        // slate-teal outline, an alerting one the orange outline, and its label carries the word.
-        tag.Background = ThemeBrushes.Get("OverlayBrush");
-        tag.BorderThickness = new Thickness(selected || alert ? 1 : 0);
-        tag.BorderBrush = ThemeBrushes.Get(alert ? "AlertBorderBrush" : selected ? "AccentBrush" : "OverlayBrush");
-        tag.Foreground = ThemeBrushes.Get(alert ? "AlertTextBrush" : selected ? "AccentBrush" : "TextPrimaryBrush");
     }
 
     // xaml-lint: allow codebehind - drag-to-orbit reads raw pointer deltas, which no command or gesture surface carries.
@@ -540,25 +300,16 @@ public sealed partial class PlantViewport : UserControl
     {
         // Don't capture yet: a press that doesn't move must still click a tag.
         _pressAt = e.GetCurrentPoint(Surface).Position;
-        _pressPose = _pose;
-        _pressOnTag = IsInTagLayer(e.OriginalSource as DependencyObject);
+        _rig.Press();
+        _pressOnTag = _tags.Contains(e.OriginalSource as DependencyObject);
         _pressIsTouch = e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch;
-    }
-
-    private bool IsInTagLayer(DependencyObject? d)
-    {
-        for (; d is not null; d = VisualTreeHelper.GetParent(d))
-        {
-            if (ReferenceEquals(d, TagLayer)) return true;
-        }
-        return false;
     }
 
     /// <summary>The unit drawn under a point on the surface, using the same projection as the drawing.</summary>
     private UnitId? UnitAt(Windows.Foundation.Point at)
     {
-        var projection = PlantSolids.ViewProjection(_pose, (float)Surface.ActualWidth, (float)Surface.ActualHeight);
-        return PlantSolids.Default.UnitAt(projection, new((float)at.X, (float)at.Y), _lift);
+        var projection = PlantSolids.ViewProjection(_rig.Pose, (float)Surface.ActualWidth, (float)Surface.ActualHeight);
+        return PlantSolids.Default.UnitAt(projection, new((float)at.X, (float)at.Y), _rig.Lift);
     }
 
     // xaml-lint: allow codebehind - drag-to-orbit (see OnPointerPressed).
@@ -570,7 +321,7 @@ public sealed partial class PlantViewport : UserControl
             // A finger has no hover; its moves after a press handed to the page scroll outline nothing.
             if (e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Touch) return;
             // Hover: outline the unit under the pointer, so it is clear the drawing is clickable.
-            var hovered = IsInTagLayer(e.OriginalSource as DependencyObject) ? null : UnitAt(p);
+            var hovered = _tags.Contains(e.OriginalSource as DependencyObject) ? null : UnitAt(p);
             if (hovered != _hovered)
             {
                 _hovered = hovered;
@@ -578,32 +329,25 @@ public sealed partial class PlantViewport : UserControl
             }
             return;
         }
-        double dx = p.X - start.X, dy = p.Y - start.Y;
-
-        if (!_dragging)
+        switch (_rig.DragBy(p.X - start.X, p.Y - start.Y, _pressIsTouch))
         {
-            if (Math.Sqrt(dx * dx + dy * dy) < DragThresholdPx) return;
-            if (_pressIsTouch && Math.Abs(dy) >= Math.Abs(dx))
-            {
+            case DragStep.Pending:
+                return;
+            case DragStep.Scroll:
                 // The panel sits in the page's vertical ScrollViewer: a mostly vertical finger drag scrolls the page.
-                // Only a sideways drag orbits by touch (yaw only); mouse and pen orbit on both axes.
                 _pressAt = null;
                 return;
-            }
-            Surface.CapturePointer(e.Pointer);
-            _dragging = true;
-            SetAuto(false);
-            _tweening = false;
+            case DragStep.Started:
+                Surface.CapturePointer(e.Pointer);
+                break;
         }
-
-        _pose = new CameraPose(_pressPose.Yaw + (float)dx * DragYawPerPx, _pressPose.Elevation + (_pressIsTouch ? 0 : (float)dy * DragElevationPerPx)).Clamped();
         Refresh();
     }
 
     // xaml-lint: allow codebehind - drag-to-orbit (see OnPointerPressed).
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
     {
-        if (_dragging)
+        if (_rig.IsDragging)
         {
             Surface.ReleasePointerCapture(e.Pointer);
         }
@@ -618,22 +362,20 @@ public sealed partial class PlantViewport : UserControl
     private void EndDrag()
     {
         _pressAt = null;
-        if (!_dragging) return;
-        _dragging = false;
-        Refresh();
+        if (_rig.EndDrag()) Refresh();
     }
 
     // xaml-lint: allow codebehind - arrow keys orbit the camera, which is view state.
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        var target = TargetOrCurrent();
+        var now = _clock.Now;
         switch (e.Key)
         {
-            case VirtualKey.Left: TweenTo(target with { Yaw = target.Yaw - MathF.PI / 4 }); break;
-            case VirtualKey.Right: TweenTo(target with { Yaw = target.Yaw + MathF.PI / 4 }); break;
-            case VirtualKey.Up: TweenTo(target with { Elevation = target.Elevation + MathF.PI / 18 }); break;
-            case VirtualKey.Down: TweenTo(target with { Elevation = target.Elevation - MathF.PI / 18 }); break;
-            case VirtualKey.Home: GoTo(CameraPose.Iso); break;
+            case VirtualKey.Left: Move(r => r.Rotate(-1, now)); break;
+            case VirtualKey.Right: Move(r => r.Rotate(1, now)); break;
+            case VirtualKey.Up: Move(r => r.Tilt(1, now)); break;
+            case VirtualKey.Down: Move(r => r.Tilt(-1, now)); break;
+            case VirtualKey.Home: Move(r => r.GoTo(CameraPresets.All[0], now)); break;
             default: return;
         }
         e.Handled = true;
