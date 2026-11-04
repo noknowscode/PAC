@@ -1,10 +1,8 @@
 using Microsoft.Extensions.Time.Testing;
 using PacConsole.Core.Persistence;
 using PacConsole.Core.Telemetry;
-using Uno.Extensions.Reactive;
 using PacConsole.Presentation;
 using PacConsole.Services;
-using Uno.Extensions.Toolkit;
 
 namespace PacConsole.Tests.Model;
 

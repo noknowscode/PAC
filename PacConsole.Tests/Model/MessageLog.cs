@@ -1,4 +1,3 @@
-using Uno.Extensions.Reactive;
 using Uno.Extensions.Reactive.Core;
 
 namespace PacConsole.Tests.Model;

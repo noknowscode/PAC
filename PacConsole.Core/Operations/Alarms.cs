@@ -187,5 +187,4 @@ public sealed record AlarmBook(ImmutableArray<AlarmEntry> Entries, ImmutableArra
 
     public int ActiveCount => Entries.Count(e => e.IsActive);
     public int UnacknowledgedCount => Entries.Count(e => e.NeedsAck);
-    public int ShelvedCount => Entries.Count(e => e.State == AlarmState.Shelved);
 }

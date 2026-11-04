@@ -3,8 +3,6 @@ using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
 using PacConsole.Presentation;
-using Uno.Extensions.Reactive;
-using Uno.Extensions.Toolkit;
 
 namespace PacConsole.Tests.Model;
 

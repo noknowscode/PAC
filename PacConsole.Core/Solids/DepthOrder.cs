@@ -171,8 +171,9 @@ public static class DepthOrder
     /// <summary>
     /// True when a plane separates the two hulls (touching counts). When every pair is separable,
     /// <see cref="Compare"/> never falls back to centres and the order is exact at any camera.
+    /// A test seam: <c>PlantSolidsTests</c> checks the plant holds this for every pair.
     /// </summary>
-    public static bool Separable(Volume a, Volume b)
+    internal static bool Separable(Volume a, Volume b)
     {
         if (a.Y0 >= b.Y1 - Eps || b.Y0 >= a.Y1 - Eps) return true;
         return SeparatedOnPlan(a.Footprint, a, b) || SeparatedOnPlan(b.Footprint, a, b);

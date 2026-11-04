@@ -273,7 +273,7 @@ public class OperationsTests
     {
         var ops = PlantOps.Initial.Shelve("clg.vib", "x", UnitId.Clg, 120, Now);
         var book = AlarmBook.Compose(121, Setpoints.Default, ops);
-        book.ShelvedCount.Should().Be(1);
+        book.Entries.Should().ContainSingle(e => e.State == AlarmState.Shelved);
         book.ActiveCount.Should().Be(0);
         ops.IsShelved("clg.vib", 120 + PlantOps.ShelveTicks + 1).Should().BeFalse();
     }

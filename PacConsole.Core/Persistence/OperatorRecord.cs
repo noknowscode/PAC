@@ -1,6 +1,5 @@
 using PacConsole.Core.Operations;
 using PacConsole.Core.Plant;
-using PacConsole.Core.Telemetry;
 
 namespace PacConsole.Core.Persistence;
 
