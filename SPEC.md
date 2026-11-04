@@ -3,6 +3,8 @@
 Status: draft for approval · 2026-10-15 · reference figure `docs/anatomy/plant/` (commits `8ad26ec`, `f08fc42`), published at https://claude.ai/artifact/3ZUDmNh8CpXUqVtdbw5nyy
 
 Goal: replace the console's wireframe plant (main viewport, three preset thumbnails, unit preview) with the solid, shaded, depth-ordered look of the reference figure, keep every current behaviour (orbit, drag, presets, tags, selection, alert), and turn the unit preview into a close-up with a live vibration gauge.
+*Superseded by console v3 (SPEC-CONSOLE.md):* the unit preview was dropped; the text below that plans it is history,
+and the capability table says what was built.
 
 Out of scope: new routes, new telemetry, theme switching (the app is dark-only, `RequestedTheme="Dark"`), WebAssembly/mobile heads (the app ships `net10.0-desktop` only today). *Superseded 2026-10-30:* the app now targets five heads (Android, iOS, WinAppSDK, WebAssembly and `net10.0-desktop`) on Uno.Sdk 7.0.0-dev.115 with SkiaSharp 4; see `README.md`.
 
@@ -61,10 +63,10 @@ Out of scope: new routes, new telemetry, theme switching (the app is dark-only, 
 | Pipework between units (rack, steam, fuel) | implemented | straight tubes on piers, base layer |
 | Turning condenser fans | implemented | blade lines rebuilt per frame on CND fan tops, only while visible and animations on |
 | Three preset thumbnails | implemented | same renderer, static camera per preset |
-| Unit preview close-up | implemented | selected unit's solids, fitted, plus a vibration gauge bound to `SelectedVib` |
-| CND fan-cell mechanism (motor, gearbox, sensor, cable) in the preview | **substituted** | the preview shows the selected unit's own solids for every unit; the fan-cell drive train exists only in the reference figure |
-| Interactive fan speed (Fig 5) | **omitted** | the console has no fan-speed telemetry or control; showing a speed slider would impersonate a capability |
-| Light theme | **omitted** | app is dark-only |
+| Unit preview close-up | **omitted** | console v3 dropped it (SPEC-CONSOLE.md: not in the mock; the plant callout and the inspector carry the unit) |
+| CND fan-cell mechanism (motor, gearbox, sensor, cable) in the preview | **omitted** | went with the preview; the fan-cell drive train exists only in the reference figure |
+| Interactive fan speed (Fig 5) | implemented, as a control | the cooling bank's fan speed setpoint on the Control tab: typed, applied, ramped in Auto (SPEC-OPERATIONS); the drawn blades keep the figure's 1.6 rad/s |
+| Light theme | implemented | System, Light or Graphite from the … menu, kept between launches (`docs/SPEC-THEME.md`) |
 | Hover-to-lift (reference figure) | **substituted** | hover draws an outline; click on a unit (or its tag, or keyboard) selects; lift follows the bound selection |
 
 ## Design Brief
@@ -300,8 +302,9 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
 
 ## Unresolved Questions
 
-- **Omitted (accepted):** light theme (app is dark-only); interactive fan speed (see Decisions).
-- **Substituted (accepted):** fan-cell preview → generic unit preview; hover-to-lift → hover outline + click/lift on selection.
+- **Omitted (accepted):** the unit preview and its fan-cell close-up (console v3, SPEC-CONSOLE.md). The light theme and
+  a fan speed control, once omitted here, were built later (the capability table above).
+- **Substituted (accepted):** hover-to-lift → hover outline + click/lift on selection.
 - **Skills not loaded for this spec:** `uno-navigation` (no route changes), `xaml-art-direction` (direction fixed by the reference figure) and `xaml-design-polish` (motion constants copied from the figure). Load `xaml-design-polish` in phase 4 before finalising motion.
 
 ## Decisions (A pass, 2026-11-04, proposed)
