@@ -138,6 +138,11 @@ public sealed partial record ConsoleView
     public string InspectorName { get; init; } = "";
     public string InspectorDescription { get; init; } = "";
     public string InspectorState { get; init; } = "";
+
+    // The state word in its tone, as two runs of which one is empty: a Run's converter brush does not repaint on a live
+    // theme switch, and a ThemeResource on each run does.
+    public string InspectorStateAlert => SelectedIsAlert ? InspectorState : "";
+    public string InspectorStateNominal => SelectedIsAlert ? "" : InspectorState;
     public string ServiceText { get; init; } = "";
     public ImmutableArray<ReadingTileView> OverviewTiles { get; init; } = [];
     public ImmutableArray<ReadingTileView> ConditionTiles { get; init; } = [];

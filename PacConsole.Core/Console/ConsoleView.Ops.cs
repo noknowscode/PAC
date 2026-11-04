@@ -11,13 +11,26 @@ public sealed record AlarmRowView(string Key, UnitId Unit, string Priority, stri
     public bool IsShelved { get; init; }
 
     public string AutomationName => $"{Priority} priority, {State}, {Title}, {Detail}, {(IsShelved ? Time : "since " + Time)}";
+
+    // Each row button names its action and its alarm (SPEC-OPERATIONS: every button names its action and target).
+    public string SelectName => $"Select {UnitCatalog.Get(Unit).Code} for {Title}";
+    public string AcknowledgeName => $"Acknowledge {Title}";
+    public string ShelveName => $"Shelve {Title} for 1 hour";
+    public string UnshelveName => $"Unshelve {Title}";
 }
 
 /// <summary>The response to the selected unit's alarm: cause, numbered steps, consequence.</summary>
-public sealed record ResponseView(string Key, string Title, string Priority, string State, string Cause, string Steps, string Consequence, bool CanAck);
+public sealed record ResponseView(string Key, string Title, string Priority, string State, string Cause, string Steps, string Consequence, bool CanAck)
+{
+    public string AcknowledgeName => $"Acknowledge {Title}";
+}
 
-/// <summary>A selected command waiting for Confirm, or a refusal with its reason.</summary>
-public sealed record PendingView(string Text, string Reason, bool IsRefused);
+/// <summary>A selected command waiting for Confirm, or a refusal with its reason; <see cref="Command"/> in words.</summary>
+public sealed record PendingView(string Text, string Reason, bool IsRefused, string Command)
+{
+    public string ConfirmName => $"Confirm: {Command}";
+    public string CancelName => $"Cancel: {Command}";
+}
 
 /// <summary>A device on the selected unit's faceplate. Selecting it selects its start or stop.</summary>
 public sealed record DeviceView(string Id, string Name, string State, string Detail, string Action, string Tone)
@@ -139,8 +152,8 @@ public sealed partial record ConsoleView
 
         PendingView? pending = ops.Pending is { } p && !p.IsExpired(tick)
             ? p.Refusal is { } reason
-                ? new PendingView($"Cannot {p.Command.Describe()}", reason, true)
-                : new PendingView($"Confirm: {p.Command.Describe()}?", "Select-before-operate: confirm within 10 s.", false)
+                ? new PendingView($"Cannot {p.Command.Describe()}", reason, true, p.Command.Describe())
+                : new PendingView($"Confirm: {p.Command.Describe()}?", "Select-before-operate: confirm within 10 s, or press Esc to cancel.", false, p.Command.Describe())
             : null;
 
         var devices = ops.DevicesOf(view.Selected).Select(d =>

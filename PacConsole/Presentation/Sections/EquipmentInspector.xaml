@@ -35,10 +35,10 @@
                 <controls:RangeBar Margin="{StaticResource GapTop4}" BandStart="{Binding BandStart}" BandEnd="{Binding BandEnd}"
                                    LimitAt="{Binding LimitAt}" ValueAt="{Binding ValueAt}" OutOfBand="{Binding OutOfBand}" />
                 <TextBlock Text="{Binding StatusText}" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AlertTextBrush}"
-                           Visibility="{Binding IsHigh, Converter={StaticResource Visible}}" />
+                           Visibility="{Binding IsHigh, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
               </StackPanel>
               <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AccentBrush}"
-                         Visibility="{Binding IsCompared, Converter={StaticResource Visible}}" />
+                         Visibility="{Binding IsCompared, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
             </Grid>
           </DataTemplate>
         </Setter.Value>
@@ -97,23 +97,24 @@
         <Button Content="{Binding Title}" HorizontalAlignment="Left"
                 Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource LinkButtonTouch}, Wide={StaticResource LinkButton}}"
                 Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectUnit}" CommandParameter="{Binding Unit}"
-                ToolTipService.ToolTip="Select this equipment" />
+                AutomationProperties.Name="{Binding SelectName}" ToolTipService.ToolTip="Select this equipment" />
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Space4}">
           <TextBlock Text="{Binding Detail}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" TextWrapping="WrapWholeWords" />
           <Button Grid.Column="1" Content="Acknowledge"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
-                  Visibility="{Binding CanAck, Converter={StaticResource Visible}}"
-                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}" />
+                  Visibility="{Binding CanAck, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}"
+                  AutomationProperties.Name="{Binding AcknowledgeName}" />
           <Button Grid.Column="2" Content="Shelve 1 h"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
-                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}, ConverterParameter=Invert}"
+                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}"
                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Shelve}" CommandParameter="{Binding Key}"
-                  ToolTipService.ToolTip="Hide this alarm for an hour; it is logged" />
+                  AutomationProperties.Name="{Binding ShelveName}" ToolTipService.ToolTip="Hide this alarm for an hour; it is logged" />
           <Button Grid.Column="2" Content="Unshelve"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
-                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}}"
+                  Visibility="{Binding IsShelved, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Unshelve}" CommandParameter="{Binding Key}"
-                  ToolTipService.ToolTip="List this alarm again now; it is logged" />
+                  AutomationProperties.Name="{Binding UnshelveName}" ToolTipService.ToolTip="List this alarm again now; it is logged" />
         </Grid>
       </StackPanel>
     </DataTemplate>
@@ -171,7 +172,7 @@
            first, each with its priority, time and state in words and its own Acknowledge and Shelve.
            The first four rows; Show all opens the rest below them. Then the shelved alarms, each with Unshelve. -->
       <StackPanel AutomationProperties.Name="Active alarms"
-                  Visibility="{Binding Data.IsAlarms, Converter={StaticResource Visible}}">
+                  Visibility="{Binding Data.IsAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space12}" MinHeight="{StaticResource ControlHeight}">
           <StackPanel VerticalAlignment="Center">
             <TextBlock Text="ACTIVE ALARMS" Style="{StaticResource TypeCaps}" />
@@ -179,25 +180,26 @@
           </StackPanel>
           <Button Grid.Column="1" Content="Acknowledge all" Command="{Binding Parent.AcknowledgeAll}"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarButtonTouch}, Wide={StaticResource ToolbarButton}}"
-                  Visibility="{Binding Data.CanAckAll, Converter={StaticResource Visible}}" />
+                  Visibility="{Binding Data.CanAckAll, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  AutomationProperties.Name="Acknowledge all alarms" />
         </Grid>
         <!-- Each row carries its own top margin (AlarmItemTemplate). -->
         <StackPanel controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.ShownAlarmRows}" />
         <!-- The rest of the list, opened in place by the toggle below it (view state, like the tabs). -->
-        <StackPanel Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}}"
+        <StackPanel Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                     controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.MoreAlarmRows}" />
         <ToggleButton x:Name="ShowAllAlarms" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
                       Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ToolbarToggleButtonTouch}, Wide={StaticResource ToolbarToggleButton}}"
-                      Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}}">
+                      Visibility="{Binding Data.HasMoreAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <Grid>
             <TextBlock Text="{Binding Data.ShowAllAlarmsText}" Style="{StaticResource ControlLabel}"
-                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, ConverterParameter=Invert}" />
+                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}" />
             <TextBlock Text="Show fewer" Style="{StaticResource ControlLabel}"
-                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}}" />
+                       Visibility="{Binding IsChecked, ElementName=ShowAllAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
           </Grid>
         </ToggleButton>
         <StackPanel Margin="{StaticResource GapTop16}" AutomationProperties.Name="Shelved alarms"
-                    Visibility="{Binding Data.HasShelvedRows, Converter={StaticResource Visible}}">
+                    Visibility="{Binding Data.HasShelvedRows, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <TextBlock Text="SHELVED" Style="{StaticResource TypeCaps}" />
           <StackPanel controls:Slots.ItemTemplate="{StaticResource AlarmItemTemplate}" controls:Slots.ItemsSource="{Binding Data.ShelvedRows}" />
         </StackPanel>
@@ -212,13 +214,13 @@
         <TextBlock Text="{Binding Data.InspectorName}" Style="{StaticResource TypeDisplay}" TextWrapping="WrapWholeWords" />
         <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{ThemeResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
         <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords">
-          <Run Text="{Binding Data.InspectorState}" Foreground="{Binding Data.SelectedIsAlert, Converter={StaticResource Tone}, ConverterParameter='True=AlertTextBrush|False=MutedBrush'}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
+          <Run Text="{Binding Data.InspectorStateAlert}" Foreground="{ThemeResource AlertTextBrush}" /><Run Text="{Binding Data.InspectorStateNominal}" Foreground="{ThemeResource MutedBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
         </TextBlock>
       </StackPanel>
 
       <!-- Alarm response: while the selected unit has an alarm, what to do about it. -->
       <!-- xaml-lint: allow card - an alarm callout with its own alert ground, not a content surface. -->
-      <Border DataContext="{Binding Data.Response}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+      <Border DataContext="{Binding Data.Response}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}, FallbackValue=Collapsed}"
               Background="{ThemeResource AlertTintBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource CalloutInset}"
               AutomationProperties.Name="Alarm response">
         <StackPanel Spacing="{StaticResource Space6}">
@@ -231,8 +233,9 @@
           <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="If not handled: " /><Run Text="{Binding Consequence}" /></TextBlock>
           <Button Content="Acknowledge" Background="{ThemeResource CardBrush}" HorizontalAlignment="Left"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
-                  Visibility="{Binding CanAck, Converter={StaticResource Visible}}"
-                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}" />
+                  Visibility="{Binding CanAck, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                  Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}"
+                  AutomationProperties.Name="{Binding AcknowledgeName}" />
         </StackPanel>
       </Border>
 
@@ -250,14 +253,14 @@
       </StackPanel>
 
       <!-- Overview: what the equipment is doing. -->
-      <StackPanel Spacing="{StaticResource Space12}" Visibility="{Binding IsChecked, ElementName=TabOverview, Converter={StaticResource Visible}}">
+      <StackPanel Spacing="{StaticResource Space12}" Visibility="{Binding IsChecked, ElementName=TabOverview, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
         <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}"
               controls:Slots.ItemTemplate="{StaticResource ReadingTileTemplate}" controls:Slots.ItemsSource="{Binding Data.OverviewTiles}" />
         <TextBlock Text="Select a reading to compare it in the synchronized trends." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
       </StackPanel>
 
       <!-- Condition: how the equipment is holding up. -->
-      <StackPanel Spacing="{StaticResource Space12}" Visibility="{Binding IsChecked, ElementName=TabCondition, Converter={StaticResource Visible}}">
+      <StackPanel Spacing="{StaticResource Space12}" Visibility="{Binding IsChecked, ElementName=TabCondition, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
         <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}"
               controls:Slots.ItemTemplate="{StaticResource ReadingTileTemplate}" controls:Slots.ItemsSource="{Binding Data.ConditionTiles}" />
         <TextBlock Text="Vibration alarms above 4.5 mm/s." Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
@@ -265,9 +268,9 @@
 
       <!-- Control: plant mode, then the selected equipment's faceplate. Every device start or stop and
            every valve move is select-before-operate: the confirm bar asks before anything runs. -->
-      <StackPanel Spacing="{StaticResource Space16}" Visibility="{Binding IsChecked, ElementName=TabControl, Converter={StaticResource Visible}}">
+      <StackPanel Spacing="{StaticResource Space16}" Visibility="{Binding IsChecked, ElementName=TabControl, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
         <!-- xaml-lint: allow card - the select-before-operate confirm bar, not a content surface. -->
-        <Border DataContext="{Binding Data.Pending}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}}"
+        <Border DataContext="{Binding Data.Pending}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}, FallbackValue=Collapsed}"
                 Background="{Binding IsRefused, Converter={StaticResource Tone}, ConverterParameter='True=AlertTintBrush|False=AccentFillBrush'}"
                 CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource CalloutInset}" AutomationProperties.Name="Pending command">
           <StackPanel Spacing="{StaticResource Space8}">
@@ -276,11 +279,19 @@
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
               <Button Content="Confirm" Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource OnAccentBrush}"
                       Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
-                      Visibility="{Binding IsRefused, Converter={StaticResource Visible}, ConverterParameter=Invert}"
-                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ConfirmPending}" />
+                      Visibility="{Binding IsRefused, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}"
+                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ConfirmPending}"
+                      AutomationProperties.Name="{Binding ConfirmName}" />
+              <!-- Esc cancels from anywhere on the page while the bar shows (SPEC-OPERATIONS): the accelerator invokes this
+                   button's command. -->
               <Button Content="Cancel" Background="{ThemeResource CardBrush}"
                       Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
-                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.CancelPending}" />
+                      Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.CancelPending}"
+                      AutomationProperties.Name="{Binding CancelName}">
+                <Button.KeyboardAccelerators>
+                  <KeyboardAccelerator Key="Escape" />
+                </Button.KeyboardAccelerators>
+              </Button>
             </StackPanel>
           </StackPanel>
         </Border>
@@ -299,14 +310,14 @@
         </StackPanel>
 
         <!-- Devices on this equipment: start or stop through the confirm bar. -->
-        <StackPanel Spacing="{StaticResource Space2}" Visibility="{Binding Data.HasDevices, Converter={StaticResource Visible}}">
+        <StackPanel Spacing="{StaticResource Space2}" Visibility="{Binding Data.HasDevices, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <TextBlock Text="Equipment" Style="{StaticResource TypeSection}" />
           <StackPanel Spacing="{StaticResource Space2}"
                       controls:Slots.ItemTemplate="{StaticResource DeviceRowTemplate}" controls:Slots.ItemsSource="{Binding Data.Devices}" />
         </StackPanel>
 
         <!-- Setpoints for this equipment: type, then Apply. Ramped ones show where they are heading. -->
-        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowFanSpeed, Converter={StaticResource Visible}}">
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowFanSpeed, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
             <TextBlock Text="Fan speed" Style="{StaticResource TypeSection}" />
             <TextBlock Grid.Column="1" Text="{Binding Data.FanSpeedText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -315,13 +326,13 @@
             <NumberBox Value="{Binding Parent.FanSpeedDraft, Mode=TwoWay}" Minimum="60" Maximum="100" SmallChange="5" LargeChange="10"
                        MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
                        AutomationProperties.Name="Fan speed setpoint, percent (60 to 100)" />
-            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyFanSpeed}"
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyFanSpeed}" AutomationProperties.Name="Apply fan speed setpoint"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
           <TextBlock Text="{Binding Data.FanSpeedHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
         </StackPanel>
 
-        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowLoad, Converter={StaticResource Visible}}">
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowLoad, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
             <TextBlock Text="Load setpoint" Style="{StaticResource TypeSection}" />
             <TextBlock Grid.Column="1" Text="{Binding Data.LoadText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -330,7 +341,7 @@
             <NumberBox Value="{Binding Parent.LoadDraft, Mode=TwoWay}" Minimum="400" Maximum="700" SmallChange="5" LargeChange="20"
                        MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
                        AutomationProperties.Name="Load setpoint, megawatts (400 to 700)" />
-            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLoad}"
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLoad}" AutomationProperties.Name="Apply load setpoint"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
           <TextBlock Text="{Binding Data.LoadHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
@@ -342,12 +353,12 @@
             <NumberBox Value="{Binding Parent.LimitDraft, Mode=TwoWay}" Minimum="140" Maximum="180" SmallChange="1" LargeChange="5"
                        MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
                        AutomationProperties.Name="Inlet pressure alarm limit, bar (140 to 180)" />
-            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLimit}"
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyLimit}" AutomationProperties.Name="Apply inlet pressure alarm limit"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
         </StackPanel>
 
-        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowReactive, Converter={StaticResource Visible}}">
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowReactive, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
             <TextBlock Text="Reactive power setpoint" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
             <TextBlock Grid.Column="1" Text="{Binding Data.ReactiveText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -356,13 +367,13 @@
             <NumberBox Value="{Binding Parent.ReactiveDraft, Mode=TwoWay}" Minimum="0" Maximum="200" SmallChange="5" LargeChange="20"
                        MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
                        AutomationProperties.Name="Reactive power setpoint, megavolt-amperes reactive (0 to 200)" />
-            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyReactive}"
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyReactive}" AutomationProperties.Name="Apply reactive power setpoint"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
           <TextBlock Text="{Binding Data.ReactiveHint}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
         </StackPanel>
 
-        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowDamper, Converter={StaticResource Visible}}">
+        <StackPanel Spacing="{StaticResource Space6}" Visibility="{Binding Data.ShowDamper, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
             <TextBlock Text="Stack damper" Style="{StaticResource TypeSection}" />
             <TextBlock Grid.Column="1" Text="{Binding Data.DamperText}" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
@@ -371,7 +382,7 @@
             <NumberBox Value="{Binding Parent.DamperDraft, Mode=TwoWay}" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10"
                        MinHeight="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeight}}"
                        AutomationProperties.Name="Stack damper position, percent (0 to 100)" />
-            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyDamper}"
+            <Button Grid.Column="1" Content="Apply" Command="{Binding Parent.ApplyDamper}" AutomationProperties.Name="Apply stack damper position"
                     Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
           </Grid>
         </StackPanel>
@@ -393,9 +404,9 @@
       <StackPanel Spacing="{StaticResource Space8}" AutomationProperties.Name="Connected equipment">
         <TextBlock Text="Connected equipment" Style="{StaticResource TypeMicro}" />
         <TextBlock Text="Not connected to other equipment in this plant." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" TextWrapping="WrapWholeWords"
-                   Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, ConverterParameter=Invert}" />
+                   Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}" />
         <controls:FlowPanel HorizontalSpacing="{StaticResource Space8}" VerticalSpacing="{StaticResource Space8}"
-                            Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}}"
+                            Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                             controls:Slots.ItemTemplate="{StaticResource ConnectionChipTemplate}" controls:Slots.ItemsSource="{Binding Data.Connections}" />
       </StackPanel>
     </StackPanel>

@@ -45,7 +45,7 @@
           <TextBlock Text="No telemetry from plant 02" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
           <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}"
                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
-          <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" HorizontalAlignment="Center"
+          <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" HorizontalAlignment="Center" AutomationProperties.Name="Retry telemetry from plant 02"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
         </StackPanel>
       </DataTemplate>
@@ -60,7 +60,7 @@
           <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{ThemeResource AlertTextBrush}" HorizontalAlignment="Center" TextAlignment="Center" />
           <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}"
                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
-          <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" HorizontalAlignment="Center"
+          <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" HorizontalAlignment="Center" AutomationProperties.Name="Retry telemetry from plant 02"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
         </StackPanel>
       </DataTemplate>
@@ -138,11 +138,11 @@
                                    IsChecked="{Binding Data.IsAlarms, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Alarms">
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource AlertBrush}" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
-                                   Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}}" />
+                                   Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                           <TextBlock Text="Active alarms" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                           <TextBlock Text="{Binding Data.ActiveAlarmCount}" Style="{StaticResource ControlLabel}" FontFamily="{StaticResource SansMediumFont}"
                                      Foreground="{ThemeResource AlertTextBrush}" VerticalAlignment="Center"
-                                     Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}}" />
+                                     Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                         </StackPanel>
                       </RadioButton>
                     </controls:FlowPanel>
