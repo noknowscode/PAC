@@ -3,6 +3,7 @@ using PacConsole.Core.Persistence;
 using PacConsole.Core.Telemetry;
 using Uno.Extensions.Reactive;
 using PacConsole.Presentation;
+using PacConsole.Services;
 using Uno.Extensions.Toolkit;
 
 namespace PacConsole.Tests.Model;
@@ -21,6 +22,8 @@ internal sealed class ModelHarness : IAsyncDisposable
 
     public FakeJournal Journal { get; }
 
+    public FakeFullScreen FullScreen { get; } = new();
+
     public ConsoleModel Model { get; }
 
     /// <param name="journal">A real journal for relaunch tests; by default, an in-memory one over <paramref name="restored"/>.</param>
@@ -37,7 +40,7 @@ internal sealed class ModelHarness : IAsyncDisposable
         // As the app's DI does: the simulated plant resumes at the saved tick plus the time since.
         Telemetry = new SimulatedTelemetry(Time, used.Restored?.ResumeTick(Time.GetUtcNow(), SimulatedTelemetry.TickInterval) ?? Simulation.StartTick);
         Themes = new FakeThemes(theme);
-        Model = new ConsoleModel(telemetry ?? Telemetry, Time, Themes, used);
+        Model = new ConsoleModel(telemetry ?? Telemetry, Time, Themes, used, FullScreen);
     }
 
     /// <summary>Advances the fake clock one telemetry interval and lets the stream deliver.</summary>
@@ -104,6 +107,20 @@ internal sealed class FakeThemes(AppTheme theme) : IThemeService
         Theme = theme;
         ThemeChanged?.Invoke(this, theme);
         return Task.FromResult(true);
+    }
+}
+
+/// <summary>Counts the model's full-screen switches.</summary>
+internal sealed class FakeFullScreen : IFullScreen
+{
+    public int Toggles { get; private set; }
+
+    public bool IsSupported => true;
+
+    public Task ToggleAsync()
+    {
+        Toggles++;
+        return Task.CompletedTask;
     }
 }
 

@@ -18,9 +18,6 @@ public partial class App : Application
     }
 
     protected Window? MainWindow { get; private set; }
-
-    /// <summary>The app window, for view glue that changes the window itself (full screen).</summary>
-    internal static Window? Shell { get; private set; }
     protected IHost? Host { get; private set; }
 
     [SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uno.Extensions APIs are used in a way that is safe for trimming in this template context.")]
@@ -54,7 +51,7 @@ public partial class App : Application
     {
         var builder = this.CreateBuilder(args)
             .UseToolkitNavigation()
-            .Configure(host => host
+            .Configure((host, window) => host
 #if DEBUG
                 .UseEnvironment(Environments.Development)
 #endif
@@ -73,6 +70,11 @@ public partial class App : Application
                     services.AddSingleton(TimeProvider.System);
                     services.AddSingleton<OperatorJournal>();
                     services.AddSingleton<IOperatorJournal>(sp => sp.GetRequiredService<OperatorJournal>());
+#if __DESKTOP__ || WINDOWS
+                    services.AddSingleton<IFullScreen>(new WindowFullScreen(window));
+#else
+                    services.AddSingleton<IFullScreen>(new NoFullScreen());
+#endif
                     // The simulated plant carries on from the saved record's tick, plus the time the console was closed.
                     services.AddSingleton<ITelemetryService>(sp => new SimulatedTelemetry(
                         sp.GetRequiredService<TimeProvider>(),
@@ -88,7 +90,6 @@ public partial class App : Application
                 .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
             );
         MainWindow = builder.Window;
-        Shell = MainWindow;
         MainWindow.Title = "PAC Control Console";
         // Decorative motion (the plant's fans and flow, the live dot) stops while the window is hidden or minimized.
         MainWindow.VisibilityChanged += (_, e) => Controls.AmbientClock.HostVisible = e.Visible;

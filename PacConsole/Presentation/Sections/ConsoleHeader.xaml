@@ -84,8 +84,8 @@
           </Button.Flyout>
         </Button>
         <Button Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource IconButtonTouch}, Wide={StaticResource IconButton}}"
-                Command="{utu:AncestorBinding AncestorType=Page, Path=ToggleFullScreen}"
-                Visibility="{utu:AncestorBinding AncestorType=Page, Path=FullScreenVisibility}"
+                Command="{Binding Parent.ToggleFullScreen}"
+                Visibility="{Binding Parent.CanGoFullScreen, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                 AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
           <FontIcon Glyph="&#xE740;" FontSize="{StaticResource IconSizeSm}" />
         </Button>

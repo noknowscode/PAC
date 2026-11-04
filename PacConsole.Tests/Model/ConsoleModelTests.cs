@@ -240,6 +240,18 @@ public class ConsoleModelTests
     }
 
     [Test]
+    public async Task Full_screen_goes_to_the_window_service_each_press()
+    {
+        await using var h = new ModelHarness();
+
+        h.Model.CanGoFullScreen.Should().BeTrue("the header offers the button where the window service can switch");
+        await h.Model.ToggleFullScreen();
+        await h.Model.ToggleFullScreen();
+
+        h.FullScreen.Toggles.Should().Be(2, "each press switches between full screen and the normal window");
+    }
+
+    [Test]
     public async Task Confirm_runs_the_selected_command_and_Cancel_drops_it()
     {
         await using var h = new ModelHarness();

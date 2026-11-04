@@ -3,6 +3,7 @@ using PacConsole.Core.Operations;
 using PacConsole.Core.Persistence;
 using PacConsole.Core.Plant;
 using PacConsole.Core.Telemetry;
+using PacConsole.Services;
 
 namespace PacConsole.Presentation;
 
@@ -19,15 +20,17 @@ public partial record ConsoleModel
     private readonly TimeProvider _time;
     private readonly IThemeService _themes;
     private readonly IOperatorJournal _journal;
+    private readonly IFullScreen _fullScreen;
     private readonly PlantOps _restoredOps;
     private long _version;
 
-    public ConsoleModel(ITelemetryService telemetry, TimeProvider time, IThemeService themes, IOperatorJournal journal)
+    public ConsoleModel(ITelemetryService telemetry, TimeProvider time, IThemeService themes, IOperatorJournal journal, IFullScreen fullScreen)
     {
         _telemetry = telemetry;
         _time = time;
         _themes = themes;
         _journal = journal;
+        _fullScreen = fullScreen;
         _restoredOps = journal.Restored?.Ops ?? PlantOps.Initial;
         // A console closed while held opens held: the stream starts paused at the plant's resumed tick.
         if (journal.Restored?.Mode == ControlMode.Hold) _telemetry.IsPaused = true;
@@ -160,6 +163,12 @@ public partial record ConsoleModel
         });
         await Theme.SetAsync(choice, ct);
     }
+
+    /// <summary>Whether the header offers Full screen (desktop and WinAppSDK windows only).</summary>
+    public bool CanGoFullScreen => _fullScreen.IsSupported;
+
+    /// <summary>The header's Full screen button: the window between full screen and its normal presenter.</summary>
+    public async ValueTask ToggleFullScreen() => await _fullScreen.ToggleAsync();
 
     // ---------------------------------------------------------------- operations (SPEC-OPERATIONS.md)
 
