@@ -1,0 +1,14 @@
+watching 1920x1200
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_FULLSCREEN window=0x200002
+full=0
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002
+_NET_WM_STATE action=1 atom=_NET_WM_STATE_FULLSCREEN window=0x200002
+full=1
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_FULLSCREEN window=0x200002
+full=0
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002
+_NET_WM_STATE action=0 atom=_NET_WM_STATE_ABOVE window=0x200002

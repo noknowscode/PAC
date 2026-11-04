@@ -90,10 +90,11 @@ Exit code 0 both times. The surviving allowances carry their reason at the site:
 
 ### Fault handling
 
-- `Rendering/SolidRenderer.cs:586` and `:828`: the still-layer and part-image rasterizers ran as fire-and-forget
+- The still-layer and part-image rasterizers (then in `Rendering/SolidRenderer.cs`) ran as fire-and-forget
   `Task.Run`. An exception was dropped unobserved, and it leaked the images already made (and, for part images, the
   recordings after the failing one). Each worker now catches, frees what it made and logs through the Uno ambient
-  logger (`Failed`, `SolidRenderer.cs:872`); the plant keeps drawing those runs as vectors. `6546128`.
+  logger; the plant keeps drawing those runs as vectors. `6546128`. After the splits the workers are
+  `StillRunCache.cs:168` and `PartImageCache.cs:106`, and the report is `LayerRaster.Failed` (`LayerRaster.cs:33`).
   Verified with a fault injected into `Rasterize` (not committed): both workers logged
   `Rasterizing the plant's cached layers failed; they stay vector drawings`, and the plant, a lift included, drew
   (`docs/audit/2026-11-04-uno-audit/injected-raster-fault.png`).
@@ -156,11 +157,12 @@ clicks. Screenshots in `docs/audit/2026-11-04-uno-audit/`:
 
 ## Remaining
 
-Updated after the A pass (2026-11-04, `40bae01`): every item but the licence decision is done.
+Updated after the A pass (2026-11-04, `40bae01`) and A pass 2: every item but the licence decision is done.
 
 | Item | Status |
 |---|---|
-| Split `Rendering/SolidRenderer.cs` (1,227 lines, five jobs) | Done, `5500a52`: `SolidRenderer` (134 lines) orchestrates `SolidGeometry` (323), `PartPainter` (249), `StillFrameCache` (390) and `SystemMotion` (214), with `SolidPalette.cs` (95). Ten reference frames drawn before the split match after it (`PacConsole.Tests/Rendering`). |
+| Split `Rendering/SolidRenderer.cs` (1,227 lines, five jobs) | Done, `5500a52`: `SolidRenderer` (134 lines) orchestrates `SolidGeometry` (323), `PartPainter` (249), `StillFrameCache` (390) and `SystemMotion` (214), with `SolidPalette.cs` (95). Ten reference frames drawn before the split match after it (`PacConsole.Tests/Rendering`). A pass 2 (`9f9181e`) split `StillFrameCache`'s two caches: `StillRunCache` (235), `PartImageCache` (148) and `LayerRaster` (38); `SolidRenderer` is 129. |
+| Split `PlantSolids` (998 lines in two partial files, four jobs) | Done in A pass 2, `a8c7e43`: the model `PlantSolids` (71); `PartKit` (136), `UnitSolids` (324) and `CycleSolids` (276) build it; `PlantFraming` (63), `UnitPicker` (45) and `PartSystems` (39) read it. Pinned by `Fixtures/framing.txt` (`7b9a251`). |
 | Split the `PlantViewport` code-behind (654 lines) | Done, `69a98ad`: the camera rules are `Core/Geometry/CameraRig` (206 lines, 11 tests); `FrameClock` (114) and `TagOverlay` (112) sit beside the control (396); the switcher, thumbnails and orbit toggles bind `RestingPreset` and `IsAutoOrbit` two-way and the camera tools bind commands, which removed the six Loaded/Unloaded/Click handlers (4 `allow codebehind` left, from 15). |
 | `ConsoleModel` has no tests | Done, `2d5afbb`: the test project references the app's plain `net10.0` build (SPEC.md, Decisions, A pass): 33 page-model tests at the time (25 `ConsoleModelTests`, 8 `OperatorPersistenceTests`), 35 after A pass 2 (26 and 9), plus 12 store tests. |
 | Orbit frames rebuild all part geometry | Done, `28b34c6`: scratch buffers for the hull sort, the lathe's rings and silhouette, and the depth sort's pairs and queue: 1.2 MB a frame (from about 2.6 MB), checked by `OrbitAllocationTests`. |

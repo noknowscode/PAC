@@ -329,3 +329,10 @@ From *Build gates* in `~/.claude/rules/uno-scaffolding.md`: this is a change to 
   `SolidPalette.For` from `Styles/Palette.xaml` and `Styles/Tokens.xaml`; `Shim.cs` stands in for the app types those
   files read. Checked: it builds and renders `08-plant-paper`, `12-trb` and `grid-Alarms` here. The prints already in
   `media/art/` are not re-rendered: they keep the look of the palette they were made with.
+- **Full screen is a model command over an injected window service.** `IFullScreen` wraps the window that
+  `IApplicationBuilder.Configure` hands over and is registered in DI; `ConsoleModel.ToggleFullScreen` and
+  `CanGoFullScreen` replace the page's command class and the static `App.Shell`. Reason: the review's service-locator
+  finding; the same shape as the theme switch over `IThemeService`. Tradeoff: the model takes a fifth dependency, and a
+  head that cannot go full screen registers `NoFullScreen`, so the header hides the button there.
+- **The plant model's framing and hit results are pinned** in `PacConsole.Tests/Fixtures/framing.txt`
+  (`PAC_PIN_WRITE=write` redraws it, only for an intended change), like the renderer's reference frames.

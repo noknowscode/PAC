@@ -1,9 +1,10 @@
 # Completeness audit: PacConsole (2026-11-04, Uno.Sdk 7.0.0-dev.115, heads: desktop, wasm, android, ios, winappsdk)
 
-Audited head: `feat/production-readiness` at `9fdaae1`; re-checked after the A pass at `40bae01` (section below). The
-audit's original findings follow unchanged below the re-check, each marked with what became of it.
+Audited head: `feat/production-readiness` at `9fdaae1`; re-checked after the A pass at `40bae01` and after A pass 2
+(sections below). The audit's original findings follow unchanged below the re-checks, each marked with what became of
+it.
 
-Verdict: **Complete with gaps** (0 Blockers, 0 functional Majors, 3 head Majors, 1 Minor)
+Verdict: **Complete with gaps** (0 Blockers, 0 functional Majors, 3 head Majors, 1 Minor), unchanged by A pass 2
 
 Safe to show (`R` on desktop, X11): the CLG-05 alarm story end to end, select-before-operate with Confirm, Cancel, Esc,
 refusal and expiry, typed setpoints with Apply (Auto ramp, Manual at once, out-of-range clamped), Hold and resume,
@@ -12,6 +13,40 @@ cursor, Latest), shift notes, a telemetry fault with Retry, the theme kept acros
 relaunch, and the 1440, 900 and 390 px layouts. In Chromium (Release WebAssembly): select-before-operate with Confirm and
 Esc, and the log kept across a page reload.
 Keep off screen: nothing known.
+
+## Re-check after A pass 2 (2026-11-04)
+
+A pass 2 had a closed scope: the code review's list (`CODE-REVIEW-A-PASS-2026-11-04`, uno-lab). No feature changed.
+
+### Fixed
+
+| Review item | Fix | Commit | Evidence |
+|---|---|---|---|
+| `PlantSolids` (998 lines) also framed the camera, hit-tested units and decided system membership | The model `PlantSolids` (71 lines); `PartKit`, `UnitSolids`, `CycleSolids` build it; `PlantFraming`, `UnitPicker`, `PartSystems` read it; the unused `Sphere` went | `7b9a251` (pins), `a8c7e43` | `Fixtures/framing.txt` (5 view projections, 9 fits, 4 hit grids of 62×38 points, one with a unit lifted) unchanged; R desktop: a click on the turbine's drawing selects TRB-04, hover outlines GEN-03 (`2026-11-04-a-pass2/desktop-click-selects-trb.png`, `desktop-hover-outline-gen.png`); R Chromium: the same click (`wasm-click-selects-trb-no-fullscreen.png`) |
+| `StillFrameCache` held two caches with their own workers | `StillRunCache`, `PartImageCache`, `LayerRaster` | `9f9181e` | Ten renderer reference frames unchanged; R: the lift on a selection draws |
+| Code-behind reached the window through static `App.Shell` | `IFullScreen` over the window `IApplicationBuilder.Configure` hands over, injected into `ConsoleModel` (`ToggleFullScreen`, `CanGoFullScreen`) | `411a7a5` | Model test; R desktop: Full screen sends `_NET_WM_STATE` add, the window goes 1440×900 → 1920×1200 (Widest layout), the second press restores it (`desktop-fullscreen-requests.txt`, `desktop-fullscreen-1920x1200-half.png`); R Chromium: the button is not offered |
+| The art capture tool did not build | Fixed (small): links the split renderer, SkiaSharp 4.151.1, `SolidPalette.For` over `Palette.xaml` | `70823ad` | Built and rendered three shots (SPEC.md, Decisions, A pass 2) |
+| Duplication: `AnimationsEnabled` twice; two always-on ICommand classes; `Compose` took setpoints beside the ops | `MotionPreference`; the page's command class went with `App.Shell`; `Compose` reads `ops.Setpoints` | `4c7047b`, `411a7a5`, `bb9d5b0` | Tests |
+| `null!` in `SolidRenderer`, `StillFrameCache.TryPartImage`, `PlantCanvas` | Constructor, `[NotNullWhen(true)]`, a local | `48ceb35` | `PartImageCacheTests` |
+| The journal's open caught two exception types | Any fault but cancellation starts fresh, is logged, and every save then reports failure | `0121f74` | Test with an `InvalidOperationException` from the folder; R desktop: an `operator` file in place of the folder logs "could not be opened; the console starts fresh" and the log band says "Not saved on this device" after a note (`desktop-storage-fault-not-saved.png`) |
+| Two summaries on `SelectDevice` | One | `cfe15d0` | |
+| Docs: SPEC.md capability table; "41 model tests" | The preview is omitted, fan speed and Light are built; 33 page-model and 12 store tests at the A pass | `84f4b73` | |
+
+### Workflows re-run
+
+| Workflow | desktop (X11) | wasm (Chromium) |
+|---|---|---|
+| 1. CLG-05 story + note | R: select by clicking the drawing, Acknowledge, Start cell 6 + Confirm, Stop cell 3 + Confirm, a note; after a relaunch the log holds all six lines (`desktop-log-after-relaunch.png`) | Partial: R for Start cell 6 with Confirm |
+| 2. Select-before-operate | R: Confirm, Esc (`desktop-confirm-start-cell6.png`, `desktop-esc-cancels.png`) | R: Confirm, then Esc on Stop cell 3 (`wasm-confirm-start6-then-esc.png`) |
+| 5. Plant | R: click and hover selection, full screen re-frames the plant, 390 px | R: click selection |
+| 7. Theme | R: Graphite from the menu (`desktop-graphite-menu-switch.png`) | X |
+
+### Counts now
+
+Unchanged: 0 Blockers, 0 functional Majors, 3 head Majors (iOS and WinAppSDK built by CI and never run; WebAssembly
+proven for launch, select-before-operate, click selection and the log across a reload), 1 Minor (headless Chromium
+draws about one frame a second). Tests: 364 (`dotnet test PacConsole.Tests -p:PacTargetFrameworks=net10.0`), of which
+35 drive the page model or the journal (26 `ConsoleModelTests`, 9 `OperatorPersistenceTests`) and 12 the store.
 
 ## Re-check after the A pass (2026-11-04, `40bae01`)
 
