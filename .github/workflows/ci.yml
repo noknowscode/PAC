@@ -302,7 +302,154 @@ jobs:
           finish() {
             [ -n "${LOGCAT_PID:-}" ] && kill "$LOGCAT_PID" 2>/dev/null
             { echo "### Android emulator smoke test: $PKG"; echo; echo "| Check | Result | Detail |"; echo "|---|---|---|"
-              printf '%s\n' "${RESULTS[@]}"; echo; echo '
+              printf '%s\n' "${RESULTS[@]}"; echo; echo '```'; cat "$OUT/timing.txt"; echo '```'; } > "$OUT/summary.md"
+            cat "$OUT/summary.md"; cat "$OUT/summary.md" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+            exit "$FAILED"
+          }
+
+          note emulator_ready_after_job_start_s $(( $(date +%s) - $(cat "$RUNNER_TEMP/smoke-job-start") ))
+          note device "$(adb shell getprop ro.product.model | tr -d '\r'), API $(adb shell getprop ro.build.version.sdk | tr -d '\r'), $(adb shell getprop ro.product.cpu.abi | tr -d '\r'), $(adb shell wm size | tr -d '\r' | tail -n 1)"
+
+          # The APK: the signed one from the Android job's artifact, with x86_64 native code.
+          APK=$(find "$GITHUB_WORKSPACE/apk" -name '*-Signed.apk' | head -n 1)
+          [ -z "$APK" ] && APK=$(find "$GITHUB_WORKSPACE/apk" -name '*.apk' | head -n 1)
+          if [ -z "$APK" ]; then check "APK" fail "no .apk in the $APP_ARTIFACT artifact"; finish; fi
+          ABIS=$(unzip -Z1 "$APK" 'lib/*' 2>/dev/null | cut -d/ -f2 | sort -u | tr '\n' ' ')
+          note apk "$(basename "$APK"), $(stat -c%s "$APK") bytes, ABIs: $ABIS"
+          case " $ABIS " in *" x86_64 "*) check "APK has x86_64" pass "$ABIS" ;; *) check "APK has x86_64" fail "ABIs: $ABIS (RuntimeIdentifiers needs android-x64)"; finish ;; esac
+
+          # Logcat from before the install to the end, streamed so nothing rotates out.
+          adb logcat -c
+          adb logcat -v threadtime > "$OUT/logcat-full.txt" 2>&1 &
+          LOGCAT_PID=$!
+          # A system process on the busy emulator can raise an ANR or crash dialog over the app (run 10: the dump held
+          # only another package's 12 nodes for 90 s). Hide those dialogs; the app's own crashes and ANRs are still caught
+          # from logcat and the process state below.
+          adb shell settings put global hide_error_dialogs 1
+          adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1
+
+          t=$(now_ms)
+          if timeout 300 adb install -r -g "$APK" > "$OUT/install.txt" 2>&1; then
+            note install_ms $(( $(now_ms) - t )); check "Install" pass "$(tail -n 1 "$OUT/install.txt" | tr -d '\r')"
+          else
+            check "Install" fail "$(tail -n 2 "$OUT/install.txt" | tr -d '\r' | tr '\n' ' ')"; finish
+          fi
+
+          # The launcher activity, matched against APP_ACTIVITY, then launched explicitly.
+          LAUNCHER=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -n 1)
+          note launcher "$LAUNCHER"
+          case "$APP_ACTIVITY" in
+            *.*) COMPONENT="$PKG/$APP_ACTIVITY" ;;
+            *) if [ "${LAUNCHER%%/*}" = "$PKG" ] && [ "${LAUNCHER##*.}" = "$APP_ACTIVITY" ]; then COMPONENT="$LAUNCHER"
+               else check "Launcher activity" fail "the launcher is '$LAUNCHER', not a class named $APP_ACTIVITY"; COMPONENT="$PKG/.$APP_ACTIVITY"; fi ;;
+          esac
+          LAUNCH_EPOCH=$(date +%s)
+          adb shell am start -W -n "$COMPONENT" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER 2>&1 | tr -d '\r' > "$OUT/am-start.txt"
+          cat "$OUT/am-start.txt"
+          # `am start -W` stops waiting after 10 s. A cold Uno start on the software-rendered emulator draws its first
+          # frame later than that, so "Status: timeout" is not a failure; the checks below decide whether the app came up.
+          STATUS=$(sed -n 's/^Status: //p' "$OUT/am-start.txt")
+          note am_start "status ${STATUS:-none}, TotalTime $(sed -n 's/^TotalTime: //p' "$OUT/am-start.txt") ms, WaitTime $(sed -n 's/^WaitTime: //p' "$OUT/am-start.txt") ms"
+          if [ -n "$STATUS" ] && ! grep -qi '^Error' "$OUT/am-start.txt"; then
+            check "Launch" pass "$COMPONENT (am start: $STATUS)"
+          else
+            check "Launch" fail "$COMPONENT: $(grep -i -m 1 'error' "$OUT/am-start.txt")"
+          fi
+
+          # Content: the marker in the accessibility tree, polled until it shows or the timeout passes. When another
+          # package's window is on top, it is logged once and dismissed (its Wait/Close/OK button, else CLOSE_SYSTEM_DIALOGS).
+          FOUND=""; COVERED=0
+          deadline=$(( LAUNCH_EPOCH + APP_MARKER_TIMEOUT ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            adb shell rm -f /sdcard/window.xml
+            timeout 30 adb shell uiautomator dump /sdcard/window.xml > "$OUT/uiautomator.txt" 2>&1
+            adb exec-out cat /sdcard/window.xml > "$OUT/window.xml" 2>/dev/null
+            # Only the app's own nodes count, not the launcher's or a notification's.
+            if [ -n "$APP_CONTENT_MARKER" ] && grep -oE '<node [^>]*>' "$OUT/window.xml" | grep -F "package=\"$PKG\"" | grep -qiE "$APP_CONTENT_MARKER"; then
+              FOUND=$(( $(date +%s) - LAUNCH_EPOCH )); break
+            fi
+            [ -z "$APP_CONTENT_MARKER" ] && break
+            # A failed dump leaves no <node> (exec-out returns cat's error text instead), which is not a covering window.
+            if grep -q '<node ' "$OUT/window.xml" && ! grep -qF "package=\"$PKG\"" "$OUT/window.xml"; then
+              COVERED=$(( COVERED + 1 ))
+              if [ "$COVERED" -eq 1 ]; then
+                cp "$OUT/window.xml" "$OUT/window-covering.xml"
+                echo "::group::Window on top is not $PKG ($(( $(date +%s) - LAUNCH_EPOCH ))s after launch)"
+                python3 -I "$BIN/window_nodes.py" list "$OUT/window.xml" '*'
+                echo "::endgroup::"
+              fi
+              TAP=$(python3 -I "$BIN/window_nodes.py" dismiss "$OUT/window.xml" "$PKG")
+              if [ -n "$TAP" ]; then echo "dismissing a dialog: tap $TAP"; adb shell input tap $TAP
+              else adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1; fi
+            fi
+            sleep 3
+          done
+          note window_covered_polls "$COVERED"
+          note window_nodes "total $(grep -o '<node ' "$OUT/window.xml" | wc -l), app $(grep -o "package=\"$PKG\"" "$OUT/window.xml" | wc -l)"
+          echo "::group::Window dump: the app's named nodes"
+          python3 -I "$BIN/window_nodes.py" list "$OUT/window.xml" "$PKG" | tee "$OUT/window-nodes.txt"
+          echo "::endgroup::"
+          if [ -n "$APP_CONTENT_MARKER" ]; then
+            if [ -n "$FOUND" ]; then note content_marker_after_launch_s "$FOUND"; check "Content marker (window dump)" pass "/$APP_CONTENT_MARKER/ after ${FOUND}s"
+            else check "Content marker (window dump)" fail "/$APP_CONTENT_MARKER/ not in the window dump within ${APP_MARKER_TIMEOUT}s ($(tail -n 1 "$OUT/uiautomator.txt" | tr -d '\r'))"; fi
+          fi
+
+          # Settle, then: still running, still in front, and a frame that is not blank.
+          elapsed=$(( $(date +%s) - LAUNCH_EPOCH ))
+          [ "$elapsed" -lt "$APP_SETTLE_SECONDS" ] && sleep $(( APP_SETTLE_SECONDS - elapsed ))
+          APP_PID=$(adb shell pidof "$PKG" | tr -d '\r')
+          if [ -n "$APP_PID" ]; then check "Process alive" pass "pid $APP_PID, $(( $(date +%s) - LAUNCH_EPOCH ))s after launch"
+          else check "Process alive" fail "$PKG is not running $(( $(date +%s) - LAUNCH_EPOCH ))s after launch"; fi
+          RESUMED=$(adb shell dumpsys activity activities | tr -d '\r' | grep -m 1 -E 'topResumedActivity|mResumedActivity' | sed 's/^ *//')
+          if echo "$RESUMED" | grep -q "$PKG/"; then check "In the foreground" pass "$RESUMED"; else check "In the foreground" fail "${RESUMED:-no resumed activity}"; fi
+          note focused_window "$(adb shell dumpsys window | tr -d '\r' | grep -m 1 'mCurrentFocus' | sed 's/^ *//')"
+          adb exec-out screencap -p > "$OUT/screenshot.png"
+          adb exec-out screencap > "$OUT/screen.raw"
+          if METRICS=$(python3 -I "$BIN/screen_check.py" "$OUT/screen.raw" "$OUT"); then R=pass; else R=fail; fi
+          echo "$METRICS"
+          check "First frame not blank" "$R" "$(echo "$METRICS" | head -n 1)"
+          rm -f "$OUT/screen.raw"
+
+          # Logcat: crashes and unhandled exceptions in the app's processes, or system lines naming the package.
+          kill "$LOGCAT_PID" 2>/dev/null; wait "$LOGCAT_PID" 2>/dev/null; LOGCAT_PID=""
+          PIDS=$( { grep -oE "Start proc [0-9]+:$PKG_RE/" "$OUT/logcat-full.txt" | sed -E 's/Start proc ([0-9]+):.*/\1/'; echo "$APP_PID"; } | grep . | sort -u | tr '\n' ' ')
+          note app_pids "$PIDS"
+          note first_frame_displayed "$(grep -m 1 -oE "Displayed $PKG_RE/[^ ]+( for user [0-9]+)?: \+[0-9a-z]+" "$OUT/logcat-full.txt" | sed 's/.*: +//')"
+          awk -v pids=" $PIDS " 'index(pids, " " $3 " ") > 0' "$OUT/logcat-full.txt" > "$OUT/logcat-app.txt"
+          { grep -E 'FATAL EXCEPTION|UNHANDLED EXCEPTION|[Uu]nhandled [Ee]xception|JavaProxyThrowable|Fatal signal' "$OUT/logcat-app.txt"
+            grep -E "AndroidRuntime.*Process: $PKG_RE|>>> $PKG_RE <<<|Process $PKG_RE \(pid [0-9]+\) has died|ANR in $PKG_RE" "$OUT/logcat-full.txt"; } > "$OUT/logcat-crash.txt"
+          note logcat_lines "full $(wc -l < "$OUT/logcat-full.txt"), app $(wc -l < "$OUT/logcat-app.txt"), crash $(wc -l < "$OUT/logcat-crash.txt")"
+          if [ -s "$OUT/logcat-crash.txt" ]; then check "No crash in logcat" fail "$(head -n 1 "$OUT/logcat-crash.txt")"
+          else check "No crash in logcat" pass "no FATAL EXCEPTION, unhandled exception, fatal signal or ANR for $PKG"; fi
+          if [ -n "$APP_LOGCAT_MARKER" ]; then
+            if grep -qE "$APP_LOGCAT_MARKER" "$OUT/logcat-app.txt"; then check "Logcat marker" pass "$(grep -m 1 -E "$APP_LOGCAT_MARKER" "$OUT/logcat-app.txt")"
+            else check "Logcat marker" fail "/$APP_LOGCAT_MARKER/ not in the app's logcat"; fi
+          fi
+          echo "::group::App logcat (first 120 lines)"; head -n 120 "$OUT/logcat-app.txt"; echo "::endgroup::"
+          # Other processes' ANRs and crashes: not the app's failure, but the usual cause of a covered screen.
+          grep -E "ANR in |FATAL EXCEPTION|AndroidRuntime: Process: |Fatal signal|isn't responding|keeps stopping|Showing (crash|ANR) dialog" "$OUT/logcat-full.txt" | grep -v "$PKG_RE" > "$OUT/logcat-system.txt"
+          note system_anr_crash_lines "$(wc -l < "$OUT/logcat-system.txt")"
+          echo "::group::Other processes: ANR and crash lines (first 30)"; head -n 30 "$OUT/logcat-system.txt"; echo "::endgroup::"
+          finish
+          SH
+      - name: Install, launch and check
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.EMULATOR_API }}
+          target: ${{ env.EMULATOR_TARGET }}
+          arch: x86_64
+          profile: ${{ env.EMULATOR_PROFILE }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash "$RUNNER_TEMP/smoke-bin/smoke.sh"
+      - name: Upload the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_ARTIFACT }}-emulator-smoke
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: warn
 
   ios:
     name: iOS (simulator build check)
