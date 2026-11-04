@@ -84,15 +84,14 @@ public static class DepthOrder
             depth = cache.Depth;
             after = cache.Constraints(volumes, p);
         }
-        var waiting = new int[n];
+        var (waiting, done, ready) = cache is null ? (new int[n], new bool[n], new PriorityQueue<int, float>()) : cache.Work(n);
         foreach (var list in after) foreach (var j in list) waiting[j]++;
 
         // Kahn's algorithm, farthest first among the ready parts; a cycle (only possible for
         // interpenetrating parts) is broken at the farthest part still waiting.
-        var ready = new PriorityQueue<int, float>();
         for (var i = 0; i < n; i++) if (waiting[i] == 0) ready.Enqueue(i, depth[i]);
+        // The order is new each time: the renderer keeps it and tells orders apart by reference.
         var order = new int[n];
-        var done = new bool[n];
         for (var k = 0; k < n; k++)
         {
             int next;
@@ -270,7 +269,8 @@ public static class DepthOrder
 /// <summary>
 /// What <see cref="DepthOrder.Sort"/> worked out at one camera: each part's silhouette and depth, and
 /// the order of every pair. A lift moves one unit's parts, so a lift frame redoes the pairs that
-/// involve them (a few thousand of ~44,000) instead of all of them. A new camera starts over.
+/// involve them (a few thousand of ~44,000) instead of all of them. A new camera starts over in the
+/// same buffers, so an orbit, a new camera every frame, allocates none of them again.
 /// </summary>
 public sealed class DepthCache
 {
@@ -288,14 +288,22 @@ public sealed class DepthCache
     {
         var n = volumes.Count;
         var camera = (p.SinYaw, p.CosYaw, p.SinElevation, p.CosElevation, p.Scale, p.CenterX, p.CenterY);
-        if (camera != _camera || n != _volumes.Length)
+        var fresh = false;
+        if (n != _volumes.Length)
         {
-            _camera = camera;
             _volumes = new Volume?[n];
             _hulls = new Vec2[n][];
             _boxes = new (float, float, float, float)[n];
             Depth = new float[n];
             _pairs = new sbyte[n * n];
+            fresh = true;
+        }
+        if (camera != _camera || fresh)
+        {
+            _camera = camera;
+            Array.Clear(_volumes);
+            Array.Fill(_pairs, Unknown);
+            fresh = true;
         }
         for (var i = 0; i < n; i++)
         {
@@ -304,6 +312,7 @@ public sealed class DepthCache
             _hulls[i] = DepthOrder.ScreenHull(volumes[i], p);
             _boxes[i] = DepthOrder.Box(_hulls[i]);
             Depth[i] = p.Depth(volumes[i].Centre);
+            if (fresh) continue;
             for (var j = 0; j < n; j++)
             {
                 _pairs[i * n + j] = Unknown;
@@ -312,12 +321,36 @@ public sealed class DepthCache
         }
     }
 
+    private List<int>[] _after = [];
+    private int[] _waiting = [];
+    private bool[] _done = [];
+    private readonly PriorityQueue<int, float> _ready = new();
+
+    /// <summary>The sort's working arrays, cleared, for <paramref name="n"/> parts.</summary>
+    internal (int[] Waiting, bool[] Done, PriorityQueue<int, float> Ready) Work(int n)
+    {
+        if (_waiting.Length != n)
+        {
+            _waiting = new int[n];
+            _done = new bool[n];
+        }
+        Array.Clear(_waiting);
+        Array.Clear(_done);
+        _ready.Clear();
+        return (_waiting, _done, _ready);
+    }
+
     /// <summary>The same lists as <see cref="DepthOrder.Constraints"/>, in the same order, from the cached pairs.</summary>
     internal List<int>[] Constraints(IReadOnlyList<Volume> volumes, OrbitProjection p)
     {
         var n = volumes.Count;
-        var after = new List<int>[n];
-        for (var i = 0; i < n; i++) after[i] = [];
+        if (_after.Length != n)
+        {
+            _after = new List<int>[n];
+            for (var i = 0; i < n; i++) _after[i] = [];
+        }
+        var after = _after;
+        foreach (var list in after) list.Clear();
         for (var i = 0; i < n; i++)
         {
             for (var j = i + 1; j < n; j++)
