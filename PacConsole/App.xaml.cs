@@ -137,7 +137,8 @@ public partial class App : Application
     /// switch IThemeService flips, without saving it. <c>--pac-system=&lt;PlantSystem&gt;</c>, <c>--pac-unit=&lt;code&gt;</c>
     /// and <c>--pac-tab=overview|condition|control</c> drive the systems filter, the selection and the inspector tab
     /// through the page's own commands. <c>--pac-section=inspector|trends|log|end</c> scrolls the page to that band and
-    /// keeps it there across window resizes. Each step prints a <c>VERIFY</c> line to stderr.
+    /// keeps it there across window resizes. <c>--pac-focus=log</c> prints each element that takes focus, for a Tab walk.
+    /// Each step prints a <c>VERIFY</c> line to stderr.
     /// </summary>
     private async Task ApplyVerificationViewAsync()
     {
@@ -152,6 +153,17 @@ public partial class App : Application
                     ? ElementTheme.Dark
                     : ElementTheme.Light;
                 Console.Error.WriteLine($"VERIFY theme={theme} requested={root.RequestedTheme} actual={root.ActualTheme}");
+            }
+            if (Arg("focus") == "log")
+            {
+                // Keyboard reachability: each element that takes focus, by type and accessible name, as Tab walks the page.
+                Microsoft.UI.Xaml.Input.FocusManager.GotFocus += (_, e) =>
+                {
+                    if (e.NewFocusedElement is not FrameworkElement f) return;
+                    var name = Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(f);
+                    if (string.IsNullOrEmpty(name)) name = (f as ContentControl)?.Content as string ?? f.Name;
+                    Console.Error.WriteLine($"VERIFY focus={f.GetType().Name} name={name}");
+                };
             }
             if (Arg("system") is null && Arg("unit") is null && Arg("tab") is null && Arg("section") is null) return;
 
