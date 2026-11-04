@@ -195,7 +195,6 @@ public partial record ConsoleModel
     // Commands read the latest snapshot as a feed parameter (MVUX injects the current value of a feed
     // named like the parameter) for the tick their effects start from.
 
-    /// <summary>Selects a device's start or stop for select-before-operate.</summary>
     /// <summary>Selects a device's start or stop for select-before-operate. Nothing is saved: a selection never outlives the console.</summary>
     public async ValueTask SelectDevice(string id, PlantSnapshot snapshot, CancellationToken ct) =>
         await Ops.UpdateAsync(o =>
