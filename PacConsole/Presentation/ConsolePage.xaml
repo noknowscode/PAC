@@ -28,7 +28,9 @@
     through Slots, which keeps each row's element across the 2 s recompositions.
   -->
 
-  <mvux:FeedView x:Name="ConsoleFeed" Source="{Binding View}">
+  <!-- Phones draw edge to edge (target SDK 36): the safe area keeps the header out from under the status bar and the
+       note and setpoint fields above the keyboard. A desktop or browser window is all safe, so nothing moves there. -->
+  <mvux:FeedView x:Name="ConsoleFeed" Source="{Binding View}" utu:SafeArea.Insets="VisibleBounds,SoftInput" utu:SafeArea.Mode="Margin">
 
     <!-- Before the first snapshot: a quiet line where the page will be, so nothing jumps. -->
     <mvux:FeedView.ProgressTemplate>
