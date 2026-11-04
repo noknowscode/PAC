@@ -93,6 +93,8 @@ public sealed partial class PlantViewport : UserControl
             };
             AutomationProperties.SetName(tag, $"Select {unit.Code} {unit.Name}");
             tag.Click += (_, _) => SelectCommand?.Execute(unit.Id);
+            // A label that measures differently once its font has loaded moves the tags again.
+            tag.SizeChanged += (_, _) => { _overlay = null; Draw(); };
             _tags[unit.Id] = tag;
             TagLayer.Children.Add(tag);
         }
@@ -259,6 +261,7 @@ public sealed partial class PlantViewport : UserControl
         if (sender is RadioButton view && !_views.Contains(view))
         {
             _views.Add(view);
+            _overlay = null;
             Draw();
         }
     }
@@ -318,7 +321,17 @@ public sealed partial class PlantViewport : UserControl
 
     private float LiftTarget(UnitId id) => SelectedUnit as UnitId? == id ? SolidRenderer.FullLift : 0;
 
-    private bool LiftSettled => _lift.All(kv => kv.Value == LiftTarget(kv.Key));
+    private bool LiftSettled
+    {
+        get
+        {
+            foreach (var unit in UnitCatalog.All)
+            {
+                if (_lift[unit.Id] != LiftTarget(unit.Id)) return false;
+            }
+            return true;
+        }
+    }
 
     /// <summary>Starts or stops the frame loop to match the state, then draws once.</summary>
     private void Refresh()
@@ -419,6 +432,17 @@ public sealed partial class PlantViewport : UserControl
         Refresh();
     }
 
+    /// <summary>
+    /// What the tags, the view switcher, the thumbnails and the help text depend on. Fans and flow change none of it,
+    /// so an ambient frame (20 a second while the plant is shown) hands the drawing its clock and lays out nothing.
+    /// </summary>
+    private readonly record struct OverlayInputs(CameraPose Pose, ImmutableDictionary<UnitId, float> Lift, UnitId? Selected,
+        ImmutableArray<UnitId> Alerting, PlantSystem System, float Width, float Height);
+
+    private OverlayInputs? _overlay;
+    private ImmutableArray<TagPlacement> _placements = [];
+    private readonly List<TagRequest> _requests = new(UnitCatalog.All.Length);
+
     private void Draw()
     {
         var width = (float)Surface.ActualWidth;
@@ -428,25 +452,39 @@ public sealed partial class PlantViewport : UserControl
         var selected = SelectedUnit as UnitId?;
         var system = ShownSystem is PlantSystem shown ? shown : PlantSystem.All;
         var alerting = AlertingUnits is ImmutableArray<UnitId> a ? a : ImmutableArray<UnitId>.Empty;
+        var inputs = new OverlayInputs(_pose, _lift, selected, alerting, system, width, height);
+        if (inputs != _overlay)
+        {
+            _overlay = inputs;
+            UpdateOverlay(inputs);
+        }
+        PlantDrawing.Show(_pose, selected, alerting, _placements, _lift, _seconds, _hovered, system, _animationsEnabled);
+    }
+
+    private void UpdateOverlay(OverlayInputs inputs)
+    {
+        var (selected, alerting, system) = (inputs.Selected, inputs.Alerting, inputs.System);
         // One projection for the drawing and the tags, so leaders land on their units at any pose.
-        var projection = PlantSolids.ViewProjection(_pose, width, height);
+        var projection = PlantSolids.ViewProjection(inputs.Pose, inputs.Width, inputs.Height);
 
         // Each tag is laid out at the size its button measures with its label, in the font it draws with and at the
         // system's text size. Only touch what changed: a new Content string re-measures and re-shapes the label's
-        // text, and this runs every animation frame (an unchanged button's Measure returns at once).
+        // text (an unchanged button's Measure returns at once).
         var tagHeight = 0f;
-        var requests = UnitCatalog.All.Select(u =>
+        _requests.Clear();
+        foreach (var u in UnitCatalog.All)
         {
             var tag = _tags[u.Id];
             var label = TagLabel(u, selected == u.Id, alerting.Contains(u.Id));
             if (!Equals(tag.Content, label)) tag.Content = label;
             tag.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
             tagHeight = Math.Max(tagHeight, (float)tag.DesiredSize.Height);
-            return new TagRequest(u.Id, projection.Project(PlantSolids.Default.Anchors[u.Id] with { Y = PlantSolids.Default.Anchors[u.Id].Y + _lift[u.Id] }), (float)tag.DesiredSize.Width);
-        }).ToList();
-        var placements = TagLayout.Solve(requests, width, Math.Max(tagHeight, TagLayout.Height));
+            var anchor = PlantSolids.Default.Anchors[u.Id];
+            _requests.Add(new TagRequest(u.Id, projection.Project(anchor with { Y = anchor.Y + inputs.Lift[u.Id] }), (float)tag.DesiredSize.Width));
+        }
+        _placements = TagLayout.Solve(_requests, inputs.Width, Math.Max(tagHeight, TagLayout.Height));
 
-        foreach (var p in placements)
+        foreach (var p in _placements)
         {
             var tag = _tags[p.Unit];
             var isAlert = alerting.Contains(p.Unit);
@@ -459,25 +497,20 @@ public sealed partial class PlantViewport : UserControl
             if (tag.Opacity != opacity) tag.Opacity = opacity;
         }
 
-        PlantDrawing.Show(_pose, selected, alerting, placements, _lift, _seconds, _hovered, system, _animationsEnabled);
-
         // The view switcher shows the standard view the camera rests in, if any.
-        var preset = CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Key;
+        var preset = CameraPresets.All.FirstOrDefault(p => inputs.Pose.IsNear(p.Pose));
         foreach (var view in _views)
         {
-            var on = Equals(view.Tag, preset);
+            var on = Equals(view.Tag, preset?.Key);
             if (view.IsChecked != on) view.IsChecked = on;
         }
         // Each thumbnail redraws only when the selection, alerts or system actually changed.
         foreach (var thumb in _thumbs) thumb.Show(selected, alerting, system);
         var alertNames = string.Join(", ", alerting.Select(u => UnitCatalog.Get(u).Code));
-        var help = $"{UnitCatalog.All.Length} units, {PresetName()} view. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
+        var help = $"{UnitCatalog.All.Length} units, {preset?.Label ?? "Free orbit"} view. {(alerting.IsEmpty ? "No alerts" : $"{alertNames} in alert")}. " +
             $"{(selected is { } s ? UnitCatalog.Get(s).Code + " selected" : "No unit selected")}.";
         if (AutomationProperties.GetHelpText(this) != help) AutomationProperties.SetHelpText(this, help);
     }
-
-    private string PresetName() =>
-        CameraPresets.All.FirstOrDefault(p => _pose.IsNear(p.Pose))?.Label ?? "Free orbit";
 
     /// <summary>The callout text: the code alone, the name with it when selected, and the word "Alert" when in alert.</summary>
     private static string TagLabel(UnitInfo unit, bool selected, bool alert) =>

@@ -150,6 +150,9 @@ public sealed class SolidRenderer : IDisposable
     private DetailLine[]?[] _details = [];
     private int[] _order = [];
     private float[] _orderLift = [];
+    private float[] _liftBuffer = [];
+    private int[]? _sequenceOrder;
+    private readonly List<int> _sequence = [];
 
     // A lift frame re-sorts only the pairs that involve the moving unit (trace, 2026-10-16: the full
     // pairwise sort was ~8 ms of every lift frame on a selection change).
@@ -181,24 +184,32 @@ public sealed class SolidRenderer : IDisposable
             }
         }
 
-        var lifts = new float[parts.Count];
-        for (var i = 0; i < parts.Count; i++) lifts[i] = LiftOf(parts[i].Unit);
-        if (cameraChanged || !lifts.AsSpan().SequenceEqual(_orderLift))
+        // Lifts are read into a reused buffer and copied only when one changed, so a frame that moves nothing (fans
+        // and flow, 20 a second) allocates no array, and the arrays kept below name the lifts they were built at.
+        if (_liftBuffer.Length != parts.Count) _liftBuffer = new float[parts.Count];
+        for (var i = 0; i < parts.Count; i++) _liftBuffer[i] = LiftOf(parts[i].Unit);
+        if (cameraChanged || !_liftBuffer.AsSpan().SequenceEqual(_orderLift))
         {
+            var raised = _liftBuffer.AsSpan().ToArray();
             var volumes = new List<Volume>(parts.Count);
-            for (var i = 0; i < parts.Count; i++) volumes.Add(parts[i].Volume.Raised(lifts[i]));
+            for (var i = 0; i < parts.Count; i++) volumes.Add(parts[i].Volume.Raised(raised[i]));
             _order = DepthOrder.Sort(volumes, projection, _depthCache);
-            _orderLift = lifts;
+            _orderLift = raised;
         }
-        var order = _order;
+        var lifts = _orderLift;
         if (cameraChanged || lifts.AsSpan().SequenceEqual(_shadowLift) is false) BuildShadows(parts, lifts, projection, cameraChanged);
 
         // The stand (plate, pads, strip) lies under everything, so it goes first; then the shadows
         // that fall on it; then every other part in depth order. -1 stands for the shadow pass.
-        var sequence = new List<int>(order.Length + 1);
-        foreach (var index in order) if (IsGround(parts[index])) sequence.Add(index);
-        sequence.Add(-1);
-        foreach (var index in order) if (!IsGround(parts[index])) sequence.Add(index);
+        if (!ReferenceEquals(_sequenceOrder, _order))
+        {
+            _sequenceOrder = _order;
+            _sequence.Clear();
+            foreach (var index in _order) if (IsGround(parts[index])) _sequence.Add(index);
+            _sequence.Add(-1);
+            foreach (var index in _order) if (!IsGround(parts[index])) _sequence.Add(index);
+        }
+        var sequence = _sequence;
 
         void Op(SKCanvas c, int index)
         {
