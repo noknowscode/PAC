@@ -12,5 +12,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="NUnit" Version="5.0.0" />
     <PackageVersion Include="NUnit3TestAdapter" Version="6.3.1" />
+    <!-- Test-only: the renderer tests draw for real on the Linux test host; the app heads bring their own Skia natives. -->
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.151.1" />
   </ItemGroup>
 </Project>
