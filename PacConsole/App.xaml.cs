@@ -227,7 +227,18 @@ public partial class App : Application
                 await Task.Delay(500);
                 Scroll();
                 // The matrix resizes the window live; keep the band at the top after each relayout.
-                root.SizeChanged += async (_, _) => { await Task.Delay(800); Scroll(); };
+                root.SizeChanged += async (_, _) =>
+                {
+                    try
+                    {
+                        await Task.Delay(800);
+                        Scroll();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"VERIFY failed: {ex}");
+                    }
+                };
             }
         }
         catch (Exception ex)
