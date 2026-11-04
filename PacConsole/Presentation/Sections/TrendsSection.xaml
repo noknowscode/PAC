@@ -58,7 +58,7 @@
   <StackPanel Spacing="{StaticResource Space16}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
               Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource BandInsetNarrow}, Normal={StaticResource BandInset}}"
               AutomationProperties.Name="Synchronized trends">
-    <utu:ResponsiveView ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
+    <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
       <!-- Phone: the title, then the range as three equal segments across the band. -->
       <utu:ResponsiveView.NarrowTemplate>
         <DataTemplate>
@@ -105,7 +105,7 @@
     <Border Style="{StaticResource Rule}" />
 
     <!-- The shared cursor: one slider moves the hairline on every row. -->
-    <utu:ResponsiveView ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Shared cursor">
+    <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Shared cursor">
       <!-- Phone: label, time and Latest; the slider across the band; the latest alert onset below. -->
       <utu:ResponsiveView.NarrowTemplate>
         <DataTemplate>

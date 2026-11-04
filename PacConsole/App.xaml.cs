@@ -126,6 +126,8 @@ public partial class App : Application
         );
         // Brushes chosen in code (converters, tag plates, range bars) follow the root's theme.
         if (MainWindow.Content is FrameworkElement root) Styles.ThemeBrushes.Track(root);
+        // The navigation host is a ContentControl, which would be an unnamed stop in every Tab cycle.
+        if (MainWindow.Content is ContentControl host) host.IsTabStop = false;
 #if DEBUG
         await ApplyVerificationViewAsync();
 #endif

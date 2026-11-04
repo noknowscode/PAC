@@ -94,7 +94,7 @@
   </UserControl.Resources>
 
   <Border BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,0,0,1">
-    <utu:ResponsiveView ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
+    <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
       <!-- Phone: the mark and the menu; net output against target; mode and data age on one line.
            Each row is its own grid, so one row's widths never push another's. -->
       <utu:ResponsiveView.NarrowTemplate>

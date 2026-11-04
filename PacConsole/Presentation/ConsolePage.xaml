@@ -30,7 +30,7 @@
 
   <!-- Phones draw edge to edge (target SDK 36): the safe area keeps the header out from under the status bar and the
        note and setpoint fields above the keyboard. A desktop or browser window is all safe, so nothing moves there. -->
-  <mvux:FeedView x:Name="ConsoleFeed" Source="{Binding View}" utu:SafeArea.Insets="VisibleBounds,SoftInput" utu:SafeArea.Mode="Margin">
+  <mvux:FeedView x:Name="ConsoleFeed" Source="{Binding View}" IsTabStop="False" utu:SafeArea.Insets="VisibleBounds,SoftInput" utu:SafeArea.Mode="Margin">
 
     <!-- Before the first snapshot: a quiet line where the page will be, so nothing jumps. -->
     <mvux:FeedView.ProgressTemplate>
@@ -187,7 +187,7 @@
             <!-- ============ FOOTER ============ -->
             <Border Background="{ThemeResource PanelBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
                     Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource FooterInsetNarrow}, Normal={StaticResource FooterInset}}">
-              <utu:ResponsiveView ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
+              <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
                 <!-- Phone: the two notes stacked. -->
                 <utu:ResponsiveView.NarrowTemplate>
                   <DataTemplate>

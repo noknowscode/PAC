@@ -36,7 +36,7 @@
       </StackPanel>
 
       <!-- Standard views: one raised segment shows the view the camera rests in. Thumbnails take over from 960 px. -->
-      <utu:ResponsiveView ResponsiveLayout="{StaticResource ConsoleLayout}" VerticalAlignment="Top" HorizontalContentAlignment="Stretch"
+      <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" VerticalAlignment="Top" HorizontalContentAlignment="Stretch"
                           AutomationProperties.Name="Standard views"
                           Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=0}"
                           Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Normal=2}"
@@ -183,7 +183,7 @@
                           Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}" />
 
         <!-- Camera tools: their own row of touch targets below 960 px, beside the picker from Wide up. -->
-        <utu:ResponsiveView ResponsiveLayout="{StaticResource ConsoleLayout}" VerticalAlignment="Center"
+        <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" VerticalAlignment="Center"
                             Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Wide=0}"
                             Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Wide=1}"
                             Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}"
