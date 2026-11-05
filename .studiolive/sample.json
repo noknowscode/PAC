@@ -10,12 +10,12 @@
     "ios"
   ],
   "sourcePath": "PacConsole/PacConsole.csproj",
-  "iconUrl": "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/icon.png",
+  "iconUrl": "https://raw.githubusercontent.com/noknowscode/PAC/studio/.studiolive/icon.png",
   "screenshots": [
-    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/console-desktop.png",
-    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/select-before-operate-desktop.png",
-    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/plant-phone.png",
-    "https://raw.githubusercontent.com/unoplatform/Uno.Samples/master/studio/pac/.studiolive/screenshots/alarm-phone.png"
+    "https://raw.githubusercontent.com/noknowscode/PAC/studio/.studiolive/screenshots/console-desktop.png",
+    "https://raw.githubusercontent.com/noknowscode/PAC/studio/.studiolive/screenshots/select-before-operate-desktop.png",
+    "https://raw.githubusercontent.com/noknowscode/PAC/studio/.studiolive/screenshots/plant-phone.png",
+    "https://raw.githubusercontent.com/noknowscode/PAC/studio/.studiolive/screenshots/alarm-phone.png"
   ],
   "showcase": {
     "summary": "An operator console that takes a simulated power-plant alarm from first alert to resolution on one screen.",
