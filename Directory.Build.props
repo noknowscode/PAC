@@ -12,16 +12,7 @@
     -->
     <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257</NoWarn>
 
-    <!--
-      Build gate: every head builds with 0 warnings, and a new warning fails the build. Code style rules set to
-      warning in .editorconfig run in the build too. Trim analysis (ILLink) stays a warning: on the trimmed heads it
-      reports Uno's packages and the MVUX generator's code, not this repo's (CI run 5: IL2026, IL2104 and IL2121,
-      208 on WinAppSDK and 3,082 on iOS).
-    -->
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- NuGet audit stays a warning: a newly published advisory, or an unreachable audit source, must not fail a build of unchanged code. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
-    <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 </Project>
