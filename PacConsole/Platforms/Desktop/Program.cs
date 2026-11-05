@@ -16,7 +16,7 @@ internal class Program
             {
                 if (Environment.GetEnvironmentVariable("PAC_X11_RENDERER") == "software")
                 {
-                    x11.RenderingBackend(X11RenderingBackend.Software);
+                    x11.ForceRenderingBackend(X11RenderingBackend.Software);
                 }
             })
 #else
