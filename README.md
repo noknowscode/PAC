@@ -1,5 +1,9 @@
 # PAC Control Console
 
+- **Owner:** Matthew Mattei (@noknowscode)
+- **Status:** ready for review
+- **What it is:** An operator console that takes a simulated power-plant alarm from first alert to resolution on one screen.
+
 ![PAC Control Console: Plant 02 with CLG-05 in alarm, the plant isolating it, and the view thumbnails beside the drawing](media/art/readme-hero.jpg)
 
 An operator console for a simulated steam-cycle power plant, built with [Uno Platform](https://platform.uno). It takes an alarm from start to finish on one screen.
@@ -22,7 +26,7 @@ dotnet run --project PacConsole -f net10.0-browserwasm -p:PacTargetFrameworks=ne
 
 `-p:PacTargetFrameworks=<tfm>` builds that head alone, so the other heads' workloads are not needed. The WinAppSDK head builds as x64 or ARM64 (the plant's `SKCanvasElement` needs one), and full screen is offered on desktop and WinAppSDK only. CI (`.github/workflows/ci.yml`) runs the tests, builds every head and launches the Android build on an emulator.
 
-Tests: `dotnet test PacConsole.Tests -p:PacTargetFrameworks=net10.0` (the tests use the app's plain `net10.0` build, so no mobile workload is needed).
+This folder holds the one app project Studio opens. The unit tests (NUnit) live in the development repository, [noknowscode/PAC](https://github.com/noknowscode/PAC).
 
 To start over, delete `operator/operator.json` in the app's local folder (Linux: `~/.local/share/PacConsole/com.unoplatform.pacconsole/LocalState/`).
 

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schemas.platform.uno/sample/v1",
+  "id": "pac",
+  "displayName": "PAC Control Console",
+  "description": "An operator console for a simulated steam-cycle power plant that takes an alarm from first alert to resolution on one screen. An inked isometric drawing of the plant, drawn with SkiaSharp, can be orbited, switched between isometric, elevation and plan views and narrowed to one process system; an equipment inspector gives each unit's readings, its alarm response and its controls, where every command is selected and then confirmed; synchronized trends share one cursor; and an operator log keeps every step. It is a showcase for control-room software teams. It uses one MVUX page model, Uno Navigation Extensions, Uno Toolkit responsive layouts from phone to wide desktop, the Simple theme with System, Light and Graphite palettes, and SkiaSharp in SKCanvasElement. Telemetry is simulated, and the operator's log, acknowledgements and setpoints are kept on the device.",
+  "platforms": [
+    "desktop",
+    "wasm",
+    "android",
+    "ios"
+  ],
+  "sourcePath": "PacConsole/PacConsole.csproj",
+  "userConversation": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Build an operator console for a steam-cycle power plant that takes an alarm from start to finish on one screen:\n- a header with the station, net output against target, the plant mode and the data age\n- an isometric drawing of the plant's seven units that can be orbited, switched between isometric, elevation and plan views, and narrowed to one process system (steam and water, cooling, fuel and flue gas, electrical, active alarms)\n- an equipment inspector with Overview, Condition and Control tabs: each unit's readings, its alarm with acknowledge, shelve and the response (likely cause, steps, consequence), and its controls, where every command is selected and then confirmed\n- Auto, Manual and Hold modes, and typed setpoints applied with Apply\n- synchronized trends of net generation and the selected readings, with a shared cursor and alarm markers\n- an operator log of every step, with shift notes, kept between launches\n- System, Light and Graphite themes\n\nSimulate the telemetry. Use MVUX, Navigation Extensions, the Uno Toolkit and SkiaSharp for the drawing, and make it work from a phone to a wide desktop."
+      },
+      {
+        "role": "assistant",
+        "content": "Here's the **PAC Control Console**. It's built and running in the preview: Plant 02 with CLG-05 in alarm, the isometric plant, the equipment inspector, the synchronized trends and the operator log."
+      }
+    ],
+    "suggestedPrompts": [
+      "Add a full operator log view with filters by kind and unit",
+      "Show fewer unit tags on phones and let the equipment picker carry the rest",
+      "Add a second plant and a switcher in the header",
+      "Export the operator log of a shift as CSV"
+    ]
+  },
+  "agentContext": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "PAC Control Console is an operator console for a simulated steam-cycle power plant: an isometric plant drawing, an equipment inspector with alarm response and select-before-operate controls, synchronized trends and an operator log, on one page."
+      },
+      {
+        "role": "assistant",
+        "content": "PAC Control Console is an Uno Platform single-project app at PacConsole/PacConsole.csproj (Uno.Sdk 7.0.0-dev.115 from global.json; heads net10.0-desktop, net10.0-browserwasm, net10.0-android, net10.0-ios and net10.0-windows10.0.19041). The UI-free domain (namespace PacConsole.Core) lives in PacConsole/Core/ inside the app project; its records opt out of MVUX key equality ([ImplicitKeys(IsEnabled = false)]) so lists compare them by value. The NUnit tests live in the development repository, noknowscode/PAC.\n\n**Key files:**\n- PacConsole/App.xaml.cs: the host (logging, UseThemeSwitching, DI: TimeProvider, OperatorJournal as IOperatorJournal, SimulatedTelemetry as ITelemetryService, IFullScreen over the window the builder hands over) and the one route, \"Console\" (ViewMap<ConsolePage, ConsoleModel>). The operator record and the fonts load before the first navigation. Debug-only verification hooks (--pac-theme, --pac-unit, --pac-tab, --pac-section, --pac-system, --pac-focus) live in the same file under #if DEBUG.\n- PacConsole/Presentation/ConsoleModel.cs: the MVUX page model. Snapshot (telemetry), View (the composed page), Ops, Mode, Selection, System, Range, Compared, Cursor, Theme and the setpoint drafts; one command per operator action.\n- PacConsole/Presentation/ConsolePage.xaml and Sections/ (ConsoleHeader, EquipmentInspector, TrendsSection, OperatorLog): one FeedView over View; inside it Data is the ConsoleView and Parent the model.\n- PacConsole/Core/Console/ConsoleView*.cs: one pure function, ConsoleView.Compose, builds everything the page shows from the snapshot, PlantOps, the mode, the selection and the view inputs.\n- PacConsole/Core/Operations: PlantOps (devices, valves, ramps, applied setpoints, acknowledgements, shelves, the log and the pending select-before-operate command), AlarmBook, PlantEffects.\n- PacConsole/Core/Telemetry: Simulation and SimulatedTelemetry (deterministic, one snapshot every 2 s).\n- PacConsole/Core/Solids: the plant as solids. PlantSolids is the model; PartKit, UnitSolids and CycleSolids build it; PlantFraming (camera framing), UnitPicker (hit testing), PartSystems (system membership), DepthOrder (painter's order) and SolidBuilder (shapes) read it.\n- PacConsole/Rendering: SolidRenderer orchestrates SolidGeometry, PartPainter, StillRunCache, PartImageCache and SystemMotion with a SolidPalette; PlantCanvas and PlantThumb are the SKCanvasElements.\n- PacConsole/Controls: PlantViewport (camera in Core/Geometry/CameraRig, FrameClock, TagOverlay), AmbientClock, Charts/TrendChart, Slots, FlowPanel, RangeBar, Pulse.\n- PacConsole/Styles: Palette.xaml (ThemeDictionaries Light and Dark), ColorOverride.xaml (Simple theme roles per theme), Tokens.xaml, Layout.xaml (ConsoleLayout), Controls.xaml, ThemeBrushes.cs.\n- PacConsole/Services: OperatorJournal (operator/operator.json in LocalFolder, atomic writes) and FullScreen.\n\n**Patterns and traps:**\n- MVUX with {Binding} only. The snapshot feed is Feed.Create over messages, because Feed.AsyncEnumerable ignores a refresh; Retry is the model's RetryTelemetry, reached from the error template through ElementName=ConsoleFeed. Commands read the latest snapshot, view and mode as feed parameters. MVUX runs commands off the UI thread, so window changes are dispatched to it.\n- Lists fill panels through Slots, which keeps each row's element across the 2 s recompositions.\n- SKCanvasElement draws on the desktop host's render thread: each frame is an immutable record handed over under a lock, renderers are made on Loaded and freed on Unloaded, and a theme change makes a new renderer from SolidPalette.For. SKCanvasElement ignores XAML Opacity, so fades are baked into paints.\n- Decorative motion (fans, flow, the live dot) runs on one 20 fps AmbientClock, not CompositionTarget.Rendering; MotionPreference reads the OS reduced-motion setting.\n- Theme: Simple theme. System, Light and Graphite go through IThemeService; colours chosen in code come from ThemeBrushes, which repaints on ActualThemeChanged. No hex outside Palette.xaml and ColorOverride.xaml.\n- Responsive: utu:Responsive with ConsoleLayout (Normal from 600 px, Wide from 960, Widest from 1600); no AdaptiveTriggers.\n- Warnings are errors, and Uno0001 (an API not implemented on a head) is an error.\n\n**Simulated:** the telemetry (it resumes at the saved tick plus the time the console was closed) and the operator, \"Operator 04\". No external service, key or hardware is needed.\n\n**Build:**\n- dotnet build PacConsole/PacConsole.csproj -f net10.0-desktop -p:PacTargetFrameworks=net10.0-desktop (the override builds one head without the other heads' workloads)\n- In a Debug run, PAC_TELEMETRY_FAULT=<n> drops the stream once after n snapshots, to show the error state and Retry.\n\nThe app is built and running. The user may ask me to modify it."
+      }
+    ]
+  }
+}

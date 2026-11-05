@@ -59,9 +59,9 @@ Fifteen pieces of the plant drawing alone are in `media/art/plant/` (captioned a
 
 ## The rendering path
 
-The app draws the plant with `PacConsole/Rendering/SolidRenderer.cs`: `Draw(canvas, parts, projection, frame)` on a SkiaSharp canvas. `capture/` is a small console tool that drives that call offscreen.
+The app draws the plant with `PacConsole/Rendering/SolidRenderer.cs`: `Draw(canvas, parts, projection, frame)` on a SkiaSharp canvas. A small console tool, `PacArt` (`media/_source/capture` in the development repository, [noknowscode/PAC](https://github.com/noknowscode/PAC); not in this sample, which holds one project), drives that call offscreen.
 
-- **The product's renderer, unchanged.** `capture/PacArt.csproj` compiles the renderer's files from `PacConsole/Rendering` (`SolidRenderer` and its parts: geometry, painter, the two caches, rasterizer, system motion, palette) as linked files, against `PacConsole.Core`, on the SkiaSharp the app runs on (4.151.1, with the Windows and Linux natives). The product code is untouched.
+- **The product's renderer, unchanged.** `capture/PacArt.csproj` compiles the renderer's files from `PacConsole/Rendering` (`SolidRenderer` and its parts: geometry, painter, the two caches, rasterizer, system motion, palette) as linked files, against the app's `Core` code, on the SkiaSharp the app runs on (4.151.1, with the Windows and Linux natives). The product code is untouched.
 - **The product's palette.** The tool builds the palette with the product's own `SolidPalette.For(theme)`. It reads each theme's colours from `Styles/Palette.xaml` (the `Light` dictionary for paper, `Dark` for graphite) and the stroke widths from `Styles/Tokens.xaml`. `capture/Shim.cs` stands in for the app types that method and the renderer read: `ThemeBrushes`, `Application.Resources`, `ElementTheme` and Uno's logger.
 - **Offscreen and repeatable.** Each frame is drawn into a raster surface: no window, no app chrome, no screen capture. Every frame uses a fresh renderer, so the app's background layer caching never touches these images. The same shot file gives the same pixels.
 - **Long exposure.** A long exposure renders `exposure` frames at a fixed 1/60 s step from `seconds`. It lightens them together on graphite and darkens them on paper. The motion is the app's own: smoke from the stacks, vapour over the fan stacks, steam wisps, energy beads on the conductors, the alarm halo's 1.6 s breath, and the moving flow marks.
@@ -76,6 +76,8 @@ The app draws the plant with `PacConsole/Rendering/SolidRenderer.cs`: `Draw(canv
   - 480 × 600 → 1920 × 2400 (4:5).
 
 ## Regenerate
+
+Run these from the development repository, which has the capture tool:
 
 ```powershell
 dotnet build media/_source/capture -c Release

@@ -13,7 +13,6 @@ app (`PacConsole*/`, `.github/`), and the art set's own `media/_source/README.md
 | `art/plant/` (top level) | 15 MB | 15 | The plant prints, captioned (`01-plant-graphite` … `15-systems`) | `_source/README.md` |
 | `art/plant/clean/` | 15 MB | 15 | The plant prints without type | `_source/README.md` |
 | `_source/` (loose files) | 76 KB | 9 | The art scripts and their inputs: `ui_art2.py` (app prints), `finish.py` (grade, caption, poster), `survey.py`, `review.py`, `shots.json` (the plant shots), `directions.py` and `directions.json`, `ui_art.py`, and `README.md` | `_source/README.md` documents `ui_art2.py`, `finish.py`, `survey.py`, `review.py` and `shots.json`; `ui_art.py` (an earlier version of `ui_art2.py`), `directions.py` and `directions.json` are referenced by nothing |
-| `_source/capture/` | 36 KB | 6 | `PacArt`, the console tool that draws the plant shots offscreen with the product's renderer (builds against the current renderer, A pass 2) | README ("`media/_source/README.md` explains how they were made"); SPEC.md (Decisions, A pass 2); `_source/README.md` |
 | `_source/capture-app/` | 16 KB | 2 | `CaptureRunner.cs.txt` and its README: the capture switch for the app prints, added to a scratch copy of the app only | `_source/README.md` |
 | `_source/directions/` | 4.7 MB | 4 | Three art-direction trials (`A.jpg`, `B.jpg`, `C.jpg`) and `compare.jpg`, written by `directions.py` | Nothing |
 | `_source/renders/` | 13 MB | 48 | The offscreen plant renders (`<id>.png` and `<id>.meta.json` captions) that `finish.py` turns into `art/plant/` | `_source/README.md` |
@@ -23,3 +22,6 @@ app (`PacConsole*/`, `.github/`), and the art set's own `media/_source/README.md
 
 Not referenced by any document: `_source/directions/`, `_source/directions.py`, `_source/directions.json` and
 `_source/ui_art.py`. They were kept in the pre-transfer cleanup, since the owner has not decided what transfers.
+
+`_source/capture/` (`PacArt`, the console tool that draws the plant shots offscreen) is not in this sample, which holds
+one project; it stays in the development repository, noknowscode/PAC.
