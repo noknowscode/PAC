@@ -108,8 +108,7 @@ This session ran `uno-audit` and `uno-completeness-audit`, then fixed what they 
 - **Fault switch and Retry:** a Debug fault switch, `PAC_TELEMETRY_FAULT=<n>`. Retry was dead because `Feed.AsyncEnumerable` ignores refresh; the snapshot feed now uses `Feed.Create` with a `RetryTelemetry` command.
 - **Dead code:** the wireframe renderer, `PlantGeometry` and their projection helpers are deleted (SPEC.md phase 7).
 - **Platform theme** (`docs/SPEC-THEME.md`):
-  - `Styles/Palette.xaml` holds the ThemeDictionaries.
-  - Simple's roles are set per theme through `ThemeColors` (`Styles/ColorOverride.xaml`).
+  - *Superseded 2026-11-06 (theme pass):* the palette is `Styles/ColorPaletteOverride.xaml` (all 33 Simple roles, Light and Default) and the no-role colours are in `App.xaml`'s theme dictionaries; `Styles/Palette.xaml` and `Styles/Tokens.xaml` are gone (README, Built with).
   - `IThemeService` gives System / Light / Graphite and saves the choice.
   - `ThemeBrushes` serves the brushes chosen by converters and code.
   - The Skia palettes follow `ActualThemeChanged`.
@@ -135,9 +134,9 @@ This session ran `uno-audit` and `uno-completeness-audit`, then fixed what they 
 |---|---|
 | mvux: errors arrive as feed state; Retry must re-run the source | `PacConsole/Presentation/ConsoleModel.cs` (`Snapshot`, `Telemetry`, `RetryTelemetry`) |
 | uno-scaffolding: theme switch is a model command calling `IThemeService` | `ConsoleModel.SetTheme`, `App.xaml.cs` `UseThemeSwitching()` |
-| uno-scaffolding semantic ladder: role overrides per theme, tokens in ThemeDictionaries | `Styles/ColorOverride.xaml`, `Styles/Palette.xaml` |
+| uno-themes: the palette is the theme's, no-role colours in App.xaml (2026-11-06) | `Styles/ColorPaletteOverride.xaml`, `App.xaml` |
 | gotcha (Theming and color): converter brushes from a live registry | `Styles/ThemeBrushes.cs`, `Presentation/Converters/ToneConverter.cs` |
-| uno-toolkit: `{utu:Responsive}` with custom layouts, no breakpoints in code | `Styles/Tokens.xaml` (`ConsoleLayout`, `PlantHeaderLayout`), `Controls/PlantViewport.xaml` |
+| uno-toolkit: `{utu:Responsive}` with custom layouts, no breakpoints in code | `Styles/Layout.xaml` (`ConsoleLayout`, `PlantHeaderLayout`), `Controls/PlantViewport.xaml` |
 | skiasharp-uno: renderer use confined to the render path | `Rendering/PlantCanvas.cs`, `Rendering/PlantThumb.cs` (`Swap`, `_drawGate`) |
 
 ## Next actions (in order)

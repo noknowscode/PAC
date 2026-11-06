@@ -1,5 +1,12 @@
 # SPEC · Theme (light and graphite, done the platform way)
 
+> *Superseded 2026-11-06 (theme pass, the look comes from Uno.Themes):* `Styles/Palette.xaml` and `Styles/ColorOverride.xaml`
+> are gone. The palette is `Styles/ColorPaletteOverride.xaml` (all 33 Simple roles in Light and Default, the file Uno
+> Platform Studio's Themes tab edits); pages and code use its role brushes; alarms, process states, the
+> select-before-operate highlight and the plant's colours are no-role colours in `App.xaml`'s Light and Default
+> dictionaries. `ThemeBrushes` resolves both from the app's resources for an element's theme and follows palette edits.
+> The switching (IThemeService, System / Light / Graphite) below is unchanged. See the README, Built with.
+
 Source: the user, 2026-10-28: "we need proper theme implementation". Today the graphite theme works by repainting the light brushes in place (`ConsoleTheme.Apply`, `Palette.Dark.xaml`). It runs, but every token has one value as far as XAML and the lint can tell (TOKENTHEME 55, HEX 18). Nothing follows the OS theme, nothing persists the choice, and the switch is page code-behind.
 
 ## Architecture Brief

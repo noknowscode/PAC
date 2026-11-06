@@ -55,7 +55,7 @@ Source: the user's mock, two screenshots of one page (2026-10-15 20:07). Built i
 
 - **Direction:** the mock is an evolution of Direction 2 (.impeccable.md). It's a light page in one bordered container on the grey ground, with bands: a header, a grey status strip, a systems bar, the plant panel and inspector, the trends, and a grey footer.
 - **Colour change from the mock:**
-  - Selection uses deep slate-teal: `AccentBrush` #2F5D73 light / #7FB3C8 graphite.
+  - Selection uses deep slate-teal: #2F5D73 light / #7FB3C8 graphite (the palette's `PrimaryBrush` since 2026-11-06).
   - Alerts use burnt orange: `AlertBrush` #C2410C light / #F0793A graphite, with an amber tint for the alert pill.
   - Status is always paired with words ("Alert", "1 active alert").
 - **Tokens:** existing ramp (12/13/16/22/56; the inspector title is 28 SemiBold, the only new size), radii 4/8/12, spacing 4/8/12/16/24/32.
