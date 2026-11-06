@@ -59,7 +59,8 @@
       <Setter Property="Padding" Value="{StaticResource LinkInset}" />
       <Setter Property="MinHeight" Value="{StaticResource ControlHeightCompact}" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+      <Setter Property="FontFamily" Value="{ThemeResource BodyMediumFontFamily}" />
+      <Setter Property="FontWeight" Value="Normal" />
     </Style>
     <Style x:Key="LinkButtonTouch" TargetType="Button" BasedOn="{StaticResource LinkButton}">
       <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />
@@ -70,8 +71,9 @@
       <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="{StaticResource ChipInset}" />
-      <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
-      <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
+      <Setter Property="FontFamily" Value="{ThemeResource BodySmallFontFamily}" />
+      <Setter Property="FontSize" Value="{ThemeResource BodySmallFontSize}" />
+      <Setter Property="FontWeight" Value="Normal" />
     </Style>
     <Style x:Key="ChipButtonTouch" TargetType="Button" BasedOn="{StaticResource ChipButton}">
       <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />

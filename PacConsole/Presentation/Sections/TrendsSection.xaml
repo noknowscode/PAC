@@ -35,7 +35,7 @@
                     Grid.RowSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=2}"
                     Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Normal=1}">
           <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" />
-          <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Value}" /><Run Text=" " /><Run Text="{Binding Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource OnSurfaceVariantBrush}" /></TextBlock>
+          <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Value}" /><Run Text=" " /><Run Text="{Binding Unit}" FontSize="{ThemeResource BodySmallFontSize}" Foreground="{ThemeResource OnSurfaceVariantBrush}" /></TextBlock>
         </StackPanel>
         <charts:TrendChart Series="{Binding Series}" Cursor="{Binding Cursor}" EventIndex="{Binding EventIndex}"
                            TimeStart="{Binding TimeStart}" TimeMid="{Binding TimeMid}" TimeEnd="{Binding TimeEnd}" Margin="{StaticResource TrendPlotGap}"

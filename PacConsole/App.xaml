@@ -14,16 +14,19 @@
         <!--
           The look comes from Uno Simple, wrapped by the Simple flavour of the Toolkit styles. Its palette is the
           console's, in Styles/ColorPaletteOverride.xaml (the file Uno Platform Studio's Themes tab edits); pages and
-          code use the role brushes it generates (OnSurfaceBrush, PrimaryBrush, OutlineVariantBrush...). The theme
-          follows the OS until the operator picks one; IThemeService applies and saves that choice (SPEC-THEME.md).
+          code use the role brushes it generates (OnSurfaceBrush, PrimaryBrush, OutlineVariantBrush...). The type is
+          IBM Plex Sans (DefaultFontFamily; a font manifest beside the regular face maps the weights to its Medium and
+          SemiBold files) on the design's closed ramp (Styles/TypographyOverride.xaml). The theme follows the OS until
+          the operator picks one; IThemeService applies and saves that choice (SPEC-THEME.md).
         -->
-        <utus:SimpleToolkitTheme>
+        <utus:SimpleToolkitTheme DefaultFontFamily="ms-appx:///Assets/Fonts/IBMPlexSans-Regular.ttf#IBM Plex Sans"
+                                 FontOverrideSource="ms-appx:///Styles/TypographyOverride.xaml">
           <utus:SimpleToolkitTheme.Colors>
             <ut:ThemeColors OverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml" />
           </utus:SimpleToolkitTheme.Colors>
         </utus:SimpleToolkitTheme>
 
-        <ResourceDictionary Source="ms-appx:///Styles/Tokens.xaml" />
+        <ResourceDictionary Source="ms-appx:///Styles/TextStyles.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Layout.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Controls.xaml" />
       </ResourceDictionary.MergedDictionaries>

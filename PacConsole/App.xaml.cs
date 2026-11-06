@@ -261,15 +261,17 @@ public partial class App : Application
 #endif
 
     /// <summary>
-    /// Loads the three faces of IBM Plex Sans the styles use (Styles/Tokens.xaml) before the page lays out: a browser
-    /// fetches them over HTTP, and the desktop host loads them off the UI thread.
+    /// Loads the three faces of IBM Plex Sans the type scale uses (DefaultFontFamily on the theme; its font manifest maps
+    /// Regular, Medium and SemiBold to their files) before the page lays out: a browser fetches them over HTTP, and the
+    /// desktop host loads them off the UI thread.
     /// </summary>
     private Task PreloadFontsAsync()
     {
 #if __WASM__ || __DESKTOP__
-        return Task.WhenAll(new[] { "SansFont", "SansMediumFont", "SansStrongFont" }
-            .Select(key => Uno.UI.Xaml.Media.FontFamilyHelper.PreloadAsync(
-                (FontFamily)Resources[key], Microsoft.UI.Text.FontWeights.Normal, Windows.UI.Text.FontStretch.Normal, Windows.UI.Text.FontStyle.Normal)));
+        var family = (FontFamily)Resources["BodyMediumFontFamily"];
+        return Task.WhenAll(new[] { Microsoft.UI.Text.FontWeights.Normal, Microsoft.UI.Text.FontWeights.Medium, Microsoft.UI.Text.FontWeights.SemiBold }
+            .Select(weight => Uno.UI.Xaml.Media.FontFamilyHelper.PreloadAsync(
+                family, weight, Windows.UI.Text.FontStretch.Normal, Windows.UI.Text.FontStyle.Normal)));
 #else
         // The phone heads and WinAppSDK read packaged fonts from the package as they lay out.
         return Task.CompletedTask;

@@ -17,8 +17,9 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="Foreground" Value="{ThemeResource OnSecondaryContainerBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
-    <Setter Property="FontSize" Value="{StaticResource TypeSizeBody}" />
+    <Setter Property="FontFamily" Value="{ThemeResource LabelMediumFontFamily}" />
+    <Setter Property="FontSize" Value="{ThemeResource LabelMediumFontSize}" />
+    <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="Padding" Value="14,0" />
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -172,12 +173,14 @@
   <!-- Valve labels: no Foreground setter, so the toggle's checked/unchecked ink still applies.
        The state line is one size smaller instead of faded (text opacity breaks contrast). -->
   <Style x:Key="ValveNumber" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
-    <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
+    <Setter Property="FontFamily" Value="{ThemeResource LabelSmallFontFamily}" />
+    <Setter Property="FontSize" Value="{ThemeResource LabelSmallFontSize}" />
+    <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style x:Key="ValveState" TargetType="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
-    <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
+    <Setter Property="FontFamily" Value="{ThemeResource BodySmallFontFamily}" />
+    <Setter Property="FontSize" Value="{ThemeResource BodySmallFontSize}" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
 
   <!-- RadioButton template: same look, RadioButton's own state names (CheckStates group). -->
@@ -260,7 +263,9 @@
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource SecondaryBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="FontFamily" Value="{ThemeResource BodyMediumFontFamily}" />
+    <Setter Property="FontSize" Value="{ThemeResource BodyMediumFontSize}" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="RadioButton">
@@ -277,6 +282,7 @@
                               ContentTemplate="{TemplateBinding ContentTemplate}"
                               Foreground="{TemplateBinding Foreground}"
                               FontFamily="{TemplateBinding FontFamily}"
+                              FontWeight="{TemplateBinding FontWeight}"
                               HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                               VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
             <VisualStateManager.VisualStateGroups>
@@ -303,7 +309,7 @@
                   <VisualState.Setters>
                     <Setter Target="Root.Background" Value="{ThemeResource SecondaryContainerBrush}" />
                     <Setter Target="Presenter.Foreground" Value="{ThemeResource OnSecondaryContainerBrush}" />
-                    <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
+                    <Setter Target="Presenter.FontWeight" Value="Medium" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Unchecked" />
@@ -333,7 +339,9 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{ThemeResource OutlineLowBrush}" />
     <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="FontFamily" Value="{ThemeResource BodyMediumFontFamily}" />
+    <Setter Property="FontSize" Value="{ThemeResource BodyMediumFontSize}" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
     <Setter Property="Template">
@@ -352,6 +360,7 @@
                                 Content="{TemplateBinding Content}"
                                 Foreground="{TemplateBinding Foreground}"
                                 FontFamily="{TemplateBinding FontFamily}"
+                                FontWeight="{TemplateBinding FontWeight}"
                                 HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                                 VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
             </Grid>
@@ -375,7 +384,7 @@
                   <VisualState.Setters>
                     <Setter Target="Frame.BorderBrush" Value="{ThemeResource PrimaryBrush}" />
                     <Setter Target="Presenter.Foreground" Value="{ThemeResource OnSurfaceBrush}" />
-                    <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
+                    <Setter Target="Presenter.FontWeight" Value="Medium" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Unchecked" />
@@ -397,7 +406,9 @@
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
+    <Setter Property="FontFamily" Value="{ThemeResource BodyMediumFontFamily}" />
+    <Setter Property="FontSize" Value="{ThemeResource BodyMediumFontSize}" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="RadioButton">
@@ -407,6 +418,7 @@
                               Content="{TemplateBinding Content}"
                               Foreground="{TemplateBinding Foreground}"
                               FontFamily="{TemplateBinding FontFamily}"
+                              FontWeight="{TemplateBinding FontWeight}"
                               VerticalContentAlignment="Center" />
             <Border x:Name="Indicator" Height="2" VerticalAlignment="Bottom" Background="{ThemeResource PrimaryBrush}" Opacity="0" />
             <VisualStateManager.VisualStateGroups>
@@ -433,7 +445,7 @@
                   <VisualState.Setters>
                     <Setter Target="Indicator.Opacity" Value="1" />
                     <Setter Target="Presenter.Foreground" Value="{ThemeResource OnSurfaceBrush}" />
-                    <Setter Target="Presenter.FontFamily" Value="{StaticResource SansMediumFont}" />
+                    <Setter Target="Presenter.FontWeight" Value="Medium" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Unchecked" />
@@ -524,7 +536,7 @@
     <Setter Property="MinWidth" Value="0" />
     <Setter Property="Padding" Value="6,0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusTag}" />
-    <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
+    <Setter Property="FontSize" Value="{ThemeResource LabelSmallFontSize}" />
   </Style>
 
 </ResourceDictionary>

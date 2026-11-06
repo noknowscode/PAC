@@ -89,6 +89,19 @@
   <!-- Stream states (connecting, no telemetry, stopped): kept off the window edge on phones. -->
   <Thickness x:Key="StateInset">24</Thickness>
 
+  <!-- Plant drawing strokes (SolidPalette): hairline, silhouette, and the lit outline of the selected unit. -->
+  <x:Double x:Key="SolidStrokeHairline">0.7</x:Double>
+  <x:Double x:Key="SolidStrokeSilhouette">1.15</x:Double>
+  <x:Double x:Key="SolidStrokeLit">1.3</x:Double>
+
+  <!-- Radii: soft, one step per scale. -->
+  <CornerRadius x:Key="RadiusTag">4</CornerRadius>
+  <CornerRadius x:Key="RadiusControl">8</CornerRadius>
+  <!-- Pointer controls are 32 px; below 960 px (Narrow and Normal, where touch is likely) the touch variants in
+       Controls.xaml give every target 44 px (WCAG 2.5.5, Apple HIG). -->
+  <x:Double x:Key="ControlHeight">32</x:Double>
+  <x:Double x:Key="TouchTarget">44</x:Double>
+
   <!-- Sizes -->
   <x:Double x:Key="IconSizeSm">14</x:Double>
   <x:Double x:Key="IconSize">16</x:Double>

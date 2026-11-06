@@ -140,7 +140,7 @@
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource AlertBrush}" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
                                    Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                           <TextBlock Text="Active alarms" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
-                          <TextBlock Text="{Binding Data.ActiveAlarmCount}" Style="{StaticResource ControlLabel}" FontFamily="{StaticResource SansMediumFont}"
+                          <TextBlock Text="{Binding Data.ActiveAlarmCount}" Style="{StaticResource ControlLabel}" FontWeight="Medium"
                                      Foreground="{ThemeResource AlertTextBrush}" VerticalAlignment="Center"
                                      Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                         </StackPanel>

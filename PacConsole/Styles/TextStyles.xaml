@@ -1,0 +1,52 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    The console's text roles: a quiet instrument (.impeccable.md, Direction 2). Each is a semantic text style of the
+    theme (BodySmall ... HeadlineMedium), whose family, size and weight come from the type scale (IBM Plex Sans,
+    DefaultFontFamily on the theme; sizes and weights in Styles/TypographyOverride.xaml), plus the role's colour and
+    line height. Simple's semantic styles also wrap and trim; the console sets single lines unless a page asks them to
+    wrap (TextWrapping="WrapWholeWords" on the element).
+  -->
+
+  <!-- Captions, labels and units: 12 on a 16 line, the palette's secondary text. -->
+  <Style x:Key="TypeMicro" TargetType="TextBlock" BasedOn="{StaticResource BodySmall}">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
+  </Style>
+  <!-- Body text: 13 on a 20 line. -->
+  <Style x:Key="TypeBody" TargetType="TextBlock" BasedOn="{StaticResource BodyMedium}">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="LineHeight" Value="20" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+  </Style>
+  <!-- A section's label (Equipment, Fan speed, the alarm response's title): 13 Medium. -->
+  <Style x:Key="TypeSection" TargetType="TextBlock" BasedOn="{StaticResource LabelMedium}">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="LineHeight" Value="20" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+  </Style>
+  <!-- Band titles and the station: 16 SemiBold. -->
+  <Style x:Key="TypeTitle" TargetType="TextBlock" BasedOn="{StaticResource TitleMedium}">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+  </Style>
+  <!-- A reading's value: 22 Regular. -->
+  <Style x:Key="TypeValue" TargetType="TextBlock" BasedOn="{StaticResource HeadlineSmall}">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+  </Style>
+  <!-- Display: net output and the inspector's equipment name, 28 SemiBold on a 34 line, against 13 body. -->
+  <Style x:Key="TypeDisplay" TargetType="TextBlock" BasedOn="{StaticResource HeadlineMedium}">
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="None" />
+    <Setter Property="LineHeight" Value="34" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+  </Style>
+</ResourceDictionary>
