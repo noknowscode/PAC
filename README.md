@@ -23,7 +23,7 @@ Uno Platform (Uno.Sdk 7.0.0-dev.132) with MVUX, Uno Navigation Extensions, Uno T
 - **Colours with no role** keep their meaning whatever the palette, as an operator console needs: alarms, process states, the select-before-operate highlight, the process systems and pipe circuits, and the plant drawing. They are in `App.xaml`'s Light and Default theme dictionaries. No state is shown by colour alone.
 - **Type:** IBM Plex Sans (`DefaultFontFamily`) on the design's closed ramp, 12 / 13 / 16 / 22 / 28, set once in `Styles/TypographyOverride.xaml`; text uses the semantic styles.
 - **Spacing, radii, sizes:** the theme's `Space*`, `Radius*CornerRadius`, `ControlHeight*` and `IconSize*` tokens (`DefaultSpacing` 8, `DefaultCornerRadius` 4). `Styles/Layout.xaml` keeps only what no theme has: breakpoints, page frames, the plant and inspector sizes.
-- **Code drawing:** the plant, its thumbnails and the trends read the same roles and colours for their element's theme through `Styles/ThemeBrushes.cs`, and redraw on a Light/Graphite switch or a palette edit.
+- **Code drawing:** the plant, its thumbnails and the trends read the same roles and colours through `Styles/ThemeBrushes.cs` for the console's theme, and redraw on a Light/Graphite switch, a system theme change or a palette edit.
 
 ## Run it
 
