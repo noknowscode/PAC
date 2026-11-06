@@ -5,8 +5,10 @@
       xmlns:utu="using:Uno.Toolkit.UI"
       xmlns:controls="using:PacConsole.Controls"
       xmlns:local="using:PacConsole.Presentation"
+      xmlns:styles="using:PacConsole.Styles"
       NavigationCacheMode="Required"
-      Background="{ThemeResource BackgroundBrush}">
+      Background="{ThemeResource BackgroundBrush}"
+      styles:ThemeBrushes.Follow="{ThemeResource ConsoleThemeName}">
 
   <!--
     Console page v3 (SPEC-CONSOLE.md, from the user's mock): one frame on the ground, in bands. Header (where, what

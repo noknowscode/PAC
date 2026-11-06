@@ -7,10 +7,13 @@ namespace PacConsole.Styles;
 /// <c>SolidShade0Color</c>).
 /// A converter or an <c>Application.Current.Resources</c> lookup sees only the app theme and is never asked again
 /// after a switch (uno-runtime-gotchas, Theming and color). So <see cref="Get"/> hands out one live brush per key, a
-/// copy owned here, and <see cref="Track"/> recolours them all whenever the window root's theme changes. When the
-/// palette itself changes (Studio's Themes tab editing the palette under Hot Reload regenerates the theme's role
-/// brushes in place) they are recoloured too, and <see cref="PaletteChanged"/> tells the Skia painters to re-read.
-/// XAML keeps using {ThemeResource}.
+/// copy owned here, recoloured whenever the console's theme changes and whenever the palette itself changes (Studio's
+/// Themes tab editing the palette under Hot Reload regenerates the theme's role brushes in place). <see cref="Changed"/>
+/// then tells the Skia painters to re-read for <see cref="Theme"/>. XAML keeps using {ThemeResource}.
+/// The theme is followed two ways: the window root's ActualThemeChanged (the operator's choice, which IThemeService sets
+/// on the root), and <see cref="FollowProperty"/>, which the page binds to a {ThemeResource} marker. A system theme
+/// change while the console follows the system (a browser's colour scheme) re-resolves every ThemeResource but raises
+/// no ActualThemeChanged on WebAssembly; the marker's re-resolution is what reports it.
 /// </summary>
 public static class ThemeBrushes
 {
@@ -20,10 +23,25 @@ public static class ThemeBrushes
     private static bool _recolourQueued;
 
     /// <summary>
-    /// Raised after the palette changed under the running app (not on a Light/Dark switch, which painters follow
-    /// through their own ActualThemeChanged): code that keeps colours rather than brushes re-reads them.
+    /// Raised after the brushes handed out were recoloured, on a Light/Graphite switch or a palette edit: code that keeps
+    /// colours rather than brushes (the Skia painters) re-reads them for <see cref="Theme"/>.
     /// </summary>
-    public static event EventHandler? PaletteChanged;
+    public static event EventHandler? Changed;
+
+    /// <summary>The console's theme, Light or Dark: what the window shows now.</summary>
+    public static ElementTheme Theme => _theme;
+
+    /// <summary>
+    /// Bound on the page to <c>{ThemeResource ConsoleThemeName}</c> ("Light" or "Dark", in App.xaml's theme
+    /// dictionaries): its value changes whenever the page's theme does, whatever changed it.
+    /// </summary>
+    public static readonly DependencyProperty FollowProperty = DependencyProperty.RegisterAttached(
+        "Follow", typeof(string), typeof(ThemeBrushes),
+        new PropertyMetadata(null, (_, e) => Apply(e.NewValue as string == "Dark" ? ElementTheme.Dark : ElementTheme.Light)));
+
+    public static string? GetFollow(DependencyObject element) => (string?)element.GetValue(FollowProperty);
+
+    public static void SetFollow(DependencyObject element, string? value) => element.SetValue(FollowProperty, value);
 
     /// <summary>
     /// The live brush for a key, in the tracked root's theme; with <paramref name="opacity"/>, the key's colour at that
@@ -54,8 +72,15 @@ public static class ThemeBrushes
     /// <summary>Follows the window root: the brushes take its theme now and on every change.</summary>
     public static void Track(FrameworkElement root)
     {
-        root.ActualThemeChanged += (sender, _) => Repaint(sender.ActualTheme);
-        Repaint(root.ActualTheme);
+        root.ActualThemeChanged += (sender, _) => Apply(sender.ActualTheme);
+        Apply(root.ActualTheme);
+    }
+
+    private static void Apply(ElementTheme theme)
+    {
+        if (theme == ElementTheme.Default || theme == _theme) return;
+        Repaint(theme);
+        Changed?.Invoke(null, EventArgs.Empty);
     }
 
     private static void Repaint(ElementTheme theme)
@@ -96,7 +121,7 @@ public static class ThemeBrushes
         {
             _recolourQueued = false;
             Repaint(_theme);
-            PaletteChanged?.Invoke(null, EventArgs.Empty);
+            Changed?.Invoke(null, EventArgs.Empty);
         });
     }
 

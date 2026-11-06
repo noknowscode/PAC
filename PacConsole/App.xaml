@@ -48,6 +48,10 @@
       -->
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
+          <!-- The theme's name, for code: the page binds it (ThemeBrushes.Follow), so the brushes and drawings chosen in
+               code follow every theme change, the system's included. -->
+          <x:String x:Key="ConsoleThemeName">Light</x:String>
+
           <!-- Alarms: burnt orange, always paired with the word (alert, above limit) or a dashed stroke. Alert marks and
                fills (the plant's alarm glow, the active-alarm dot, a limit tick, an onset mark); its text ink; the
                alarm response's opaque amber ground. -->
@@ -120,6 +124,8 @@
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Default">
+          <x:String x:Key="ConsoleThemeName">Dark</x:String>
+
           <Color x:Key="AlertColor">#FFF0793A</Color>
           <Color x:Key="AlertTextColor">#FFF38B55</Color>
           <Color x:Key="AlertTintColor">#FF3A2617</Color>

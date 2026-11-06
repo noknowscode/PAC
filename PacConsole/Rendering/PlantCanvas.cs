@@ -48,18 +48,14 @@ public sealed partial class PlantCanvas : SKCanvasElement
             if (_renderer is not { } renderer) Swap(renderer = CreateRenderer());
             OnPaletteChanged(renderer.Palette);
             Invalidate();
-            Styles.ThemeBrushes.PaletteChanged += OnPaletteEdited;
+            Styles.ThemeBrushes.Changed += OnThemeChanged;
         };
         Unloaded += (_, _) =>
         {
-            Styles.ThemeBrushes.PaletteChanged -= OnPaletteEdited;
+            Styles.ThemeBrushes.Changed -= OnThemeChanged;
             Swap(null);
         };
-        ActualThemeChanged += (_, _) => OnThemeChanged();
     }
-
-    // The palette changed under the running app (Studio's Themes tab): read it again, as on a Light/Dark switch.
-    private void OnPaletteEdited(object? sender, EventArgs e) => OnThemeChanged();
 
     /// <summary>Hands the next frame to the render thread, then asks for a redraw.</summary>
     public void Show(CameraPose pose, UnitId? selected, ImmutableArray<UnitId> alerting, ImmutableArray<TagPlacement> tags,
@@ -70,7 +66,8 @@ public sealed partial class PlantCanvas : SKCanvasElement
         Invalidate();
     }
 
-    private void OnThemeChanged()
+    // The console's theme or its palette changed (a Light/Graphite switch, the system's theme, Studio's Themes tab).
+    private void OnThemeChanged(object? sender, EventArgs e)
     {
         if (_renderer is null) return;
         var renderer = CreateRenderer();
@@ -100,7 +97,7 @@ public sealed partial class PlantCanvas : SKCanvasElement
 
     private SolidRenderer CreateRenderer()
     {
-        var renderer = new SolidRenderer(SolidPalette.For(ActualTheme));
+        var renderer = new SolidRenderer(SolidPalette.For(Styles.ThemeBrushes.Theme));
         var queue = DispatcherQueue;
         // Cached still layers arrive on a worker; one more frame puts them on screen.
         renderer.StillLayersReady += () => queue.TryEnqueue(() => { if (ReferenceEquals(_renderer, renderer)) Invalidate(); });

@@ -29,20 +29,16 @@ public sealed partial class PlantThumb : SKCanvasElement
     {
         Loaded += (_, _) =>
         {
-            if (_renderer is null) Swap(new(SolidPalette.For(ActualTheme)));
+            if (_renderer is null) Swap(new(SolidPalette.For(Styles.ThemeBrushes.Theme)));
             Invalidate();
-            Styles.ThemeBrushes.PaletteChanged += OnPaletteEdited;
+            Styles.ThemeBrushes.Changed += OnThemeChanged;
         };
         Unloaded += (_, _) =>
         {
-            Styles.ThemeBrushes.PaletteChanged -= OnPaletteEdited;
+            Styles.ThemeBrushes.Changed -= OnThemeChanged;
             Swap(null);
         };
-        ActualThemeChanged += (_, _) => OnThemeChanged();
     }
-
-    // The palette changed under the running app (Studio's Themes tab): read it again, as on a Light/Dark switch.
-    private void OnPaletteEdited(object? sender, EventArgs e) => OnThemeChanged();
 
     /// <summary>Key of a <see cref="CameraPresets"/> entry ("iso", "elevation", "plan").</summary>
     public string? PresetKey
@@ -72,10 +68,11 @@ public sealed partial class PlantThumb : SKCanvasElement
         Invalidate();
     }
 
-    private void OnThemeChanged()
+    // The console's theme or its palette changed (a Light/Graphite switch, the system's theme, Studio's Themes tab).
+    private void OnThemeChanged(object? sender, EventArgs e)
     {
         if (_renderer is null) return;
-        Swap(new(SolidPalette.For(ActualTheme)));
+        Swap(new(SolidPalette.For(Styles.ThemeBrushes.Theme)));
         Invalidate();
     }
 
