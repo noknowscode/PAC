@@ -25,8 +25,10 @@ public sealed partial class RangeBar : Canvas
         Children.Add(_band);
         Children.Add(_limit);
         Children.Add(_marker);
-        _track.Fill = ThemeBrushes.Get("FillBrush");
-        _band.Fill = ThemeBrushes.Get("FillStrongBrush");
+        // The track is the theme's subtle fill; the normal band, the limit and an out-of-band value are process and
+        // alarm colours (App.xaml), which keep their meaning whatever the palette.
+        _track.Fill = ThemeBrushes.Get("SurfaceVariantBrush");
+        _band.Fill = ThemeBrushes.Get("ProcessFillBrush");
         _limit.Fill = ThemeBrushes.Get("AlertBrush");
         SizeChanged += (_, _) => Arrange();
     }
@@ -61,7 +63,7 @@ public sealed partial class RangeBar : Canvas
         Place(_limit, Math.Clamp(LimitAt * w - 1, 0, w - 2), 1, null);
         Place(_marker, Math.Clamp(ValueAt * w - 1, 0, w - 2), 0, null);
         // ThemeBrushes repaints these on a theme switch, so choosing one here is enough.
-        _marker.Fill = ThemeBrushes.Get(OutOfBand ? "AlertTextBrush" : "TextPrimaryBrush");
+        _marker.Fill = ThemeBrushes.Get(OutOfBand ? "AlertTextBrush" : "OnSurfaceBrush");
     }
 
     private static void Place(Rectangle r, double x, double y, double? width)

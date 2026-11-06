@@ -15,7 +15,7 @@
     <DataTemplate x:Key="HeaderBrandTemplate">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space14}" VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-          <FontIcon Glyph="&#xE81E;" FontSize="{StaticResource IconSize}" Foreground="{ThemeResource AlertBrush}" VerticalAlignment="Center"
+          <FontIcon Glyph="&#xE81E;" FontSize="{StaticResource IconSize}" Foreground="{ThemeResource TertiaryBrush}" VerticalAlignment="Center"
                     AutomationProperties.AccessibilityView="Raw" />
           <TextBlock Text="PAC" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
         </StackPanel>
@@ -32,7 +32,7 @@
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space10}" VerticalAlignment="Center">
         <TextBlock Text="Net output" Style="{StaticResource TypeBody}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGap}" />
         <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeDisplay}" />
-        <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGap}" />
+        <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGap}" />
       </StackPanel>
     </DataTemplate>
 
@@ -49,7 +49,7 @@
       <StackPanel VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
           <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="{Binding Data.DataIsLive}" VerticalAlignment="Center"
-                   Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=AccentBrush|False=FaintBrush'}" />
+                   Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=PrimaryBrush|False=OutlineBrush'}" />
           <TextBlock Text="{Binding Data.ModeLine}" Style="{StaticResource TypeBody}" />
         </StackPanel>
         <TextBlock Text="{Binding Data.SnapshotText}" Style="{StaticResource TypeMicro}" HorizontalAlignment="Right" />
@@ -60,9 +60,9 @@
     <DataTemplate x:Key="HeaderStatusInlineTemplate">
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space8}">
         <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="{Binding Data.DataIsLive}" VerticalAlignment="Center"
-                 Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=AccentBrush|False=FaintBrush'}" />
+                 Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=PrimaryBrush|False=OutlineBrush'}" />
         <TextBlock Grid.Column="1" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" VerticalAlignment="Center">
-          <Run Text="{Binding Data.ModeLine}" Foreground="{ThemeResource TextPrimaryBrush}" /><Run Text=" · " /><Run Text="{Binding Data.SnapshotText}" />
+          <Run Text="{Binding Data.ModeLine}" Foreground="{ThemeResource OnSurfaceBrush}" /><Run Text=" · " /><Run Text="{Binding Data.SnapshotText}" />
         </TextBlock>
       </Grid>
     </DataTemplate>
@@ -93,7 +93,7 @@
     </DataTemplate>
   </UserControl.Resources>
 
-  <Border BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,0,0,1">
+  <Border BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,0,0,1">
     <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
       <!-- Phone: the mark and the menu; net output against target; mode and data age on one line.
            Each row is its own grid, so one row's widths never push another's. -->

@@ -33,7 +33,8 @@ public sealed record SolidPalette(
     public IReadOnlyDictionary<PlantSystem, SKColor> Systems { get; init; } = new Dictionary<PlantSystem, SKColor>();
 
     /// <summary>
-    /// The console palette for one theme (the Solid* colours in <c>Styles/Palette.xaml</c>), so every plant
+    /// The console palette for one theme (the plant's Solid*, circuit and system colours in App.xaml, the selection
+    /// colour from the theme's palette), so every plant
     /// drawing matches its card. Stroke widths are theme-invariant and come from <c>Styles/Tokens.xaml</c>.
     /// </summary>
     public static SolidPalette For(ElementTheme theme)
@@ -55,8 +56,8 @@ public sealed record SolidPalette(
             Mid: C("SolidLineMidColor"),
             Lo: C("SolidLineLoColor"),
             Faint: C("SolidLineFaintColor"),
-            Lit: C("AccentBrush"),
-            Alert: C("AlertBrush"),
+            Lit: C("PrimaryColor"),
+            Alert: C("AlertColor"),
             Leader: C("SolidLeaderColor"),
             Shadow: C("SolidShadowColor"),
             Silhouette: C("SolidSilhouetteColor"),
@@ -66,18 +67,18 @@ public sealed record SolidPalette(
         {
             Circuits = new Dictionary<Circuit, (SKColor, SKColor)>
             {
-                [Circuit.Steam] = (C("SolidSteamColor"), C("CircuitSteamBrush")),
-                [Circuit.Water] = (C("SolidWaterColor"), C("CircuitWaterBrush")),
-                [Circuit.Cooling] = (C("SolidCoolingColor"), C("CircuitCoolingBrush")),
-                [Circuit.Fuel] = (C("SolidFuelColor"), C("CircuitFuelBrush")),
+                [Circuit.Steam] = (C("SolidSteamColor"), C("CircuitSteamColor")),
+                [Circuit.Water] = (C("SolidWaterColor"), C("CircuitWaterColor")),
+                [Circuit.Cooling] = (C("SolidCoolingColor"), C("CircuitCoolingColor")),
+                [Circuit.Fuel] = (C("SolidFuelColor"), C("CircuitFuelColor")),
             },
             Systems = new Dictionary<PlantSystem, SKColor>
             {
-                [PlantSystem.SteamWater] = C("SystemSteamWaterBrush"),
-                [PlantSystem.Cooling] = C("SystemCoolingBrush"),
-                [PlantSystem.FuelFlue] = C("SystemFuelFlueBrush"),
-                [PlantSystem.Electrical] = C("SystemElectricalBrush"),
-                [PlantSystem.Alarms] = C("AlertBrush"),
+                [PlantSystem.SteamWater] = C("SystemSteamWaterColor"),
+                [PlantSystem.Cooling] = C("SystemCoolingColor"),
+                [PlantSystem.FuelFlue] = C("SystemFuelFlueColor"),
+                [PlantSystem.Electrical] = C("SystemElectricalColor"),
+                [PlantSystem.Alarms] = C("AlertColor"),
             },
         };
     }

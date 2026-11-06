@@ -12,21 +12,170 @@
         <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
 
         <!--
-          Uno Simple, wrapped by the Simple flavour of the Toolkit styles. Its colour roles come from the
-          console palette, once per theme (ColorOverride.xaml). The theme itself follows the OS until the
-          operator picks one; IThemeService applies and saves that choice (SPEC-THEME.md).
+          The look comes from Uno Simple, wrapped by the Simple flavour of the Toolkit styles. Its palette is the
+          console's, in Styles/ColorPaletteOverride.xaml (the file Uno Platform Studio's Themes tab edits); pages and
+          code use the role brushes it generates (OnSurfaceBrush, PrimaryBrush, OutlineVariantBrush...). The theme
+          follows the OS until the operator picks one; IThemeService applies and saves that choice (SPEC-THEME.md).
         -->
         <utus:SimpleToolkitTheme>
           <utus:SimpleToolkitTheme.Colors>
-            <ut:ThemeColors OverrideSource="ms-appx:///Styles/ColorOverride.xaml" />
+            <ut:ThemeColors OverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml" />
           </utus:SimpleToolkitTheme.Colors>
         </utus:SimpleToolkitTheme>
 
-        <ResourceDictionary Source="ms-appx:///Styles/Palette.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Tokens.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Layout.xaml" />
         <ResourceDictionary Source="ms-appx:///Styles/Controls.xaml" />
       </ResourceDictionary.MergedDictionaries>
+
+      <!--
+        The colours no palette role covers. An operator console keeps a muted neutral ground so that these carry
+        meaning, and they keep it whatever the palette: alarms, process states, the select-before-operate highlight,
+        the process systems and pipe circuits, and the plant drawing. Every colour with a role (text, page, panels,
+        accent, errors, rules) is the palette's, used through the role's brush. Pages take these through
+        {ThemeResource}; code asks Styles/ThemeBrushes.cs, which resolves them for the window's theme.
+        No state is shown by colour alone: an alarm carries the word, a device its state word and a filled or hollow
+        dot, a valve its position word and a filled or ringed face.
+        Contrast: alarm text holds 5.3:1 on the alarm tint and 6.2:1 on Surface (Light), 5.9:1 and 4.9:1 (Graphite).
+        "Default" is the Graphite (Dark) dictionary, the WinUI convention.
+      -->
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <!-- Alarms: burnt orange, always paired with the word (alert, above limit) or a dashed stroke. Alert marks and
+               fills (the plant's alarm glow, the active-alarm dot, a limit tick, an onset mark); its text ink; the
+               alarm response's opaque amber ground. -->
+          <Color x:Key="AlertColor">#FFC2410C</Color>
+          <Color x:Key="AlertTextColor">#FFAE3A0A</Color>
+          <Color x:Key="AlertTintColor">#FFFCEAD7</Color>
+
+          <!-- Process states (ISA-101 greys): running is a filled ink dot, stopped a hollow faint ring, a device in
+               transition (starting, stopping) the slate-teal ring; an open valve and a reading's normal band are the
+               strong fill. -->
+          <Color x:Key="RunningColor">#FF1E2833</Color>
+          <Color x:Key="StoppedColor">#FF8A939E</Color>
+          <Color x:Key="TransitionColor">#FF2F5D73</Color>
+          <Color x:Key="ProcessFillColor">#FFD5DAE0</Color>
+
+          <!-- Select-before-operate: the pending command's highlight (12% slate-teal), until it is confirmed or cancelled. -->
+          <Color x:Key="PendingCommandColor">#1F2F5D73</Color>
+
+          <!-- Process systems: a system's dot in the systems bar, and its outline, glow and motion when the plant view
+               isolates it. Distinct from the slate-teal selection and the burnt-orange alarm. -->
+          <Color x:Key="SystemSteamWaterColor">#FFB84D66</Color>
+          <Color x:Key="SystemCoolingColor">#FF1F8A7E</Color>
+          <Color x:Key="SystemFuelFlueColor">#FF7457A8</Color>
+          <Color x:Key="SystemElectricalColor">#FFA87B12</Color>
+          <!-- Pipe circuits, muted so the alarm stays the only call to attention: the deep tone (shades, outline, the
+               legend swatch) and the base face. -->
+          <Color x:Key="CircuitSteamColor">#FFD4A3AF</Color>
+          <Color x:Key="CircuitWaterColor">#FF9EC1D8</Color>
+          <Color x:Key="CircuitCoolingColor">#FF96C9C3</Color>
+          <Color x:Key="CircuitFuelColor">#FFB9A8D0</Color>
+          <Color x:Key="SolidSteamColor">#FFF2D9DF</Color>
+          <Color x:Key="SolidWaterColor">#FFD6E7F2</Color>
+          <Color x:Key="SolidCoolingColor">#FFD3ECE9</Color>
+          <Color x:Key="SolidFuelColor">#FFE5DDEF</Color>
+
+          <!-- The plant drawing (the main view and the view thumbnails): the Anatomy figure's solid look on the ground.
+               Shades step down from the ground, tops step up; the line inks; the inked silhouette every piece of
+               equipment carries; a flat ground shadow (one opaque tone, so overlapping shadows never darken). -->
+          <Color x:Key="SolidPaperColor">#FFF4F5F6</Color>
+          <Color x:Key="SolidShade0Color">#FFC9D4DE</Color>
+          <Color x:Key="SolidShade1Color">#FFD6DFE7</Color>
+          <Color x:Key="SolidShade2Color">#FFE2E9EF</Color>
+          <Color x:Key="SolidShade3Color">#FFECF1F5</Color>
+          <Color x:Key="SolidTopColor">#FFFFFFFF</Color>
+          <Color x:Key="SolidLitFaceColor">#FFE3EEF3</Color>
+          <Color x:Key="SolidLitShadeColor">#FFCFE0E8</Color>
+          <Color x:Key="SolidLitTopColor">#FFF2F7F9</Color>
+          <Color x:Key="SolidLineHiColor">#FF1E2833</Color>
+          <Color x:Key="SolidLineMidColor">#FF5E6E80</Color>
+          <Color x:Key="SolidLineLoColor">#FF9AA9B8</Color>
+          <Color x:Key="SolidLineFaintColor">#FFC3CED8</Color>
+          <Color x:Key="SolidSilhouetteColor">#FF2C3D50</Color>
+          <Color x:Key="SolidLeaderColor">#FF8A939E</Color>
+          <Color x:Key="SolidShadowColor">#FFD3DDE6</Color>
+
+          <SolidColorBrush x:Key="AlertBrush" Color="{StaticResource AlertColor}" />
+          <SolidColorBrush x:Key="AlertTextBrush" Color="{StaticResource AlertTextColor}" />
+          <SolidColorBrush x:Key="AlertTintBrush" Color="{StaticResource AlertTintColor}" />
+          <SolidColorBrush x:Key="RunningBrush" Color="{StaticResource RunningColor}" />
+          <SolidColorBrush x:Key="StoppedBrush" Color="{StaticResource StoppedColor}" />
+          <SolidColorBrush x:Key="TransitionBrush" Color="{StaticResource TransitionColor}" />
+          <SolidColorBrush x:Key="TransitionFillBrush" Color="{StaticResource TransitionColor}" Opacity="0.12" />
+          <SolidColorBrush x:Key="ProcessFillBrush" Color="{StaticResource ProcessFillColor}" />
+          <SolidColorBrush x:Key="PendingCommandBrush" Color="{StaticResource PendingCommandColor}" />
+          <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="{StaticResource SystemSteamWaterColor}" />
+          <SolidColorBrush x:Key="SystemCoolingBrush" Color="{StaticResource SystemCoolingColor}" />
+          <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="{StaticResource SystemFuelFlueColor}" />
+          <SolidColorBrush x:Key="SystemElectricalBrush" Color="{StaticResource SystemElectricalColor}" />
+          <SolidColorBrush x:Key="CircuitSteamBrush" Color="{StaticResource CircuitSteamColor}" />
+          <SolidColorBrush x:Key="CircuitWaterBrush" Color="{StaticResource CircuitWaterColor}" />
+          <SolidColorBrush x:Key="CircuitCoolingBrush" Color="{StaticResource CircuitCoolingColor}" />
+          <SolidColorBrush x:Key="CircuitFuelBrush" Color="{StaticResource CircuitFuelColor}" />
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Default">
+          <Color x:Key="AlertColor">#FFF0793A</Color>
+          <Color x:Key="AlertTextColor">#FFF38B55</Color>
+          <Color x:Key="AlertTintColor">#FF3A2617</Color>
+
+          <Color x:Key="RunningColor">#FFE8EAEC</Color>
+          <Color x:Key="StoppedColor">#FF6E767F</Color>
+          <Color x:Key="TransitionColor">#FF7FB3C8</Color>
+          <Color x:Key="ProcessFillColor">#FF353A40</Color>
+
+          <Color x:Key="PendingCommandColor">#247FB3C8</Color>
+
+          <Color x:Key="SystemSteamWaterColor">#FFE8899C</Color>
+          <Color x:Key="SystemCoolingColor">#FF56C4B6</Color>
+          <Color x:Key="SystemFuelFlueColor">#FFAD90DB</Color>
+          <Color x:Key="SystemElectricalColor">#FFE2B652</Color>
+          <Color x:Key="CircuitSteamColor">#FF7A4D58</Color>
+          <Color x:Key="CircuitWaterColor">#FF3F5F78</Color>
+          <Color x:Key="CircuitCoolingColor">#FF3A6662</Color>
+          <Color x:Key="CircuitFuelColor">#FF5C4E70</Color>
+          <Color x:Key="SolidSteamColor">#FF4A3037</Color>
+          <Color x:Key="SolidWaterColor">#FF283B4B</Color>
+          <Color x:Key="SolidCoolingColor">#FF243F3D</Color>
+          <Color x:Key="SolidFuelColor">#FF3A3047</Color>
+
+          <Color x:Key="SolidPaperColor">#FF16181B</Color>
+          <Color x:Key="SolidShade0Color">#FF0F1113</Color>
+          <Color x:Key="SolidShade1Color">#FF131518</Color>
+          <Color x:Key="SolidShade2Color">#FF1A1C20</Color>
+          <Color x:Key="SolidShade3Color">#FF1E2125</Color>
+          <Color x:Key="SolidTopColor">#FF262A2F</Color>
+          <Color x:Key="SolidLitFaceColor">#FF1A272D</Color>
+          <Color x:Key="SolidLitShadeColor">#FF152026</Color>
+          <Color x:Key="SolidLitTopColor">#FF22333B</Color>
+          <Color x:Key="SolidLineHiColor">#FFE8EAEC</Color>
+          <Color x:Key="SolidLineMidColor">#FF9AA1A9</Color>
+          <Color x:Key="SolidLineLoColor">#FF5A6168</Color>
+          <Color x:Key="SolidLineFaintColor">#FF33383E</Color>
+          <Color x:Key="SolidSilhouetteColor">#FF8E97A1</Color>
+          <Color x:Key="SolidLeaderColor">#FF6E767F</Color>
+          <Color x:Key="SolidShadowColor">#FF0E1012</Color>
+
+          <SolidColorBrush x:Key="AlertBrush" Color="{StaticResource AlertColor}" />
+          <SolidColorBrush x:Key="AlertTextBrush" Color="{StaticResource AlertTextColor}" />
+          <SolidColorBrush x:Key="AlertTintBrush" Color="{StaticResource AlertTintColor}" />
+          <SolidColorBrush x:Key="RunningBrush" Color="{StaticResource RunningColor}" />
+          <SolidColorBrush x:Key="StoppedBrush" Color="{StaticResource StoppedColor}" />
+          <SolidColorBrush x:Key="TransitionBrush" Color="{StaticResource TransitionColor}" />
+          <SolidColorBrush x:Key="TransitionFillBrush" Color="{StaticResource TransitionColor}" Opacity="0.14" />
+          <SolidColorBrush x:Key="ProcessFillBrush" Color="{StaticResource ProcessFillColor}" />
+          <SolidColorBrush x:Key="PendingCommandBrush" Color="{StaticResource PendingCommandColor}" />
+          <SolidColorBrush x:Key="SystemSteamWaterBrush" Color="{StaticResource SystemSteamWaterColor}" />
+          <SolidColorBrush x:Key="SystemCoolingBrush" Color="{StaticResource SystemCoolingColor}" />
+          <SolidColorBrush x:Key="SystemFuelFlueBrush" Color="{StaticResource SystemFuelFlueColor}" />
+          <SolidColorBrush x:Key="SystemElectricalBrush" Color="{StaticResource SystemElectricalColor}" />
+          <SolidColorBrush x:Key="CircuitSteamBrush" Color="{StaticResource CircuitSteamColor}" />
+          <SolidColorBrush x:Key="CircuitWaterBrush" Color="{StaticResource CircuitWaterColor}" />
+          <SolidColorBrush x:Key="CircuitCoolingBrush" Color="{StaticResource CircuitCoolingColor}" />
+          <SolidColorBrush x:Key="CircuitFuelBrush" Color="{StaticResource CircuitFuelColor}" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
 
       <!-- The converters the console page and its section controls bind with. -->
       <conv:ToneConverter x:Key="Tone" />

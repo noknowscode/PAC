@@ -29,7 +29,7 @@
                 <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" MaxLines="2" />
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                   <TextBlock Text="{Binding Value}" Style="{StaticResource TypeValue}"
-                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='high=AlertTextBrush|normal=TextPrimaryBrush'}" />
+                             Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='high=AlertTextBrush|normal=OnSurfaceBrush'}" />
                   <TextBlock Text="{Binding Unit}" Style="{StaticResource TypeMicro}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGapSm}" />
                 </StackPanel>
                 <controls:RangeBar Margin="{StaticResource GapTop4}" BandStart="{Binding BandStart}" BandEnd="{Binding BandEnd}"
@@ -37,7 +37,7 @@
                 <TextBlock Text="{Binding StatusText}" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AlertTextBrush}"
                            Visibility="{Binding IsHigh, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
               </StackPanel>
-              <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource AccentBrush}"
+              <TextBlock Grid.Column="1" Text="↗" Style="{StaticResource TypeMicro}" Foreground="{ThemeResource PrimaryBrush}"
                          Visibility="{Binding IsCompared, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
             </Grid>
           </DataTemplate>
@@ -50,7 +50,7 @@
       <Button Content="{Binding}" Style="{StaticResource TileButton}"
               Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ToggleCompare}" CommandParameter="{Binding Key}"
               AutomationProperties.Name="{Binding AutomationName}"
-              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=AccentFillBrush|normal=CardBrush'}" />
+              Background="{Binding Surface, Converter={StaticResource Tone}, ConverterParameter='compared=PrimaryPressedBrush|normal=SurfaceBrush'}" />
     </DataTemplate>
 
     <!-- A quiet text button: an alarm's title selects its unit. -->
@@ -66,8 +66,8 @@
     </Style>
 
     <Style x:Key="ChipButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-      <Setter Property="Background" Value="{ThemeResource CardBrush}" />
-      <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+      <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="{StaticResource ChipInset}" />
       <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
@@ -91,7 +91,7 @@
     <DataTemplate x:Key="AlarmItemTemplate">
       <StackPanel Spacing="{StaticResource Space2}" Margin="{StaticResource GapTop12}" AutomationProperties.Name="{Binding AutomationName}">
         <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='unacked=AlertTextBrush|returned=AlertTextBrush|acked=MutedBrush'}">
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='unacked=AlertTextBrush|returned=AlertTextBrush|acked=OnSurfaceVariantBrush'}">
           <Run Text="{Binding Priority}" /><Run Text=" · " /><Run Text="{Binding Time}" /><Run Text=" · " /><Run Text="{Binding State}" />
         </TextBlock>
         <Button Content="{Binding Title}" HorizontalAlignment="Left"
@@ -123,8 +123,8 @@
       <Grid ColumnDefinitions="10,*,Auto" ColumnSpacing="{StaticResource Space10}" MinHeight="{StaticResource ListRowMinHeight}">
         <!-- The state dot repeats the State word beside it; it never carries the state alone. -->
         <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" VerticalAlignment="Center" StrokeThickness="{StaticResource DeviceDotStroke}"
-                 Stroke="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=TextPrimaryBrush|moving=AccentBrush|stopped=FaintBrush'}"
-                 Fill="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=TextPrimaryBrush|moving=AccentFillBrush|stopped=CardBrush'}" />
+                 Stroke="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=RunningBrush|moving=TransitionBrush|stopped=StoppedBrush'}"
+                 Fill="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='running=RunningBrush|moving=TransitionFillBrush|stopped=SurfaceBrush'}" />
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
           <TextBlock Text="{Binding Name}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
           <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="{Binding State}" /><Run Text="   " /><Run Text="{Binding Detail}" /></TextBlock>
@@ -144,7 +144,7 @@
       <Setter Property="Width" Value="{StaticResource ValveWidth}" />
       <Setter Property="Height" Value="{StaticResource ValveHeight}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="BorderBrush" Value="{ThemeResource BorderBrushDefault}" />
+      <Setter Property="BorderBrush" Value="{ThemeResource OutlineBrush}" />
       <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     </Style>
 
@@ -158,7 +158,7 @@
     <!-- A valve on the selected equipment: selecting it selects its move to the other position. -->
     <DataTemplate x:Key="ValveTemplate">
       <Button ContentTemplate="{StaticResource ValveFace}" Content="{Binding}" Style="{StaticResource ValveButton}"
-              Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=FillStrongBrush|False=CardBrush'}"
+              Background="{Binding Open, Converter={StaticResource Tone}, ConverterParameter='True=ProcessFillBrush|False=SurfaceBrush'}"
               Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.SelectValve}" CommandParameter="{Binding Id}"
               AutomationProperties.Name="{Binding AutomationName}" ToolTipService.ToolTip="{Binding AutomationName}" />
     </DataTemplate>
@@ -212,9 +212,9 @@
           <TextBlock Grid.Column="1" Text="EQUIPMENT INSPECTOR" Style="{StaticResource TypeCaps}" />
         </Grid>
         <TextBlock Text="{Binding Data.InspectorName}" Style="{StaticResource TypeDisplay}" TextWrapping="WrapWholeWords" />
-        <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{ThemeResource InkSoftBrush}" TextWrapping="WrapWholeWords" />
+        <TextBlock Text="{Binding Data.InspectorDescription}" Style="{StaticResource TypeBody}" Foreground="{ThemeResource SecondaryBrush}" TextWrapping="WrapWholeWords" />
         <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords">
-          <Run Text="{Binding Data.InspectorStateAlert}" Foreground="{ThemeResource AlertTextBrush}" /><Run Text="{Binding Data.InspectorStateNominal}" Foreground="{ThemeResource MutedBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
+          <Run Text="{Binding Data.InspectorStateAlert}" Foreground="{ThemeResource AlertTextBrush}" /><Run Text="{Binding Data.InspectorStateNominal}" Foreground="{ThemeResource OnSurfaceVariantBrush}" /><Run Text=" · " /><Run Text="{Binding Data.ServiceText}" />
         </TextBlock>
       </StackPanel>
 
@@ -228,11 +228,11 @@
             <Run Text="{Binding Priority}" /><Run Text=" priority · " /><Run Text="{Binding State}" />
           </TextBlock>
           <TextBlock Text="{Binding Title}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
-          <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="Likely cause: " /><Run Text="{Binding Cause}" Foreground="{ThemeResource TextPrimaryBrush}" /></TextBlock>
+          <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="Likely cause: " /><Run Text="{Binding Cause}" Foreground="{ThemeResource OnSurfaceBrush}" /></TextBlock>
           <TextBlock Text="{Binding Steps}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords" />
           <TextBlock Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords"><Run Text="If not handled: " /><Run Text="{Binding Consequence}" /></TextBlock>
-          <Button Content="Acknowledge" Background="{ThemeResource CardBrush}" HorizontalAlignment="Left"
-                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+          <Button Content="Acknowledge" HorizontalAlignment="Left"
+                  Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleSurfaceButtonTouch}, Wide={StaticResource ConsoleSurfaceButton}}"
                   Visibility="{Binding CanAck, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                   Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.Acknowledge}" CommandParameter="{Binding Key}"
                   AutomationProperties.Name="{Binding AcknowledgeName}" />
@@ -271,21 +271,21 @@
       <StackPanel Spacing="{StaticResource Space16}" Visibility="{Binding IsChecked, ElementName=TabControl, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
         <!-- xaml-lint: allow card - the select-before-operate confirm bar, not a content surface. -->
         <Border DataContext="{Binding Data.Pending}" Visibility="{Binding DataContext, RelativeSource={RelativeSource Self}, Converter={StaticResource Present}, FallbackValue=Collapsed}"
-                Background="{Binding IsRefused, Converter={StaticResource Tone}, ConverterParameter='True=AlertTintBrush|False=AccentFillBrush'}"
+                Background="{Binding IsRefused, Converter={StaticResource Tone}, ConverterParameter='True=ErrorContainerBrush|False=PendingCommandBrush'}"
                 CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource CalloutInset}" AutomationProperties.Name="Pending command">
           <StackPanel Spacing="{StaticResource Space8}">
             <TextBlock Text="{Binding Text}" Style="{StaticResource TypeSection}" TextWrapping="WrapWholeWords" />
             <TextBlock Text="{Binding Reason}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-              <Button Content="Confirm" Background="{ThemeResource AccentBrush}" Foreground="{ThemeResource OnAccentBrush}"
-                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+              <Button Content="Confirm"
+                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsolePrimaryButtonTouch}, Wide={StaticResource ConsolePrimaryButton}}"
                       Visibility="{Binding IsRefused, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}"
                       Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.ConfirmPending}"
                       AutomationProperties.Name="{Binding ConfirmName}" />
               <!-- Esc cancels from anywhere on the page while the bar shows (SPEC-OPERATIONS): the accelerator invokes this
                    button's command. -->
-              <Button Content="Cancel" Background="{ThemeResource CardBrush}"
-                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}"
+              <Button Content="Cancel"
+                      Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleSurfaceButtonTouch}, Wide={StaticResource ConsoleSurfaceButton}}"
                       Command="{utu:AncestorBinding AncestorType=Page, Path=DataContext.CancelPending}"
                       AutomationProperties.Name="{Binding CancelName}">
                 <Button.KeyboardAccelerators>
@@ -298,7 +298,7 @@
 
         <StackPanel Spacing="{StaticResource Space8}">
           <TextBlock Text="Plant mode" Style="{StaticResource TypeMicro}" />
-          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}" Background="{ThemeResource FillBrush}">
+          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}" Background="{ThemeResource SurfaceVariantBrush}">
             <RadioButton Content="Auto" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsAuto, Mode=OneWay}" Command="{Binding Parent.SetAuto}"
                          Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}" />
             <RadioButton Grid.Column="1" Content="Manual" Style="{StaticResource ModeRadioButton}" IsChecked="{Binding Data.IsManual, Mode=OneWay}" Command="{Binding Parent.SetManual}"
@@ -403,7 +403,7 @@
       <!-- Connected equipment: chips that select it, or a line saying there is none. -->
       <StackPanel Spacing="{StaticResource Space8}" AutomationProperties.Name="Connected equipment">
         <TextBlock Text="Connected equipment" Style="{StaticResource TypeMicro}" />
-        <TextBlock Text="Not connected to other equipment in this plant." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}" TextWrapping="WrapWholeWords"
+        <TextBlock Text="Not connected to other equipment in this plant." Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}" TextWrapping="WrapWholeWords"
                    Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, ConverterParameter=Invert, FallbackValue=Collapsed}" />
         <controls:FlowPanel HorizontalSpacing="{StaticResource Space8}" VerticalSpacing="{StaticResource Space8}"
                             Visibility="{Binding Data.HasConnections, Converter={StaticResource Visible}, FallbackValue=Collapsed}"

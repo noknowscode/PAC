@@ -223,7 +223,9 @@ public sealed partial class TrendChart : UserControl
                 var c = ThemeBrushes.Color(key, theme);
                 return new SKColor(c.R, c.G, c.B, c.A);
             }
-            var inks = new Inks(C("AccentBrush"), C("HairlineBrush"), C("FaintBrush"), C("InkSoftBrush"), C("AlertBrush"));
+            // The plotted line is the selection colour; gridlines, the target and the cursor are the palette's
+            // outline and soft ink; a limit and an alert onset are the alarm colour.
+            var inks = new Inks(C("PrimaryColor"), C("OutlineVariantColor"), C("OutlineColor"), C("SecondaryColor"), C("AlertColor"));
             lock (_drawGate) _inks = inks;
         }
 

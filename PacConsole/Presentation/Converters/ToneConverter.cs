@@ -5,7 +5,7 @@ namespace PacConsole.Presentation.Converters;
 
 /// <summary>
 /// Maps a tone key (or a bool, as "True"/"False") to a palette brush:
-/// ConverterParameter="selected=AccentBrush|alert=AlertBorderBrush|normal=BorderBrushDefault".
+/// ConverterParameter="high=AlertTextBrush|normal=OnSurfaceBrush" (a role brush of the theme or a no-role brush of App.xaml).
 /// The last pair is the fallback. Keeps brush choices in XAML and state rules in Core. The brushes come
 /// from <see cref="ThemeBrushes"/>, so they follow a theme switch without the binding re-running.
 /// </summary>

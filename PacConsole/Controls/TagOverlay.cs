@@ -102,11 +102,13 @@ internal sealed class TagOverlay
         var key = selected ? (alert ? "SelectedAlert" : "Selected") : alert ? "Alert" : "Normal";
         if (Equals(tag.DataContext, key)) return; // avoid restyling every frame
         tag.DataContext = key;
-        // A plate in the ground colour (so the label reads over line work). The selected plate takes the
-        // slate-teal outline, an alerting one the orange outline, and its label carries the word.
-        tag.Background = ThemeBrushes.Get("OverlayBrush");
+        // A plate in the ground colour at 92 % (so the label reads over line work). The selected plate takes the
+        // selection colour (Primary) as its outline and ink, an alerting one the alarm outline at 70 %, and its label
+        // carries the word.
+        var plate = ThemeBrushes.Get("BackgroundBrush", 0.92);
+        tag.Background = plate;
         tag.BorderThickness = new Thickness(selected || alert ? 1 : 0);
-        tag.BorderBrush = ThemeBrushes.Get(alert ? "AlertBorderBrush" : selected ? "AccentBrush" : "OverlayBrush");
-        tag.Foreground = ThemeBrushes.Get(alert ? "AlertTextBrush" : selected ? "AccentBrush" : "TextPrimaryBrush");
+        tag.BorderBrush = alert ? ThemeBrushes.Get("AlertBrush", 0.7) : selected ? ThemeBrushes.Get("PrimaryBrush") : plate;
+        tag.Foreground = ThemeBrushes.Get(alert ? "AlertTextBrush" : selected ? "PrimaryBrush" : "OnBackgroundBrush");
     }
 }

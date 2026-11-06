@@ -6,7 +6,7 @@
       xmlns:controls="using:PacConsole.Controls"
       xmlns:local="using:PacConsole.Presentation"
       NavigationCacheMode="Required"
-      Background="{ThemeResource GroundBrush}">
+      Background="{ThemeResource BackgroundBrush}">
 
   <!--
     Console page v3 (SPEC-CONSOLE.md, from the user's mock): one frame on the ground, in bands. Header (where, what
@@ -35,7 +35,7 @@
     <!-- Before the first snapshot: a quiet line where the page will be, so nothing jumps. -->
     <mvux:FeedView.ProgressTemplate>
       <DataTemplate>
-        <TextBlock Text="Connecting to plant 02…" Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}"
+        <TextBlock Text="Connecting to plant 02…" Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="WrapWholeWords" Margin="{StaticResource StateInset}" />
       </DataTemplate>
     </mvux:FeedView.ProgressTemplate>
@@ -45,7 +45,7 @@
       <DataTemplate>
         <StackPanel Spacing="{StaticResource Space12}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource StateInset}">
           <TextBlock Text="No telemetry from plant 02" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
-          <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}"
+          <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}"
                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
           <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" HorizontalAlignment="Center" AutomationProperties.Name="Retry telemetry from plant 02"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
@@ -59,8 +59,8 @@
     <mvux:FeedView.ErrorTemplate>
       <DataTemplate>
         <StackPanel Spacing="{StaticResource Space12}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource StateInset}">
-          <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{ThemeResource AlertTextBrush}" HorizontalAlignment="Center" TextAlignment="Center" />
-          <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{ThemeResource MutedBrush}"
+          <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{ThemeResource ErrorBrush}" HorizontalAlignment="Center" TextAlignment="Center" />
+          <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}"
                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
           <Button Content="Retry" Command="{Binding DataContext.RetryTelemetry, ElementName=ConsoleFeed}" HorizontalAlignment="Center" AutomationProperties.Name="Retry telemetry from plant 02"
                   Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ConsoleButtonTouch}, Wide={StaticResource ConsoleButton}}" />
@@ -71,7 +71,7 @@
     <DataTemplate>
       <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <!-- The page fills the window edge to edge: the bands carry the structure, not a frame. -->
-        <Border Background="{ThemeResource CardBrush}">
+        <Border Background="{ThemeResource SurfaceBrush}">
           <StackPanel>
 
             <local:ConsoleHeader />
@@ -83,7 +83,7 @@
                  selection whose inspector was taller. Stacked (below 960 px), each sizes to its content. -->
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
 
-              <Border Background="{ThemeResource PanelBrush}"
+              <Border Background="{ThemeResource BackgroundBrush}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}"
                       Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=NaN, Wide={StaticResource PlantHeightWide}, Widest={StaticResource PlantHeightWidest}}">
                 <controls:PlantViewport Title="{Binding Data.SystemTitle}"
@@ -154,7 +154,6 @@
                       <ComboBox Grid.Column="1" MinWidth="{StaticResource PickerMinWidth}"
                                 HorizontalAlignment="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=Stretch, Wide=Left}"
                                 Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource FieldHeight}}"
-                                Background="{ThemeResource CardBrush}" Foreground="{ThemeResource TextPrimaryBrush}" BorderBrush="{ThemeResource HairlineBrush}"
                                 ItemsSource="{Binding Data.EquipmentChoices}"
                                 SelectedIndex="{Binding Data.SelectedIndex, Mode=OneWay}"
                                 utu:CommandExtensions.Command="{Binding Parent.PickEquipment}"
@@ -168,7 +167,7 @@
               <Border Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Wide=1}"
                       Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Wide=0}"
                       Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}"
-                      BorderBrush="{ThemeResource HairlineBrush}"
+                      BorderBrush="{ThemeResource OutlineVariantBrush}"
                       BorderThickness="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow='0,1,0,0', Wide='1,0,0,0'}"
                       Width="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=NaN, Wide={StaticResource InspectorWidthWide}, Widest={StaticResource InspectorWidthWidest}}"
                       Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=NaN, Wide={StaticResource PlantHeightWide}, Widest={StaticResource PlantHeightWidest}}">
@@ -181,7 +180,7 @@
             <local:OperatorLog />
 
             <!-- Footer -->
-            <Border Background="{ThemeResource PanelBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
+            <Border Background="{ThemeResource BackgroundBrush}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
                     Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource FooterInsetNarrow}, Normal={StaticResource FooterInset}}">
               <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
                 <!-- Phone: the two notes stacked. -->

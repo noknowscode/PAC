@@ -5,7 +5,7 @@
 
   <!--
     Console tokens: a quiet instrument (see .impeccable.md, Direction 2). Fonts, type, strokes and
-    radii live here; every colour lives once per theme in Palette.xaml.
+    radii live here; colours are the theme's roles (Styles/ColorPaletteOverride.xaml) and App.xaml's no-role colours.
     Counts are closed: 4 text colours, 1 hairline, 2 fills, 1 accent, 1 alert, 5 type sizes.
     Console v3 (SPEC-CONSOLE.md): selection is a deep slate-teal, alerts a burnt orange.
   -->
@@ -27,36 +27,36 @@
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeMicro}" />
     <Setter Property="LineHeight" Value="16" />
-    <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
   </Style>
   <Style x:Key="TypeBody" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeBody}" />
     <Setter Property="LineHeight" Value="20" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
   </Style>
   <Style x:Key="TypeSection" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansMediumFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeBody}" />
     <Setter Property="LineHeight" Value="20" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
   </Style>
   <Style x:Key="TypeTitle" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeTitle}" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
   </Style>
   <Style x:Key="TypeValue" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeValue}" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
   </Style>
   <!-- Display: net output and the inspector's equipment name, 28 against 13 body. -->
   <Style x:Key="TypeDisplay" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource SansStrongFont}" />
     <Setter Property="FontSize" Value="{StaticResource TypeSizeDisplay}" />
     <Setter Property="LineHeight" Value="34" />
-    <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
   </Style>
 
   <x:Double x:Key="SolidStrokeHairline">0.7</x:Double>

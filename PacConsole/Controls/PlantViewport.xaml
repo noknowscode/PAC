@@ -7,7 +7,7 @@
              x:Name="Viewport"
              IsTabStop="True"
              UseSystemFocusVisuals="True"
-             FocusVisualPrimaryBrush="{ThemeResource AccentBrush}"
+             FocusVisualPrimaryBrush="{ThemeResource PrimaryBrush}"
              AutomationProperties.Name="Plant 3D model">
 
   <!--
@@ -47,7 +47,7 @@
         <utu:ResponsiveView.NarrowTemplate>
           <DataTemplate>
             <!-- xaml-lint: allow card - the segmented control's track, not a content surface (same as the page's Mode and range tracks). -->
-            <Border Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1"
+            <Border Background="{ThemeResource SurfaceBrush}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                     CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource Inset3}">
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}">
                 <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
@@ -79,7 +79,7 @@
         <utu:ResponsiveView.NormalTemplate>
           <DataTemplate>
             <!-- xaml-lint: allow card - the segmented control's track, not a content surface. -->
-            <Border Background="{ThemeResource CardBrush}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1"
+            <Border Background="{ThemeResource SurfaceBrush}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                     CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource Inset3}">
               <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space2}">
                 <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
@@ -176,7 +176,7 @@
       </StackPanel>
     </Grid>
 
-    <Border Grid.Row="2" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
+    <Border Grid.Row="2" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
             Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource PanelFooterInsetNarrow}, Normal={StaticResource PanelFooterInset}}">
       <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space16}">
         <ContentPresenter x:Name="FooterHost" VerticalAlignment="Center" HorizontalContentAlignment="Stretch"

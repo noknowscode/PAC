@@ -14,7 +14,7 @@
     <DataTemplate x:Key="TrendsTitleTemplate">
       <StackPanel Spacing="{StaticResource Space2}">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space10}">
-          <FontIcon Glyph="&#xE9D2;" FontSize="{StaticResource IconSizeSm}" Foreground="{ThemeResource InkSoftBrush}" VerticalAlignment="Center"
+          <FontIcon Glyph="&#xE9D2;" FontSize="{StaticResource IconSizeSm}" Foreground="{ThemeResource SecondaryBrush}" VerticalAlignment="Center"
                     AutomationProperties.AccessibilityView="Raw" />
           <TextBlock Text="Synchronized trends" Style="{StaticResource TypeTitle}" />
         </StackPanel>
@@ -35,7 +35,7 @@
                     Grid.RowSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=2}"
                     Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Normal=1}">
           <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" />
-          <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Value}" /><Run Text=" " /><Run Text="{Binding Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource MutedBrush}" /></TextBlock>
+          <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Value}" /><Run Text=" " /><Run Text="{Binding Unit}" FontSize="{StaticResource TypeSizeMicro}" Foreground="{ThemeResource OnSurfaceVariantBrush}" /></TextBlock>
         </StackPanel>
         <charts:TrendChart Series="{Binding Series}" Cursor="{Binding Cursor}" EventIndex="{Binding EventIndex}"
                            TimeStart="{Binding TimeStart}" TimeMid="{Binding TimeMid}" TimeEnd="{Binding TimeEnd}" Margin="{StaticResource TrendPlotGap}"
@@ -55,7 +55,7 @@
     </DataTemplate>
   </UserControl.Resources>
 
-  <StackPanel Spacing="{StaticResource Space16}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
+  <StackPanel Spacing="{StaticResource Space16}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
               Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource BandInsetNarrow}, Normal={StaticResource BandInset}}"
               AutomationProperties.Name="Synchronized trends">
     <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
@@ -65,7 +65,7 @@
           <StackPanel Spacing="{StaticResource Space12}">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource TrendsTitleTemplate}" IsTabStop="False" HorizontalContentAlignment="Stretch" />
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}"
-                  Background="{ThemeResource FillBrush}" AutomationProperties.Name="Trend range">
+                  Background="{ThemeResource SurfaceVariantBrush}" AutomationProperties.Name="Trend range">
               <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource TouchTarget}"
                            IsChecked="{Binding Data.IsRange15, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Minutes15" />
               <RadioButton Grid.Column="1" Content="1 hour" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource TouchTarget}"
@@ -82,7 +82,7 @@
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource TrendsTitleTemplate}" IsTabStop="False" HorizontalContentAlignment="Stretch" />
             <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}"
-                  Background="{ThemeResource FillBrush}" VerticalAlignment="Top" AutomationProperties.Name="Trend range">
+                  Background="{ThemeResource SurfaceVariantBrush}" VerticalAlignment="Top" AutomationProperties.Name="Trend range">
               <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}"
                            Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}"
                            IsChecked="{Binding Data.IsRange15, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Minutes15" />

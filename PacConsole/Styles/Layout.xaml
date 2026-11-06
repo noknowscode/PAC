@@ -1,6 +1,6 @@
 <!--
   Layout tokens (hand-authored). Pages and controls reference these keys, never literal spacing, insets or sizes, so
-  one edit here retunes the console. Colours live once per theme in Palette.xaml; fonts, the type ramp, strokes,
+  one edit here retunes the console. Colours are the theme's roles and App.xaml's no-role colours; fonts, the type ramp, strokes,
   radii and control heights in Tokens.xaml.
 
   Spacing scale: PAC's 4 px grid (SPEC-CONSOLE.md: 4 / 8 / 12 / 16 / 24 / 32) with the 2 / 6 / 10 / 14 half steps the

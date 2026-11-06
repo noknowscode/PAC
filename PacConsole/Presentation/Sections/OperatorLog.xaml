@@ -20,7 +20,7 @@
         </Grid.ColumnDefinitions>
         <TextBlock Text="{Binding Time}" Style="{StaticResource TypeMicro}" />
         <TextBlock Grid.Column="1" Text="{Binding Kind}" Style="{StaticResource TypeMicro}"
-                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='alarm=AlertTextBrush|refused=AlertTextBrush|normal=MutedBrush|note=AccentBrush|action=TextPrimaryBrush|acknowledge=InkSoftBrush|shelve=InkSoftBrush|unshelve=InkSoftBrush'}" />
+                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter='alarm=AlertTextBrush|refused=ErrorBrush|normal=OnSurfaceVariantBrush|note=PrimaryBrush|action=OnSurfaceBrush|acknowledge=SecondaryBrush|shelve=SecondaryBrush|unshelve=SecondaryBrush'}" />
         <TextBlock Text="{Binding Text}" Style="{StaticResource TypeBody}" TextWrapping="WrapWholeWords"
                    Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=0}"
                    Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Normal=2}"
@@ -29,7 +29,7 @@
     </DataTemplate>
   </UserControl.Resources>
 
-  <StackPanel Spacing="{StaticResource Space10}" BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="0,1,0,0"
+  <StackPanel Spacing="{StaticResource Space10}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
               Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource BandInsetNarrow}, Normal={StaticResource BandInset}}"
               AutomationProperties.Name="Operator log">
     <StackPanel Spacing="{StaticResource Space2}">
@@ -42,7 +42,7 @@
                 controls:Slots.ItemTemplate="{StaticResource LogRowTemplate}" controls:Slots.ItemsSource="{Binding Data.LogRows}" />
     <!-- The record is saved after every action; when a save fails (the journal logs why), say so where the log is. -->
     <TextBlock Text="Not saved on this device. The log and your changes stay until the console closes." Style="{StaticResource TypeMicro}"
-               Foreground="{ThemeResource AlertTextBrush}" TextWrapping="WrapWholeWords"
+               Foreground="{ThemeResource ErrorBrush}" TextWrapping="WrapWholeWords"
                Visibility="{Binding Parent.SaveFailed, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}" Margin="{StaticResource GapTop6}">
       <TextBox Text="{Binding Parent.NoteDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Add a shift note…"
