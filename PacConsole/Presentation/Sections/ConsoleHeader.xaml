@@ -13,9 +13,9 @@
   <UserControl.Resources>
     <!-- One template per piece; the ResponsiveView below arranges them per category. -->
     <DataTemplate x:Key="HeaderBrandTemplate">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space14}" VerticalAlignment="Center">
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-          <FontIcon Glyph="&#xE81E;" FontSize="{StaticResource IconSize}" Foreground="{ThemeResource TertiaryBrush}" VerticalAlignment="Center"
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space150}" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
+          <FontIcon Glyph="&#xE81E;" FontSize="{StaticResource IconSizeSmall}" Foreground="{ThemeResource TertiaryBrush}" VerticalAlignment="Center"
                     AutomationProperties.AccessibilityView="Raw" />
           <TextBlock Text="PAC" Style="{StaticResource TypeTitle}" VerticalAlignment="Center" />
         </StackPanel>
@@ -29,7 +29,7 @@
     </DataTemplate>
 
     <DataTemplate x:Key="HeaderOutputTemplate">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space10}" VerticalAlignment="Center">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space125}" VerticalAlignment="Center">
         <TextBlock Text="Net output" Style="{StaticResource TypeBody}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGap}" />
         <TextBlock Text="{Binding Data.OutputNow}" Style="{StaticResource TypeDisplay}" />
         <TextBlock Text="MW" Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}" VerticalAlignment="Bottom" Margin="{StaticResource BaselineGap}" />
@@ -47,7 +47,7 @@
     <!-- Mode and data age, right-aligned on two lines (Normal up). -->
     <DataTemplate x:Key="HeaderStatusTemplate">
       <StackPanel VerticalAlignment="Center">
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}" HorizontalAlignment="Right">
           <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="{Binding Data.DataIsLive}" VerticalAlignment="Center"
                    Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=PrimaryBrush|False=OutlineBrush'}" />
           <TextBlock Text="{Binding Data.ModeLine}" Style="{StaticResource TypeBody}" />
@@ -58,7 +58,7 @@
 
     <!-- The same on one wrapping line (phones). -->
     <DataTemplate x:Key="HeaderStatusInlineTemplate">
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space8}">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space100}">
         <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" controls:Pulse.IsEnabled="{Binding Data.DataIsLive}" VerticalAlignment="Center"
                  Fill="{Binding Data.DataIsLive, Converter={StaticResource Tone}, ConverterParameter='True=PrimaryBrush|False=OutlineBrush'}" />
         <TextBlock Grid.Column="1" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" VerticalAlignment="Center">
@@ -68,10 +68,10 @@
     </DataTemplate>
 
     <DataTemplate x:Key="HeaderActionsTemplate">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space050}" VerticalAlignment="Center">
         <Button Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource IconButtonTouch}, Wide={StaticResource IconButton}}"
                 AutomationProperties.Name="More" ToolTipService.ToolTip="More">
-          <FontIcon Glyph="&#xE712;" FontSize="{StaticResource IconSize}" />
+          <FontIcon Glyph="&#xE712;" FontSize="{StaticResource IconSizeSmall}" />
           <Button.Flyout>
             <MenuFlyout Placement="BottomEdgeAlignedRight">
               <RadioMenuFlyoutItem Text="System theme" GroupName="Theme" IsChecked="{Binding Data.IsThemeSystem, Mode=OneWay}"
@@ -87,7 +87,7 @@
                 Command="{Binding Parent.ToggleFullScreen}"
                 Visibility="{Binding Parent.CanGoFullScreen, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                 AutomationProperties.Name="Full screen" ToolTipService.ToolTip="Full screen">
-          <FontIcon Glyph="&#xE740;" FontSize="{StaticResource IconSizeSm}" />
+          <FontIcon Glyph="&#xE740;" FontSize="{StaticResource IconSizeSmall}" />
         </Button>
       </StackPanel>
     </DataTemplate>
@@ -99,13 +99,13 @@
            Each row is its own grid, so one row's widths never push another's. -->
       <utu:ResponsiveView.NarrowTemplate>
         <DataTemplate>
-          <StackPanel Spacing="{StaticResource Space6}" Padding="{StaticResource HeaderInsetNarrow}">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space12}">
+          <StackPanel Spacing="{StaticResource Space075}" Padding="{StaticResource HeaderInsetNarrow}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space150}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderBrandTemplate}" IsTabStop="False" VerticalAlignment="Center" />
               <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource HeaderActionsTemplate}" IsTabStop="False" />
             </Grid>
             <!-- The target takes the room the output leaves, and wraps in it: at 390 px "15 MW below target" was clipped. -->
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space12}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space150}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderOutputTemplate}" IsTabStop="False" />
               <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource HeaderTargetTemplate}" IsTabStop="False" VerticalAlignment="Center"
                               HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" />
@@ -117,13 +117,13 @@
       <!-- Tablet: the station, its status and the menu; net output against target below. -->
       <utu:ResponsiveView.NormalTemplate>
         <DataTemplate>
-          <StackPanel Spacing="{StaticResource Space8}" Padding="{StaticResource HeaderInset}">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Space20}">
+          <StackPanel Spacing="{StaticResource Space100}" Padding="{StaticResource HeaderInset}">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Space250}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderBrandTemplate}" IsTabStop="False" VerticalAlignment="Center" />
               <ContentControl Grid.Column="2" Content="{Binding}" ContentTemplate="{StaticResource HeaderStatusTemplate}" IsTabStop="False" VerticalAlignment="Center" />
               <ContentControl Grid.Column="3" Content="{Binding}" ContentTemplate="{StaticResource HeaderActionsTemplate}" IsTabStop="False" VerticalAlignment="Center" />
             </Grid>
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space20}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space250}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderOutputTemplate}" IsTabStop="False" />
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderTargetTemplate}" IsTabStop="False" VerticalAlignment="Center" />
             </StackPanel>
@@ -133,13 +133,13 @@
       <!-- Desktop: one row. The operator is named from Widest, where the row has room for it. -->
       <utu:ResponsiveView.WideTemplate>
         <DataTemplate>
-          <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Space20}" Padding="{StaticResource HeaderInset}">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Space250}" Padding="{StaticResource HeaderInset}">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HeaderBrandTemplate}" IsTabStop="False" VerticalAlignment="Center" />
-            <Border Grid.Column="1" Style="{StaticResource VerticalRule}" Margin="{StaticResource InsetY6}" />
+            <Border Grid.Column="1" Style="{StaticResource VerticalRule}" Margin="{StaticResource Space075VerticalThickness}" />
             <ContentControl Grid.Column="2" Content="{Binding}" ContentTemplate="{StaticResource HeaderOutputTemplate}" IsTabStop="False" VerticalAlignment="Center" />
             <ContentControl Grid.Column="3" Content="{Binding}" ContentTemplate="{StaticResource HeaderTargetTemplate}" IsTabStop="False" VerticalAlignment="Center" />
             <ContentControl Grid.Column="5" Content="{Binding}" ContentTemplate="{StaticResource HeaderStatusTemplate}" IsTabStop="False" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="6" Text="Operator 04" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" Margin="{StaticResource InsetX4}"
+            <TextBlock Grid.Column="6" Text="Operator 04" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" Margin="{StaticResource Space050HorizontalThickness}"
                        Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Wide=Collapsed, Widest=Visible}" />
             <ContentControl Grid.Column="7" Content="{Binding}" ContentTemplate="{StaticResource HeaderActionsTemplate}" IsTabStop="False" VerticalAlignment="Center" />
           </Grid>

@@ -1,12 +1,10 @@
 <!--
-  Layout tokens (hand-authored). Pages and controls reference these keys, never literal spacing, insets or sizes, so
-  one edit here retunes the console. Colours are the theme's roles and App.xaml's no-role colours; fonts, the type ramp, strokes,
-  radii and control heights in Tokens.xaml.
-
-  Spacing scale: PAC's 4 px grid (SPEC-CONSOLE.md: 4 / 8 / 12 / 16 / 24 / 32) with the 2 / 6 / 10 / 14 half steps the
-  console already used, named by value. Thickness forms:
-    Inset{n}            n on all sides               GapTop{n} / GapBottom{n}   one side only
-    Semantic insets     bands, panels, callouts      *Narrow for phones (below 600 px), the plain key from Normal up
+  Layout values (hand-authored): only what no theme has. Spacing, radii, control heights and icon sizes are the theme's
+  tokens (Space*, Space*Thickness, Radius*CornerRadius, ControlHeight*, IconSize*), whose bases are set on
+  SimpleToolkitTheme in App.xaml (DefaultSpacing 8: Space025 = 2, Space050 = 4, Space075 = 6, Space100 = 8, Space125 = 10,
+  Space150 = 12, Space200 = 16, Space250 = 20, Space300 = 24; DefaultCornerRadius 4: Radius100 = 4, Radius200 = 8).
+  What stays here: the breakpoints, the page frames and panel insets whose sides differ, the plant and inspector sizes,
+  the drawing's strokes, small optical offsets and the few control sizes the theme has no step for.
   WinUI cannot StaticResource across sibling merged dictionaries, so every value here is a literal.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -31,42 +29,19 @@
        beside the title from 1280 px, where the panel (window less the 340 inspector) holds every chip on one line. -->
   <utu:ResponsiveLayout x:Key="PlantHeaderLayout" Narrowest="0" Narrow="0" Normal="600" Wide="1280" />
 
-  <!-- Spacing scale (gaps: Spacing, RowSpacing, ColumnSpacing) -->
-  <x:Double x:Key="Space2">2</x:Double>
-  <x:Double x:Key="Space4">4</x:Double>
-  <x:Double x:Key="Space6">6</x:Double>
-  <x:Double x:Key="Space8">8</x:Double>
-  <x:Double x:Key="Space10">10</x:Double>
-  <x:Double x:Key="Space12">12</x:Double>
-  <x:Double x:Key="Space14">14</x:Double>
-  <x:Double x:Key="Space16">16</x:Double>
-  <x:Double x:Key="Space20">20</x:Double>
-  <x:Double x:Key="Space24">24</x:Double>
-
-  <!-- Uniform insets and one-sided gaps (the few places a parent Spacing can't express) -->
-  <Thickness x:Key="Inset3">3</Thickness>
-  <Thickness x:Key="InsetX4">4,0</Thickness>
-  <Thickness x:Key="InsetY6">0,6</Thickness>
-  <Thickness x:Key="GapTop4">0,4,0,0</Thickness>
-  <Thickness x:Key="GapTop6">0,6,0,0</Thickness>
-  <Thickness x:Key="GapTop8">0,8,0,0</Thickness>
-  <Thickness x:Key="GapTop10">0,10,0,0</Thickness>
-  <Thickness x:Key="GapTop12">0,12,0,0</Thickness>
-  <Thickness x:Key="GapTop16">0,16,0,0</Thickness>
-  <!-- Small text set on the baseline of a large figure beside it (MW beside the net output, a unit beside a value). -->
+  <!-- Small text set on the baseline of a large figure beside it (MW beside the net output, a unit beside a value):
+       optical offsets for IBM Plex Sans at 13 and 12 beside 28 and 22. -->
   <Thickness x:Key="BaselineGapSm">0,0,0,3</Thickness>
   <Thickness x:Key="BaselineGap">0,0,0,5</Thickness>
-  <Thickness x:Key="Zero">0</Thickness>
 
-  <!-- Page bands (header, trends, operator log, footer): 16 px sides on phones, 24 from Normal up. -->
+  <!-- Page bands (header, trends, operator log, footer): 16 px sides on phones, 24 from Normal up; their top and bottom
+       insets differ from the sides, which no single spacing token holds. -->
   <Thickness x:Key="HeaderInsetNarrow">16,8,8,12</Thickness>
   <Thickness x:Key="HeaderInset">24,12,16,12</Thickness>
-  <Thickness x:Key="BandInsetNarrow">16,16</Thickness>
   <Thickness x:Key="BandInset">24,20</Thickness>
   <Thickness x:Key="FooterInsetNarrow">16,12</Thickness>
   <Thickness x:Key="FooterInset">24,12</Thickness>
-  <!-- The inspector's content, stacked under the plant or beside it. -->
-  <Thickness x:Key="InspectorInsetNarrow">16,16</Thickness>
+  <!-- The inspector's content beside the plant (Space200Thickness on phones). -->
   <Thickness x:Key="InspectorInset">24,20</Thickness>
 
   <!-- The plant panel: header (title, switcher, systems filter), legend, thumbnails and its footer bar. -->
@@ -79,32 +54,26 @@
   <Thickness x:Key="ThumbColumnMargin">0,12,20,12</Thickness>
   <Thickness x:Key="ThumbLabelMargin">10,0,10,8</Thickness>
 
-  <!-- Component insets -->
-  <Thickness x:Key="CalloutInset">14,12</Thickness>
-  <Thickness x:Key="TileInset">10,8</Thickness>
-  <Thickness x:Key="LinkInset">4,0</Thickness>
-  <Thickness x:Key="ChipInset">10,0</Thickness>
-  <!-- A trend plot sits 16 px below its row top: the target or limit label rides above the plot. -->
-  <Thickness x:Key="TrendPlotGap">0,16,0,0</Thickness>
-  <!-- Stream states (connecting, no telemetry, stopped): kept off the window edge on phones. -->
-  <Thickness x:Key="StateInset">24</Thickness>
-
   <!-- Plant drawing strokes (SolidPalette): hairline, silhouette, and the lit outline of the selected unit. -->
   <x:Double x:Key="SolidStrokeHairline">0.7</x:Double>
   <x:Double x:Key="SolidStrokeSilhouette">1.15</x:Double>
   <x:Double x:Key="SolidStrokeLit">1.3</x:Double>
 
-  <!-- Radii: soft, one step per scale. -->
-  <CornerRadius x:Key="RadiusTag">4</CornerRadius>
-  <CornerRadius x:Key="RadiusControl">8</CornerRadius>
-  <!-- Pointer controls are 32 px; below 960 px (Narrow and Normal, where touch is likely) the touch variants in
-       Controls.xaml give every target 44 px (WCAG 2.5.5, Apple HIG). -->
-  <x:Double x:Key="ControlHeight">32</x:Double>
-  <x:Double x:Key="TouchTarget">44</x:Double>
+  <!-- Control sizes. Pointer controls are ControlHeightSmall (32); below 960 px (Narrow and Normal, where touch is
+       likely) the touch variants in Controls.xaml give every target ControlHeightMediumLarge (44, WCAG 2.5.5, Apple HIG).
+       The theme has no step for these: -->
+  <!-- the compact segments on a track (plant mode, trend range) and the view switcher's, from Wide up -->
+  <x:Double x:Key="SegmentHeightCompact">28</x:Double>
+  <!-- the inspector's tabs, text over a 2 px indicator -->
+  <x:Double x:Key="TabHeight">36</x:Double>
+  <!-- a plant tag's plate: at least the WCAG 2.2 minimum target, taller when the system text size is -->
+  <x:Double x:Key="TagMinHeight">24</x:Double>
+  <x:Double x:Key="PickerMinWidth">220</x:Double>
+  <x:Double x:Key="RowActionMinWidth">72</x:Double>
+  <x:Double x:Key="TileMinHeight">72</x:Double>
+  <!-- A valve: 64 wide by ControlHeightMediumLarge, the touch target at every width. -->
+  <x:Double x:Key="ValveWidth">64</x:Double>
 
-  <!-- Sizes -->
-  <x:Double x:Key="IconSizeSm">14</x:Double>
-  <x:Double x:Key="IconSize">16</x:Double>
   <!-- Status dots: the live dot, a system's dot in the filter, a circuit's swatch in the legend, a device's state. -->
   <x:Double x:Key="DotSizeLive">6</x:Double>
   <x:Double x:Key="DotSizeSystem">7</x:Double>
@@ -114,20 +83,6 @@
   <x:Double x:Key="HeaderRuleHeight">20</x:Double>
   <x:Double x:Key="EventMarkWidth">2</x:Double>
   <x:Double x:Key="EventMarkHeight">14</x:Double>
-
-  <!-- Compact pointer controls (plant mode and trend range segments on a 3 px track, radius 8 + 1; the alarm title
-       link): 28 px from Wide up, the touch target below. -->
-  <x:Double x:Key="ControlHeightCompact">28</x:Double>
-  <CornerRadius x:Key="RadiusTrack">9</CornerRadius>
-  <!-- Fields beside 32 px buttons (the equipment picker). -->
-  <x:Double x:Key="FieldHeight">34</x:Double>
-  <x:Double x:Key="PickerMinWidth">220</x:Double>
-  <x:Double x:Key="RowActionMinWidth">72</x:Double>
-  <x:Double x:Key="ListRowMinHeight">40</x:Double>
-  <x:Double x:Key="TileMinHeight">72</x:Double>
-  <!-- A valve: 64 x 44, the touch target at every width. -->
-  <x:Double x:Key="ValveWidth">64</x:Double>
-  <x:Double x:Key="ValveHeight">44</x:Double>
 
   <!-- Plant panel and inspector, per category (see ConsoleLayout). Narrow and Normal size the panel to its rows,
        with the drawing at least this tall; Wide and Widest share one fixed height with the inspector beside it. -->

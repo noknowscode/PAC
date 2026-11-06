@@ -35,7 +35,7 @@ public sealed record SolidPalette(
     /// <summary>
     /// The console palette for one theme (the plant's Solid*, circuit and system colours in App.xaml, the selection
     /// colour from the theme's palette), so every plant
-    /// drawing matches its card. Stroke widths are theme-invariant and come from <c>Styles/Tokens.xaml</c>.
+    /// drawing matches its card. Stroke widths are theme-invariant and come from <c>Styles/Layout.xaml</c>.
     /// </summary>
     public static SolidPalette For(ElementTheme theme)
     {

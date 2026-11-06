@@ -28,9 +28,9 @@
   </UserControl.Resources>
   <Grid x:Name="Root" RowDefinitions="Auto,*,Auto" Background="Transparent">
 
-    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space20}"
+    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space250}"
           Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource PanelHeaderInsetNarrow}, Normal={StaticResource PanelHeaderInset}}">
-      <StackPanel Spacing="{StaticResource Space2}" VerticalAlignment="Center" IsHitTestVisible="False">
+      <StackPanel Spacing="{StaticResource Space025}" VerticalAlignment="Center" IsHitTestVisible="False">
         <TextBlock x:Name="TitleText" Style="{StaticResource TypeSection}" />
         <TextBlock Text="Drag to orbit · Select an assembly" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
       </StackPanel>
@@ -41,33 +41,33 @@
                           Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=0}"
                           Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Normal=2}"
                           Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=3, Normal=1}"
-                          Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource GapTop10}, Normal={StaticResource Zero}}"
+                          Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource Space125TopThickness}, Normal={StaticResource Space0Thickness}}"
                           Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=Visible, Wide=Collapsed}">
         <!-- Phone: three equal segments across the panel. -->
         <utu:ResponsiveView.NarrowTemplate>
           <DataTemplate>
             <!-- xaml-lint: allow card - the segmented control's track, not a content surface (same as the page's Mode and range tracks). -->
             <Border Background="{ThemeResource SurfaceBrush}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource Inset3}">
-              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}">
+                    CornerRadius="{StaticResource Radius200CornerRadius}" Padding="{StaticResource Space050Thickness}">
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space025}">
                 <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
                              IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=iso}" AutomationProperties.Name="Isometric view">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
-                    <FontIcon Glyph="&#xE7B8;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
+                    <FontIcon Glyph="&#xE7B8;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Isometric" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton Grid.Column="1" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
                              IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=elevation}" AutomationProperties.Name="Elevation view">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
-                    <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
+                    <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Elevation" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton Grid.Column="2" GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
                              IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=plan}" AutomationProperties.Name="Plan view">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
-                    <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
+                    <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Plan" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
@@ -80,26 +80,26 @@
           <DataTemplate>
             <!-- xaml-lint: allow card - the segmented control's track, not a content surface. -->
             <Border Background="{ThemeResource SurfaceBrush}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusControl}" Padding="{StaticResource Inset3}">
-              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space2}">
+                    CornerRadius="{StaticResource Radius200CornerRadius}" Padding="{StaticResource Space050Thickness}">
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space025}">
                 <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
                              IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=iso}" AutomationProperties.Name="Isometric view">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
-                    <FontIcon Glyph="&#xE7B8;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
+                    <FontIcon Glyph="&#xE7B8;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Isometric" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
                              IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=elevation}" AutomationProperties.Name="Elevation view">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
-                    <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
+                    <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Elevation" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
                 <RadioButton GroupName="PlantView" Style="{StaticResource ViewRadioButtonTouch}"
                              IsChecked="{Binding RestingPreset, ElementName=Viewport, Mode=TwoWay, Converter={StaticResource PresetIs}, ConverterParameter=plan}" AutomationProperties.Name="Plan view">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
-                    <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
+                    <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Plan" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
@@ -114,7 +114,7 @@
                         Grid.Row="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Narrow=2, Normal=1, Wide=0}"
                         Grid.Column="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Narrow=0, Wide=1}"
                         Grid.ColumnSpan="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Narrow=3, Wide=1}"
-                        Margin="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Narrow={StaticResource GapTop10}, Wide={StaticResource Zero}}" />
+                        Margin="{utu:Responsive Layout={StaticResource PlantHeaderLayout}, Narrow={StaticResource Space125TopThickness}, Wide={StaticResource Space0Thickness}}" />
     </Grid>
 
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
@@ -126,21 +126,21 @@
         <Canvas x:Name="TagLayer" />
 
         <!-- Circuit legend: the pipe tints, each with its name. -->
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space14}" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False"
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space150}" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False"
                     Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource LegendMarginNarrow}, Normal={StaticResource LegendMargin}}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
             <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" Fill="{ThemeResource CircuitSteamBrush}" VerticalAlignment="Center" />
             <TextBlock Text="Steam" Style="{StaticResource TypeMicro}" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
             <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" Fill="{ThemeResource CircuitWaterBrush}" VerticalAlignment="Center" />
             <TextBlock Text="Feedwater" Style="{StaticResource TypeMicro}" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
             <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" Fill="{ThemeResource CircuitCoolingBrush}" VerticalAlignment="Center" />
             <TextBlock Text="Cooling water" Style="{StaticResource TypeMicro}" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space6}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space075}">
             <Ellipse Width="{StaticResource DotSizeLegend}" Height="{StaticResource DotSizeLegend}" Fill="{ThemeResource CircuitFuelBrush}" VerticalAlignment="Center" />
             <TextBlock Text="Fuel" Style="{StaticResource TypeMicro}" />
           </StackPanel>
@@ -149,7 +149,7 @@
 
       <!-- The standard views beside the drawing, live: each shows the plant from its camera with the same
            selection, alerts and system; choosing one moves the main camera there. -->
-      <StackPanel Grid.Column="1" Spacing="{StaticResource Space10}" Margin="{StaticResource ThumbColumnMargin}" VerticalAlignment="Top"
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space125}" Margin="{StaticResource ThumbColumnMargin}" VerticalAlignment="Top"
                   AutomationProperties.Name="Standard views"
                   Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=Collapsed, Wide=Visible}">
         <RadioButton GroupName="PlantThumbs"
@@ -178,7 +178,7 @@
 
     <Border Grid.Row="2" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
             Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource PanelFooterInsetNarrow}, Normal={StaticResource PanelFooterInset}}">
-      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space16}">
+      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space200}">
         <ContentPresenter x:Name="FooterHost" VerticalAlignment="Center" HorizontalContentAlignment="Stretch"
                           Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}" />
 
@@ -187,13 +187,13 @@
                             Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Wide=0}"
                             Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Wide=1}"
                             Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Wide=1}"
-                            Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource GapTop8}, Wide={StaticResource Zero}}">
+                            Margin="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource Space100TopThickness}, Wide={StaticResource Space0Thickness}}">
           <utu:ResponsiveView.NarrowTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" AutomationProperties.Name="Camera">
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space050}" AutomationProperties.Name="Camera">
                 <ToggleButton Style="{StaticResource ToolbarToggleButtonTouch}" AutomationProperties.Name="Auto orbit"
                               IsChecked="{Binding IsAutoOrbit, ElementName=Viewport, Mode=TwoWay}">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                     <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" Fill="{Binding Foreground, ElementName=OrbitLabel}" VerticalAlignment="Center" />
                     <TextBlock x:Name="OrbitLabel" Text="{utu:AncestorBinding AncestorType=controls:PlantViewport, Path=OrbitStatus}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
@@ -201,7 +201,7 @@
                 <Button Style="{StaticResource IconButtonTouch}" Command="{Binding RotateLeftCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate left 45 degrees" ToolTipService.ToolTip="Rotate left">
                   <!-- Fluent "Rotate" glyph, mirrored for the anticlockwise turn. -->
-                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" RenderTransformOrigin="0.5,0.5">
+                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSizeSmall}" RenderTransformOrigin="0.5,0.5">
                     <FontIcon.RenderTransform>
                       <ScaleTransform ScaleX="-1" />
                     </FontIcon.RenderTransform>
@@ -209,13 +209,13 @@
                 </Button>
                 <Button Style="{StaticResource IconButtonTouch}" Command="{Binding RotateRightCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate right 45 degrees" ToolTipService.ToolTip="Rotate right">
-                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" />
+                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSizeSmall}" />
                 </Button>
                 <!-- Below 600 px the label goes and the Home glyph carries Reset; its name still says it. -->
                 <Button Style="{StaticResource ToolbarButtonTouch}" Command="{Binding ResetViewCommand, ElementName=Viewport}" AutomationProperties.Name="Reset view"
                         ToolTipService.ToolTip="Back to the isometric view (Home)">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                    <FontIcon Glyph="&#xE80F;" FontSize="{StaticResource IconSizeSm}" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
+                    <FontIcon Glyph="&#xE80F;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Reset view" Style="{StaticResource ControlLabel}" VerticalAlignment="Center"
                                Visibility="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=Collapsed, Normal=Visible}" />
                   </StackPanel>
@@ -225,17 +225,17 @@
           </utu:ResponsiveView.NarrowTemplate>
           <utu:ResponsiveView.WideTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" AutomationProperties.Name="Camera">
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space050}" AutomationProperties.Name="Camera">
                 <ToggleButton Style="{StaticResource ToolbarToggleButton}" AutomationProperties.Name="Auto orbit"
                               IsChecked="{Binding IsAutoOrbit, ElementName=Viewport, Mode=TwoWay}">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                     <Ellipse Width="{StaticResource DotSizeLive}" Height="{StaticResource DotSizeLive}" Fill="{Binding Foreground, ElementName=OrbitLabel}" VerticalAlignment="Center" />
                     <TextBlock x:Name="OrbitLabel" Text="{utu:AncestorBinding AncestorType=controls:PlantViewport, Path=OrbitStatus}" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </ToggleButton>
                 <Button Style="{StaticResource IconButton}" Command="{Binding RotateLeftCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate left 45 degrees" ToolTipService.ToolTip="Rotate left">
-                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" RenderTransformOrigin="0.5,0.5">
+                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSizeSmall}" RenderTransformOrigin="0.5,0.5">
                     <FontIcon.RenderTransform>
                       <ScaleTransform ScaleX="-1" />
                     </FontIcon.RenderTransform>
@@ -243,13 +243,13 @@
                 </Button>
                 <Button Style="{StaticResource IconButton}" Command="{Binding RotateRightCommand, ElementName=Viewport}"
                         AutomationProperties.Name="Rotate right 45 degrees" ToolTipService.ToolTip="Rotate right">
-                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSize}" />
+                  <FontIcon Glyph="&#xE7AD;" FontSize="{StaticResource IconSizeSmall}" />
                 </Button>
                 <Button Style="{StaticResource ToolbarButton}" Command="{Binding ResetViewCommand, ElementName=Viewport}" AutomationProperties.Name="Reset view"
                         ToolTipService.ToolTip="Back to the isometric view (Home)">
-                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                     <!-- Fluent "Home": the camera's home pose, the same as the Home key. -->
-                    <FontIcon Glyph="&#xE80F;" FontSize="{StaticResource IconSizeSm}" />
+                    <FontIcon Glyph="&#xE80F;" FontSize="{StaticResource IconSizeSmall}" />
                     <TextBlock Text="Reset view" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>

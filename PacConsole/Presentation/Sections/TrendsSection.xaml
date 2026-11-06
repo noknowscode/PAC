@@ -12,9 +12,9 @@
 
   <UserControl.Resources>
     <DataTemplate x:Key="TrendsTitleTemplate">
-      <StackPanel Spacing="{StaticResource Space2}">
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space10}">
-          <FontIcon Glyph="&#xE9D2;" FontSize="{StaticResource IconSizeSm}" Foreground="{ThemeResource SecondaryBrush}" VerticalAlignment="Center"
+      <StackPanel Spacing="{StaticResource Space025}">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space125}">
+          <FontIcon Glyph="&#xE9D2;" FontSize="{StaticResource IconSizeSmall}" Foreground="{ThemeResource SecondaryBrush}" VerticalAlignment="Center"
                     AutomationProperties.AccessibilityView="Raw" />
           <TextBlock Text="Synchronized trends" Style="{StaticResource TypeTitle}" />
         </StackPanel>
@@ -25,20 +25,20 @@
     <!-- One row per series: the reading and its value at the cursor beside its plot (Normal up), above it on phones.
          The row record carries the shared cursor and time axis, so every row shares this one template. -->
     <DataTemplate x:Key="TrendRowTemplate">
-      <Grid RowDefinitions="Auto,*" ColumnSpacing="{StaticResource Space16}"
+      <Grid RowDefinitions="Auto,*" ColumnSpacing="{StaticResource Space200}"
             Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TrendRowHeightNarrow}, Normal={StaticResource TrendRowHeight}}">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="{StaticResource TrendLabelColumn}" />
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <StackPanel Spacing="{StaticResource Space2}" VerticalAlignment="Center"
+        <StackPanel Spacing="{StaticResource Space025}" VerticalAlignment="Center"
                     Grid.RowSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=2}"
                     Grid.ColumnSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=2, Normal=1}">
           <TextBlock Text="{Binding Label}" Style="{StaticResource TypeMicro}" />
           <TextBlock Style="{StaticResource TypeValue}"><Run Text="{Binding Value}" /><Run Text=" " /><Run Text="{Binding Unit}" FontSize="{ThemeResource BodySmallFontSize}" Foreground="{ThemeResource OnSurfaceVariantBrush}" /></TextBlock>
         </StackPanel>
         <charts:TrendChart Series="{Binding Series}" Cursor="{Binding Cursor}" EventIndex="{Binding EventIndex}"
-                           TimeStart="{Binding TimeStart}" TimeMid="{Binding TimeMid}" TimeEnd="{Binding TimeEnd}" Margin="{StaticResource TrendPlotGap}"
+                           TimeStart="{Binding TimeStart}" TimeMid="{Binding TimeMid}" TimeEnd="{Binding TimeEnd}" Margin="{StaticResource Space200TopThickness}"
                            Grid.Row="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=0}"
                            Grid.RowSpan="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=1, Normal=2}"
                            Grid.Column="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=0, Normal=1}"
@@ -48,29 +48,29 @@
 
     <!-- The latest alert onset in the range: an alert tick with its words. -->
     <DataTemplate x:Key="CursorEventTemplate">
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space8}">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space100}">
         <Border Width="{StaticResource EventMarkWidth}" Height="{StaticResource EventMarkHeight}" Background="{ThemeResource AlertBrush}" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Text="{Binding Data.EventText}" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" VerticalAlignment="Center" />
       </Grid>
     </DataTemplate>
   </UserControl.Resources>
 
-  <StackPanel Spacing="{StaticResource Space16}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
-              Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource BandInsetNarrow}, Normal={StaticResource BandInset}}"
+  <StackPanel Spacing="{StaticResource Space200}" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,1,0,0"
+              Padding="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource Space200Thickness}, Normal={StaticResource BandInset}}"
               AutomationProperties.Name="Synchronized trends">
     <utu:ResponsiveView IsTabStop="False" ResponsiveLayout="{StaticResource ConsoleLayout}" HorizontalContentAlignment="Stretch">
       <!-- Phone: the title, then the range as three equal segments across the band. -->
       <utu:ResponsiveView.NarrowTemplate>
         <DataTemplate>
-          <StackPanel Spacing="{StaticResource Space12}">
+          <StackPanel Spacing="{StaticResource Space150}">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource TrendsTitleTemplate}" IsTabStop="False" HorizontalContentAlignment="Stretch" />
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}"
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space025}" Padding="{StaticResource Space050Thickness}" CornerRadius="{StaticResource Radius200CornerRadius}"
                   Background="{ThemeResource SurfaceVariantBrush}" AutomationProperties.Name="Trend range">
-              <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource TouchTarget}"
+              <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource ControlHeightMediumLarge}"
                            IsChecked="{Binding Data.IsRange15, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Minutes15" />
-              <RadioButton Grid.Column="1" Content="1 hour" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource TouchTarget}"
+              <RadioButton Grid.Column="1" Content="1 hour" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource ControlHeightMediumLarge}"
                            IsChecked="{Binding Data.IsRange1h, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Hour1" />
-              <RadioButton Grid.Column="2" Content="8 hours" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource TouchTarget}"
+              <RadioButton Grid.Column="2" Content="8 hours" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}" Height="{StaticResource ControlHeightMediumLarge}"
                            IsChecked="{Binding Data.IsRange8h, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Hours8" />
             </Grid>
           </StackPanel>
@@ -79,18 +79,18 @@
       <!-- From 600 px: the range beside the title (touch-sized below 960 px). -->
       <utu:ResponsiveView.NormalTemplate>
         <DataTemplate>
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space200}">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource TrendsTitleTemplate}" IsTabStop="False" HorizontalContentAlignment="Stretch" />
-            <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space2}" Padding="{StaticResource Inset3}" CornerRadius="{StaticResource RadiusTrack}"
+            <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space025}" Padding="{StaticResource Space050Thickness}" CornerRadius="{StaticResource Radius200CornerRadius}"
                   Background="{ThemeResource SurfaceVariantBrush}" VerticalAlignment="Top" AutomationProperties.Name="Trend range">
               <RadioButton Content="15 min" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}"
-                           Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}"
+                           Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ControlHeightMediumLarge}, Wide={StaticResource SegmentHeightCompact}}"
                            IsChecked="{Binding Data.IsRange15, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Minutes15" />
               <RadioButton Grid.Column="1" Content="1 hour" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}"
-                           Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}"
+                           Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ControlHeightMediumLarge}, Wide={StaticResource SegmentHeightCompact}}"
                            IsChecked="{Binding Data.IsRange1h, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Hour1" />
               <RadioButton Grid.Column="2" Content="8 hours" GroupName="TrendRange" Style="{StaticResource ModeRadioButton}"
-                           Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource ControlHeightCompact}}"
+                           Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ControlHeightMediumLarge}, Wide={StaticResource SegmentHeightCompact}}"
                            IsChecked="{Binding Data.IsRange8h, Mode=OneWay}" Command="{Binding Parent.SelectRange}" CommandParameter="Hours8" />
             </Grid>
           </Grid>
@@ -99,7 +99,7 @@
     </utu:ResponsiveView>
 
     <!-- Net generation, then up to three compared readings. -->
-    <StackPanel Spacing="{StaticResource Space16}"
+    <StackPanel Spacing="{StaticResource Space200}"
                 controls:Slots.ItemTemplate="{StaticResource TrendRowTemplate}" controls:Slots.ItemsSource="{Binding Data.TrendRows}" />
 
     <Border Style="{StaticResource Rule}" />
@@ -109,13 +109,13 @@
       <!-- Phone: label, time and Latest; the slider across the band; the latest alert onset below. -->
       <utu:ResponsiveView.NarrowTemplate>
         <DataTemplate>
-          <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space12}" RowSpacing="{StaticResource Space8}">
+          <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space150}" RowSpacing="{StaticResource Space100}">
             <TextBlock Text="Shared cursor" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding Data.CursorTime}" Style="{StaticResource TypeSection}" VerticalAlignment="Center" />
             <Button Grid.Column="2" Content="Latest" Style="{StaticResource ToolbarButtonTouch}" Command="{Binding Parent.SetCursorLatest}"
                     AutomationProperties.Name="Move the cursor to the latest sample" />
             <Slider Grid.Row="1" Grid.ColumnSpan="3" Minimum="0" Maximum="{Binding Data.CursorMax}" StepFrequency="1" SmallChange="1" LargeChange="10"
-                    MinHeight="{StaticResource TouchTarget}" VerticalAlignment="Center"
+                    MinHeight="{StaticResource ControlHeightMediumLarge}" VerticalAlignment="Center"
                     Value="{Binding Parent.Cursor, Mode=TwoWay}" AutomationProperties.Name="Shared trend cursor" />
             <ContentControl Grid.Row="2" Grid.ColumnSpan="3" Content="{Binding}" ContentTemplate="{StaticResource CursorEventTemplate}" IsTabStop="False"
                             HorizontalContentAlignment="Stretch" />
@@ -125,10 +125,10 @@
       <!-- Tablet: label, slider, time and Latest on one row; the alert onset below. -->
       <utu:ResponsiveView.NormalTemplate>
         <DataTemplate>
-          <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space20}" RowSpacing="{StaticResource Space8}">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space250}" RowSpacing="{StaticResource Space100}">
             <TextBlock Text="Shared cursor" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
             <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Data.CursorMax}" StepFrequency="1" SmallChange="1" LargeChange="10"
-                    MinHeight="{StaticResource TouchTarget}" VerticalAlignment="Center"
+                    MinHeight="{StaticResource ControlHeightMediumLarge}" VerticalAlignment="Center"
                     Value="{Binding Parent.Cursor, Mode=TwoWay}" AutomationProperties.Name="Shared trend cursor" />
             <TextBlock Grid.Column="2" Text="{Binding Data.CursorTime}" Style="{StaticResource TypeSection}" VerticalAlignment="Center" />
             <Button Grid.Column="3" Content="Latest" Style="{StaticResource ToolbarButtonTouch}" Command="{Binding Parent.SetCursorLatest}"
@@ -141,7 +141,7 @@
       <!-- Desktop: one row. -->
       <utu:ResponsiveView.WideTemplate>
         <DataTemplate>
-          <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Space20}">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Space250}">
             <TextBlock Text="Shared cursor" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
             <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Data.CursorMax}" StepFrequency="1" SmallChange="1" LargeChange="10" VerticalAlignment="Center"
                     Value="{Binding Parent.Cursor, Mode=TwoWay}" AutomationProperties.Name="Shared trend cursor" />

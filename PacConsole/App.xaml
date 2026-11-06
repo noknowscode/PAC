@@ -17,9 +17,13 @@
           code use the role brushes it generates (OnSurfaceBrush, PrimaryBrush, OutlineVariantBrush...). The type is
           IBM Plex Sans (DefaultFontFamily; a font manifest beside the regular face maps the weights to its Medium and
           SemiBold files) on the design's closed ramp (Styles/TypographyOverride.xaml). The theme follows the OS until
-          the operator picks one; IThemeService applies and saves that choice (SPEC-THEME.md).
+          the operator picks one; IThemeService applies and saves that choice (SPEC-THEME.md). Spacing, radii and
+          control sizes are the theme's tokens: the design's 4 px grid runs on an 8 px spacing unit (Space025 = 2 ...
+          Space300 = 24) and its radii on 4 (Radius100 = 4: tags and segments, Radius200 = 8: controls, tracks and
+          callouts); the 32 px pointer controls are ControlHeightSmall and the 44 px touch targets ControlHeightMediumLarge.
         -->
-        <utus:SimpleToolkitTheme DefaultFontFamily="ms-appx:///Assets/Fonts/IBMPlexSans-Regular.ttf#IBM Plex Sans"
+        <utus:SimpleToolkitTheme DefaultSpacing="8" DefaultCornerRadius="4" DefaultDensity="Regular"
+                                 DefaultFontFamily="ms-appx:///Assets/Fonts/IBMPlexSans-Regular.ttf#IBM Plex Sans"
                                  FontOverrideSource="ms-appx:///Styles/TypographyOverride.xaml">
           <utus:SimpleToolkitTheme.Colors>
             <ut:ThemeColors OverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml" />

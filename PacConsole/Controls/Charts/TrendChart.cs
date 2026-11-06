@@ -33,8 +33,9 @@ public sealed partial class TrendChart : UserControl
 
     public TrendChart()
     {
-        // Layout values come from Layout.xaml, like the XAML pages'; only the Skia marks below are drawn in code.
-        var root = new Grid { ColumnSpacing = Token<double>("Space8"), RowSpacing = Token<double>("Space2") };
+        // Spacing comes from the theme's tokens and layout values from Layout.xaml, like the XAML pages'; only the Skia marks
+        // below are drawn in code.
+        var root = new Grid { ColumnSpacing = Token<double>("Space100"), RowSpacing = Token<double>("Space025") };
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Token<double>("TrendAxisLabelWidth")) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });

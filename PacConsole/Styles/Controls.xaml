@@ -15,13 +15,13 @@
     <Setter Property="Background" Value="{ThemeResource SecondaryContainerBrush}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius200CornerRadius}" />
     <Setter Property="Foreground" Value="{ThemeResource OnSecondaryContainerBrush}" />
     <Setter Property="FontFamily" Value="{ThemeResource LabelMediumFontFamily}" />
     <Setter Property="FontSize" Value="{ThemeResource LabelMediumFontSize}" />
     <Setter Property="FontWeight" Value="Medium" />
-    <Setter Property="Padding" Value="14,0" />
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+    <Setter Property="Padding" Value="{StaticResource Space150HorizontalThickness}" />
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="UseSystemFocusVisuals" Value="True" />
@@ -243,11 +243,11 @@
 
   <Style x:Key="ModeRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleRadioButton}">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="Height" Value="{StaticResource ControlHeight}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius100CornerRadius}" />
+    <Setter Property="Padding" Value="{StaticResource Space125HorizontalThickness}" />
     <Setter Property="GroupName" Value="Mode" />
   </Style>
 
@@ -258,9 +258,9 @@
   <Style x:Key="SegmentRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
     <Setter Property="MinWidth" Value="0" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Height" Value="30" />
-    <Setter Property="Padding" Value="12,0" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Padding" Value="{StaticResource Space150HorizontalThickness}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius100CornerRadius}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource SecondaryBrush}" />
     <Setter Property="FontFamily" Value="{ThemeResource BodyMediumFontFamily}" />
@@ -323,8 +323,8 @@
   </Style>
 
   <Style x:Key="ViewRadioButton" TargetType="RadioButton" BasedOn="{StaticResource SegmentRadioButton}">
-    <Setter Property="Height" Value="28" />
-    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="Height" Value="{StaticResource SegmentHeightCompact}" />
+    <Setter Property="Padding" Value="{StaticResource Space125HorizontalThickness}" />
   </Style>
 
   <!--
@@ -335,7 +335,7 @@
     <Setter Property="MinWidth" Value="0" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius200CornerRadius}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{ThemeResource OutlineLowBrush}" />
     <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
@@ -401,7 +401,7 @@
   <Style x:Key="TabRadioButton" TargetType="RadioButton" BasedOn="{StaticResource ConsoleButtonBase}">
     <Setter Property="MinWidth" Value="0" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Height" Value="36" />
+    <Setter Property="Height" Value="{StaticResource TabHeight}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Background" Value="Transparent" />
@@ -459,63 +459,63 @@
   </Style>
 
   <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-    <Setter Property="Width" Value="{StaticResource ControlHeight}" />
-    <Setter Property="Height" Value="{StaticResource ControlHeight}" />
+    <Setter Property="Width" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource SecondaryBrush}" />
   </Style>
 
   <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-    <Setter Property="Height" Value="{StaticResource ControlHeight}" />
-    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Padding" Value="{StaticResource Space125HorizontalThickness}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource SecondaryBrush}" />
   </Style>
 
   <Style x:Key="ToolbarToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource ConsoleToggleButton}">
-    <Setter Property="Height" Value="{StaticResource ControlHeight}" />
-    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Padding" Value="{StaticResource Space125HorizontalThickness}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{ThemeResource SecondaryBrush}" />
   </Style>
 
   <!--
-    Touch variants: the same look with a 44 px target (TouchTarget). The page picks them below 960 px, the Narrow and
+    Touch variants: the same look with a 44 px target (ControlHeightMediumLarge). The page picks them below 960 px, the Narrow and
     Normal categories of ConsoleLayout, with {utu:Responsive Narrow=…Touch, Wide=…}; a Style cannot hold a responsive
     value itself.
   -->
   <Style x:Key="ConsoleButtonTouch" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-    <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <Style x:Key="ConsolePrimaryButtonTouch" TargetType="Button" BasedOn="{StaticResource ConsolePrimaryButton}">
-    <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <Style x:Key="ConsoleSurfaceButtonTouch" TargetType="Button" BasedOn="{StaticResource ConsoleSurfaceButton}">
-    <Setter Property="MinHeight" Value="{StaticResource TouchTarget}" />
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <Style x:Key="IconButtonTouch" TargetType="Button" BasedOn="{StaticResource IconButton}">
-    <Setter Property="Width" Value="{StaticResource TouchTarget}" />
-    <Setter Property="Height" Value="{StaticResource TouchTarget}" />
+    <Setter Property="Width" Value="{StaticResource ControlHeightMediumLarge}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <Style x:Key="ToolbarButtonTouch" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-    <Setter Property="Height" Value="{StaticResource TouchTarget}" />
-    <Setter Property="MinWidth" Value="{StaticResource TouchTarget}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightMediumLarge}" />
+    <Setter Property="MinWidth" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <Style x:Key="ToolbarToggleButtonTouch" TargetType="ToggleButton" BasedOn="{StaticResource ToolbarToggleButton}">
-    <Setter Property="Height" Value="{StaticResource TouchTarget}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <Style x:Key="SegmentRadioButtonTouch" TargetType="RadioButton" BasedOn="{StaticResource SegmentRadioButton}">
-    <Setter Property="Height" Value="{StaticResource TouchTarget}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
   <!-- The view switcher's segments, sharing the switcher's width equally. -->
   <Style x:Key="ViewRadioButtonTouch" TargetType="RadioButton" BasedOn="{StaticResource ViewRadioButton}">
-    <Setter Property="Height" Value="{StaticResource TouchTarget}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightMediumLarge}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <Style x:Key="TabRadioButtonTouch" TargetType="RadioButton" BasedOn="{StaticResource TabRadioButton}">
-    <Setter Property="Height" Value="{StaticResource TouchTarget}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightMediumLarge}" />
   </Style>
 
   <!-- Hairline rules between the console's sections, and the vertical one in the header. -->
@@ -532,10 +532,10 @@
        (the WCAG 2.2 minimum target) and taller when the system text size is. Its size is measured, not set, and the
        tag layout spaces the plates by it. Brushes are set per state in code; the selected plate turns orange. -->
   <Style x:Key="TagButton" TargetType="Button" BasedOn="{StaticResource ConsoleButton}">
-    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="MinHeight" Value="{StaticResource TagMinHeight}" />
     <Setter Property="MinWidth" Value="0" />
-    <Setter Property="Padding" Value="6,0" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusTag}" />
+    <Setter Property="Padding" Value="{StaticResource Space075HorizontalThickness}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius100CornerRadius}" />
     <Setter Property="FontSize" Value="{ThemeResource LabelSmallFontSize}" />
   </Style>
 

@@ -36,14 +36,14 @@
     <mvux:FeedView.ProgressTemplate>
       <DataTemplate>
         <TextBlock Text="Connecting to plant 02…" Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="WrapWholeWords" Margin="{StaticResource StateInset}" />
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="WrapWholeWords" Margin="{StaticResource Space300Thickness}" />
       </DataTemplate>
     </mvux:FeedView.ProgressTemplate>
 
     <!-- No snapshot in the stream (the source returned nothing): say so, with the same retry. -->
     <mvux:FeedView.NoneTemplate>
       <DataTemplate>
-        <StackPanel Spacing="{StaticResource Space12}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource StateInset}">
+        <StackPanel Spacing="{StaticResource Space150}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource Space300Thickness}">
           <TextBlock Text="No telemetry from plant 02" Style="{StaticResource TypeTitle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
           <TextBlock Text="The stream is connected but has not sent a snapshot." Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}"
                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
@@ -58,7 +58,7 @@
          cannot restart a stream (uno-runtime-gotchas, Binding). -->
     <mvux:FeedView.ErrorTemplate>
       <DataTemplate>
-        <StackPanel Spacing="{StaticResource Space12}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource StateInset}">
+        <StackPanel Spacing="{StaticResource Space150}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource Space300Thickness}">
           <TextBlock Text="Telemetry stopped" Style="{StaticResource TypeTitle}" Foreground="{ThemeResource ErrorBrush}" HorizontalAlignment="Center" TextAlignment="Center" />
           <TextBlock Text="The last values are no longer current." Style="{StaticResource TypeBody}" Foreground="{ThemeResource OnSurfaceVariantBrush}"
                      HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" />
@@ -94,14 +94,14 @@
                   <controls:PlantViewport.HeaderContent>
                     <!-- The systems filter, with the drawing it filters: a chip isolates its circuit's ink and motion.
                          The chips wrap, so the filter never clips or scrolls sideways. -->
-                    <controls:FlowPanel HorizontalSpacing="{StaticResource Space4}" VerticalSpacing="{StaticResource Space4}" AutomationProperties.Name="Systems">
+                    <controls:FlowPanel HorizontalSpacing="{StaticResource Space050}" VerticalSpacing="{StaticResource Space050}" AutomationProperties.Name="Systems">
                       <RadioButton GroupName="Systems" Content="All systems"
                                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource SegmentRadioButtonTouch}, Wide={StaticResource SegmentRadioButton}}"
                                    IsChecked="{Binding Data.IsAllSystems, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="All" />
                       <RadioButton GroupName="Systems" AutomationProperties.Name="Steam and water"
                                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource SegmentRadioButtonTouch}, Wide={StaticResource SegmentRadioButton}}"
                                    IsChecked="{Binding Data.IsSteamWater, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="SteamWater">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource SystemSteamWaterBrush}" VerticalAlignment="Center" />
                           <TextBlock Text="Steam &amp; water" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                         </StackPanel>
@@ -109,7 +109,7 @@
                       <RadioButton GroupName="Systems" AutomationProperties.Name="Cooling"
                                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource SegmentRadioButtonTouch}, Wide={StaticResource SegmentRadioButton}}"
                                    IsChecked="{Binding Data.IsCooling, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Cooling">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource SystemCoolingBrush}" VerticalAlignment="Center" />
                           <TextBlock Text="Cooling" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                         </StackPanel>
@@ -117,7 +117,7 @@
                       <RadioButton GroupName="Systems" AutomationProperties.Name="Fuel and flue gas"
                                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource SegmentRadioButtonTouch}, Wide={StaticResource SegmentRadioButton}}"
                                    IsChecked="{Binding Data.IsFuelFlue, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="FuelFlue">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource SystemFuelFlueBrush}" VerticalAlignment="Center" />
                           <TextBlock Text="Fuel &amp; flue gas" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                         </StackPanel>
@@ -125,7 +125,7 @@
                       <RadioButton GroupName="Systems" AutomationProperties.Name="Electrical"
                                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource SegmentRadioButtonTouch}, Wide={StaticResource SegmentRadioButton}}"
                                    IsChecked="{Binding Data.IsElectrical, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Electrical">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource SystemElectricalBrush}" VerticalAlignment="Center" />
                           <TextBlock Text="Electrical" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
                         </StackPanel>
@@ -136,7 +136,7 @@
                                    Style="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource SegmentRadioButtonTouch}, Wide={StaticResource SegmentRadioButton}}"
                                    ToolTipService.ToolTip="{Binding Data.ActiveAlertText}"
                                    IsChecked="{Binding Data.IsAlarms, Mode=OneWay}" Command="{Binding Parent.SelectSystem}" CommandParameter="Alarms">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space100}">
                           <Ellipse Width="{StaticResource DotSizeSystem}" Height="{StaticResource DotSizeSystem}" Fill="{ThemeResource AlertBrush}" VerticalAlignment="Center" controls:Pulse.IsEnabled="True"
                                    Visibility="{Binding Data.HasActiveAlarms, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                           <TextBlock Text="Active alarms" Style="{StaticResource ControlLabel}" VerticalAlignment="Center" />
@@ -149,11 +149,11 @@
                   </controls:PlantViewport.HeaderContent>
                   <controls:PlantViewport.FooterContent>
                     <!-- The equipment picker: full width on phones and tablets, a fixed field from Wide up. -->
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space12}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space150}">
                       <TextBlock Text="Equipment" Style="{StaticResource TypeMicro}" VerticalAlignment="Center" />
                       <ComboBox Grid.Column="1" MinWidth="{StaticResource PickerMinWidth}"
                                 HorizontalAlignment="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow=Stretch, Wide=Left}"
-                                Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource TouchTarget}, Wide={StaticResource FieldHeight}}"
+                                Height="{utu:Responsive Layout={StaticResource ConsoleLayout}, Narrow={StaticResource ControlHeightMediumLarge}, Wide={StaticResource ControlHeightSmall}}"
                                 ItemsSource="{Binding Data.EquipmentChoices}"
                                 SelectedIndex="{Binding Data.SelectedIndex, Mode=OneWay}"
                                 utu:CommandExtensions.Command="{Binding Parent.PickEquipment}"
@@ -186,7 +186,7 @@
                 <!-- Phone: the two notes stacked. -->
                 <utu:ResponsiveView.NarrowTemplate>
                   <DataTemplate>
-                    <StackPanel Spacing="{StaticResource Space4}">
+                    <StackPanel Spacing="{StaticResource Space050}">
                       <TextBlock Text="Interactive concept · water-cooled condenser + separate cooling bank" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
                       <TextBlock Text="Readings, trends and sensor assignments are simulated" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
                     </StackPanel>
@@ -195,7 +195,7 @@
                 <!-- From 600 px: the concept at the left, the simulation note at the right. -->
                 <utu:ResponsiveView.NormalTemplate>
                   <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space200}">
                       <TextBlock Text="Interactive concept · water-cooled condenser + separate cooling bank" Style="{StaticResource TypeMicro}" TextWrapping="WrapWholeWords" />
                       <TextBlock Grid.Column="1" Text="Readings, trends and sensor assignments are simulated" Style="{StaticResource TypeMicro}" />
                     </Grid>
