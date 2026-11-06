@@ -48,10 +48,18 @@ public sealed partial class PlantCanvas : SKCanvasElement
             if (_renderer is not { } renderer) Swap(renderer = CreateRenderer());
             OnPaletteChanged(renderer.Palette);
             Invalidate();
+            Styles.ThemeBrushes.PaletteChanged += OnPaletteEdited;
         };
-        Unloaded += (_, _) => Swap(null);
+        Unloaded += (_, _) =>
+        {
+            Styles.ThemeBrushes.PaletteChanged -= OnPaletteEdited;
+            Swap(null);
+        };
         ActualThemeChanged += (_, _) => OnThemeChanged();
     }
+
+    // The palette changed under the running app (Studio's Themes tab): read it again, as on a Light/Dark switch.
+    private void OnPaletteEdited(object? sender, EventArgs e) => OnThemeChanged();
 
     /// <summary>Hands the next frame to the render thread, then asks for a redraw.</summary>
     public void Show(CameraPose pose, UnitId? selected, ImmutableArray<UnitId> alerting, ImmutableArray<TagPlacement> tags,

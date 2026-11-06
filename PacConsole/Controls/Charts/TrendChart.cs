@@ -65,9 +65,17 @@ public sealed partial class TrendChart : UserControl
 
         Content = root;
         AutomationProperties.SetAccessibilityView(_canvas, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
-        Loaded += (_, _) => OnTheme();
+        Loaded += (_, _) =>
+        {
+            OnTheme();
+            ThemeBrushes.PaletteChanged += OnPaletteEdited;
+        };
+        Unloaded += (_, _) => ThemeBrushes.PaletteChanged -= OnPaletteEdited;
         ActualThemeChanged += (_, _) => OnTheme();
     }
+
+    // The palette changed under the running app (Studio's Themes tab): read the inks again.
+    private void OnPaletteEdited(object? sender, EventArgs e) => OnTheme();
 
     private static T Token<T>(string key) => (T)Application.Current.Resources[key];
 

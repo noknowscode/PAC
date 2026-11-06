@@ -85,22 +85,19 @@
 
           <!-- The plant drawing (the main view and the view thumbnails): the Anatomy figure's solid look on the ground.
                Shades step down from the ground, tops step up; the line inks; the inked silhouette every piece of
-               equipment carries; a flat ground shadow (one opaque tone, so overlapping shadows never darken). -->
-          <Color x:Key="SolidPaperColor">#FFF4F5F6</Color>
+               equipment carries; a flat ground shadow (one opaque tone, so overlapping shadows never darken). The
+               paper, the leaders and the selected unit's lighting are the palette's (Background, Outline, Primary and
+               PrimaryContainer: Rendering/SolidPalette.cs). -->
           <Color x:Key="SolidShade0Color">#FFC9D4DE</Color>
           <Color x:Key="SolidShade1Color">#FFD6DFE7</Color>
           <Color x:Key="SolidShade2Color">#FFE2E9EF</Color>
           <Color x:Key="SolidShade3Color">#FFECF1F5</Color>
           <Color x:Key="SolidTopColor">#FFFFFFFF</Color>
-          <Color x:Key="SolidLitFaceColor">#FFE3EEF3</Color>
-          <Color x:Key="SolidLitShadeColor">#FFCFE0E8</Color>
-          <Color x:Key="SolidLitTopColor">#FFF2F7F9</Color>
           <Color x:Key="SolidLineHiColor">#FF1E2833</Color>
           <Color x:Key="SolidLineMidColor">#FF5E6E80</Color>
           <Color x:Key="SolidLineLoColor">#FF9AA9B8</Color>
           <Color x:Key="SolidLineFaintColor">#FFC3CED8</Color>
           <Color x:Key="SolidSilhouetteColor">#FF2C3D50</Color>
-          <Color x:Key="SolidLeaderColor">#FF8A939E</Color>
           <Color x:Key="SolidShadowColor">#FFD3DDE6</Color>
 
           <SolidColorBrush x:Key="AlertBrush" Color="{StaticResource AlertColor}" />
@@ -146,22 +143,16 @@
           <Color x:Key="SolidWaterColor">#FF283B4B</Color>
           <Color x:Key="SolidCoolingColor">#FF243F3D</Color>
           <Color x:Key="SolidFuelColor">#FF3A3047</Color>
-
-          <Color x:Key="SolidPaperColor">#FF16181B</Color>
           <Color x:Key="SolidShade0Color">#FF0F1113</Color>
           <Color x:Key="SolidShade1Color">#FF131518</Color>
           <Color x:Key="SolidShade2Color">#FF1A1C20</Color>
           <Color x:Key="SolidShade3Color">#FF1E2125</Color>
           <Color x:Key="SolidTopColor">#FF262A2F</Color>
-          <Color x:Key="SolidLitFaceColor">#FF1A272D</Color>
-          <Color x:Key="SolidLitShadeColor">#FF152026</Color>
-          <Color x:Key="SolidLitTopColor">#FF22333B</Color>
           <Color x:Key="SolidLineHiColor">#FFE8EAEC</Color>
           <Color x:Key="SolidLineMidColor">#FF9AA1A9</Color>
           <Color x:Key="SolidLineLoColor">#FF5A6168</Color>
           <Color x:Key="SolidLineFaintColor">#FF33383E</Color>
           <Color x:Key="SolidSilhouetteColor">#FF8E97A1</Color>
-          <Color x:Key="SolidLeaderColor">#FF6E767F</Color>
           <Color x:Key="SolidShadowColor">#FF0E1012</Color>
 
           <SolidColorBrush x:Key="AlertBrush" Color="{StaticResource AlertColor}" />
