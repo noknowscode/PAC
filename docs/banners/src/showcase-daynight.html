@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>showcase-daynight</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* Two tablets, the console at tablet width (one column: header, plant, inspector) in Light and in Graphite,
+     captured seconds apart in one session. Backdrop: a brushed grey from the palette, TertiaryContainer #D5DAE0 and
+     SurfaceVariant #E9ECEF, darkening toward Outline #8A939E at the corners, with a Graphite Primary #7FB3C8 glow behind the Graphite tablet. */
+  .stage { background:
+      radial-gradient(70% 90% at 50% 45%, #E9ECEF 0%, #DDE1E6 50%, #C9D0D7 100%); --grain: .07; }
+  .brush { position: absolute; inset: 0; opacity: .5;
+    background: repeating-linear-gradient(100deg, rgba(255,255,255,.0) 0 3px, rgba(255,255,255,.18) 3px 4px, rgba(138,147,158,.0) 4px 9px); }
+  .vign { position: absolute; inset: 0; background: radial-gradient(90% 100% at 50% 45%, rgba(138,147,158,0) 55%, rgba(138,147,158,.28) 100%); }
+  .t1 { left: 200px; top: 50px; width: 392px; height: 550px; --bezel: 12px; --r: 22px; transform: perspective(1800px) rotateY(9deg); z-index: 2; }
+  .t2 { left: 608px; top: 26px; width: 392px; height: 550px; --bezel: 12px; --r: 22px; transform: perspective(1800px) rotateY(-9deg); }
+  .glow { position: absolute; left: 34%; right: 12%; top: 18%; bottom: 22%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(127,179,200,.30), rgba(127,179,200,0)); filter: blur(30px); }
+  .floor { position: absolute; left: 18%; right: 18%; bottom: 22px; height: 60px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(30,40,51,.22), rgba(30,40,51,0)); filter: blur(8px); }
+</style></head>
+<body><div class="stage grain">
+  <div class="brush"></div>
+  <div class="vign"></div>
+  <div class="glow"></div>
+  <div class="floor"></div>
+  <div class="device t1"><div class="screen"><img src="cap/light-tablet-console@2x.png"></div></div>
+  <div class="device t2"><div class="screen"><img src="cap/dark-tablet-console@2x.png"></div></div>
+</div></body></html>

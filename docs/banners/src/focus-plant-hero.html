@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>focus-plant-hero</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* focus-plant at 1920 x 1080: the same capture (DPR 3, 2220 x 1290 device px) shown at 1680 CSS px wide at scale 1,
+     below its native pixels. Same backdrop as the banner: Graphite Background #16181B, grid in Outline #6E767F,
+     a slate-teal light (Primary #7FB3C8) over the turbine and the alarm's warmth (AlertColor #F0793A) over the bank. */
+  .stage { background:
+      radial-gradient(34% 40% at 47% 50%, rgba(127,179,200,.10) 0%, rgba(127,179,200,0) 70%),
+      radial-gradient(22% 30% at 63% 70%, rgba(240,121,58,.09) 0%, rgba(240,121,58,0) 70%),
+      radial-gradient(90% 90% at 50% 45%, #1A1D21 0%, #16181B 60%, #121417 100%); --grain: .04; }
+  .iso-grid { --iso-ink: rgba(110,118,127,.13); --iso-size: 64px; --iso-mask: 70% 75% at 50% 50%; }
+  .plane { position: absolute; left: 130px; top: 30px; width: 1660px; height: 965px; transform-origin: 50% 100%;
+    transform: perspective(3400px) rotateX(9deg); --fx: 6%; --fy: 7%; }
+  .plane img { width: 100%; height: 100%; }
+</style></head>
+<body><div class="stage grain">
+  <div class="iso-grid"></div>
+  <div class="plane falloff"><img src="cap/dark-plant-turbine@3x.png"></div>
+</div></body></html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>focus-alarm</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* The alarm, Light, "Active alarms" isolated: CLG-05 Cooling bank glowing in AlertColor #C2410C with its callout,
+     the rest of the plant ghosted; beside it the inspector's alarm list (priority, onset, value against limit,
+     Acknowledge, Shelve 1 h) and the alarm response. The drawing's ground is the Light Background #F4F5F6, the centre
+     of the backdrop; the edges fall to SurfaceVariant #E9ECEF and TertiaryContainer #D5DAE0, with AlertTint #FCEAD7
+     warming the bank. */
+  .stage { background:
+      radial-gradient(30% 38% at 36% 56%, rgba(252,234,215,.85) 0%, rgba(252,234,215,0) 70%),
+      radial-gradient(70% 80% at 40% 50%, #F4F5F6 0%, #F4F5F6 45%, rgba(244,245,246,0) 85%),
+      linear-gradient(160deg, #E9ECEF 0%, #E2E6EA 55%, #D5DAE0 100%); --grain: .05; }
+  .iso-grid { --iso-ink: rgba(138,147,158,.12); --iso-size: 46px; --iso-mask: 60% 70% at 36% 50%; }
+  .bank { position: absolute; left: 46px; top: 150px; width: 750px; height: 360px; transform-origin: 50% 100%;
+    transform: perspective(1800px) rotateX(6deg); --fx: 7%; --fy: 9%; }
+  .bank img { width: 100%; height: 100%; }
+  /* The inspector's pieces as floating sheets: Surface #FFFFFF panels, at native pixels in the 2x export */
+  .sheet { position: absolute; background: #FFFFFF; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(30,40,51,.08), 0 2px 4px rgba(30,40,51,.05), 0 14px 28px -8px rgba(30,40,51,.16), 0 34px 64px -20px rgba(30,40,51,.26); }
+  .sheet img { width: 100%; height: 100%; }
+  .list { left: 784px; top: 76px; width: 356px; height: 168px; transform: rotate(-1.2deg); z-index: 2; }
+  .resp { left: 800px; top: 264px; width: 340px; height: 306px; transform: rotate(1deg); }
+  .resp img { width: 340px; height: auto; margin-top: -135px; }
+</style></head>
+<body><div class="stage grain">
+  <div class="iso-grid"></div>
+  <div class="bank falloff"><img src="cap/light-alarm-bank@3x.png"></div>
+  <div class="sheet resp"><img src="cap/light-alarm-response@3x.png"></div>
+  <div class="sheet list"><img src="cap/light-alarm-list@3x.png"></div>
+</div></body></html>

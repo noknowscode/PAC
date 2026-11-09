@@ -1,0 +1,135 @@
+{
+  "id": "pac",
+  "displayName": "PAC",
+  "banners": [
+    {
+      "name": "showcase-desk",
+      "family": "showcase",
+      "title": "Desk and phones",
+      "description": "The Light console in a desktop window between a Graphite plant phone and a Light select-before-operate phone.",
+      "pick": false,
+      "files": {
+        "1x": "finals/showcase-desk@1x.png",
+        "2x": "finals/showcase-desk@2x.png"
+      }
+    },
+    {
+      "name": "showcase-phones",
+      "family": "showcase",
+      "title": "Three phones",
+      "description": "The alarm response (Graphite), the plant (Light, centre) and the synchronized trends (Graphite) on slate-teal.",
+      "pick": false,
+      "files": {
+        "1x": "finals/showcase-phones@1x.png",
+        "2x": "finals/showcase-phones@2x.png"
+      }
+    },
+    {
+      "name": "showcase-daynight",
+      "family": "showcase",
+      "title": "Light and Graphite tablets",
+      "description": "The tablet layout in Light and Graphite side by side: header, plant and the alarm response.",
+      "pick": false,
+      "files": {
+        "1x": "finals/showcase-daynight@1x.png",
+        "2x": "finals/showcase-daynight@2x.png"
+      }
+    },
+    {
+      "name": "focus-plant",
+      "family": "focused",
+      "title": "The plant drawing",
+      "description": "The Skia plant in Graphite: TRB-04 selected and lit, CLG-05 in alarm, every unit tagged.",
+      "pick": true,
+      "files": {
+        "1x": "finals/focus-plant@1x.png",
+        "2x": "finals/focus-plant@2x.png",
+        "hero": "finals/focus-plant-hero.png"
+      }
+    },
+    {
+      "name": "focus-alarm",
+      "family": "focused",
+      "title": "An alarm and its response",
+      "description": "CLG-05 glowing in alarm with its callout, beside the alarm list and the alarm response.",
+      "pick": false,
+      "files": {
+        "1x": "finals/focus-alarm@1x.png",
+        "2x": "finals/focus-alarm@2x.png"
+      }
+    },
+    {
+      "name": "focus-sbo",
+      "family": "focused",
+      "title": "Select before operate",
+      "description": "The CLG-05 faceplate with a pending start of Cell 6 and Confirm, the pending bar lifted out in a loupe.",
+      "pick": false,
+      "files": {
+        "1x": "finals/focus-sbo@1x.png",
+        "2x": "finals/focus-sbo@2x.png"
+      }
+    },
+    {
+      "name": "focus-trends",
+      "family": "focused",
+      "title": "Synchronized trends",
+      "description": "An hour of generation, basin temperature and fan vibration over its limit, with the shared cursor.",
+      "pick": false,
+      "files": {
+        "1x": "finals/focus-trends@1x.png",
+        "2x": "finals/focus-trends@2x.png"
+      }
+    },
+    {
+      "name": "stylized-split",
+      "family": "stylized",
+      "title": "Light and Graphite split",
+      "description": "One console in Light and Graphite, cut on the drawing's 30 degree isometric angle.",
+      "pick": false,
+      "files": {
+        "1x": "finals/stylized-split@1x.png",
+        "2x": "finals/stylized-split@2x.png"
+      }
+    },
+    {
+      "name": "stylized-systems",
+      "family": "stylized",
+      "title": "Four systems",
+      "description": "The plant four times, steam, cooling, fuel and electrical each isolated and lit in its colour.",
+      "pick": true,
+      "files": {
+        "1x": "finals/stylized-systems@1x.png",
+        "2x": "finals/stylized-systems@2x.png",
+        "hero": "finals/stylized-systems-hero.png"
+      }
+    },
+    {
+      "name": "stylized-views",
+      "family": "stylized",
+      "title": "Plan, elevation, isometric",
+      "description": "The three views of one plant laid out like a drawing sheet.",
+      "pick": false,
+      "files": {
+        "1x": "finals/stylized-views@1x.png",
+        "2x": "finals/stylized-views@2x.png"
+      }
+    },
+    {
+      "name": "focus-plant-titled",
+      "family": "titled",
+      "title": "Plant, titled",
+      "description": "The plant banner with PAC Control Console in IBM Plex Sans SemiBold (optional).",
+      "pick": false,
+      "files": {
+        "1x": "finals/focus-plant-titled@1x.png",
+        "2x": "finals/focus-plant-titled@2x.png"
+      }
+    }
+  ],
+  "notes": [
+    "Snapshot clocks differ by up to a minute between screens of one session (15:11 to 15:16 UTC in showcase-desk).",
+    "Each stylized-systems tile has a different unit selected: the app picked it as each system was isolated.",
+    "Unit tags inside the stylized-systems tiles are about 8 px at 1x; the system glows carry the banner.",
+    "focus-sbo repeats the pending-command bar in a loupe by design."
+  ]
+}

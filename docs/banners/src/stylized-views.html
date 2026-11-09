@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>stylized-views</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* Three views of one plant, set out like a drawing sheet: Plan above Elevation on the left, Isometric on the right.
+     Each is the plant drawing as the console shows it in that view (Light, STK-01 selected, CLG-05 in alarm, one
+     session), cropped from the plant panel. The sheet is the drawing's own paper, Background #F4F5F6; the sheet frame
+     is OutlineVariant #D9DDE2 and the grid Outline #8A939E. */
+  .stage { background: radial-gradient(80% 90% at 50% 50%, #F4F5F6 0%, #F4F5F6 60%, #EBEEF1 100%); --grain: .04; }
+  .sheetframe { position: absolute; left: 22px; top: 20px; right: 22px; bottom: 20px; border: 1px solid #D9DDE2; border-radius: 4px; }
+  .sheetframe::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(217,221,226,.7); border-radius: 2px; }
+  .iso-grid { --iso-ink: rgba(138,147,158,.10); --iso-size: 40px; --iso-mask: 42% 60% at 70% 52%; }
+  .view { position: absolute; --fx: 3%; --fy: 5%; }
+  .view img { width: 100%; height: 100%; }
+  .plan { left: 74px; top: 44px; width: 400px; height: 225px; }
+  .elev { left: 52px; top: 352px; width: 580px; height: 234px; --fx: 2%; }
+  .isov { left: 494px; top: 118px; width: 650px; height: 361px; --fx: 2%; --fy: 4%; }
+</style></head>
+<body><div class="stage grain">
+  <div class="iso-grid"></div>
+  <div class="sheetframe"></div>
+  <div class="view plan falloff"><img src="cap/light-view-plan@3x.png"></div>
+  <div class="view elev falloff"><img src="cap/light-view-elev@3x.png"></div>
+  <div class="view isov falloff"><img src="cap/light-view-iso@3x.png"></div>
+</div></body></html>
