@@ -17,7 +17,7 @@ An operator console for a simulated steam-cycle power plant, built with [Uno Pla
 
 ## Built with
 
-Uno Platform (Uno.Sdk 7.0.0-dev.132) with MVUX, Uno Navigation Extensions, Uno Toolkit responsive layouts and SkiaSharp in `SKCanvasElement`. The look comes from Uno.Themes: the Simple theme (`SimpleToolkitTheme`), Light and Graphite (Dark).
+Uno Platform (Uno.Sdk 7.0.5) with MVUX, Uno Navigation Extensions, Uno Toolkit responsive layouts and SkiaSharp in `SKCanvasElement`. The look comes from Uno.Themes: the Simple theme (`SimpleToolkitTheme`), Light and Graphite (Dark).
 
 - **Palette:** one file, `PacConsole/Styles/ColorPaletteOverride.xaml`, read by the theme (`ThemeColors.OverrideSource` in `App.xaml`): all 33 roles in Light and Default, and the file Uno Platform Studio's Themes tab edits. Pages and code use the role brushes the theme generates (`BackgroundBrush`, `SurfaceBrush`, `OnSurfaceBrush`, `OnSurfaceVariantBrush`, `OutlineVariantBrush`, `PrimaryBrush` for the slate-teal selection and the primary action, `ErrorBrush` for errors).
 - **Colours with no role** keep their meaning whatever the palette, as an operator console needs: alarms, process states, the select-before-operate highlight, the process systems and pipe circuits, and the plant drawing. They are in `App.xaml`'s Light and Default theme dictionaries. No state is shown by colour alone.
