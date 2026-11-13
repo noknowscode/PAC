@@ -36,7 +36,9 @@ public class OperationsTests
         var lapsed = PlantOps.Initial.Select(Start("clg.cell6"), 200).Confirm(206, Now);
         lapsed.Device("clg.cell6").Running.Should().BeFalse();
         lapsed.Pending.Should().BeNull();
-        lapsed.Log.Should().BeEmpty();
+        lapsed.Log.Should().ContainSingle().Which.Should().Match<LogEntry>(e =>
+            e.Kind == LogKind.Refused && e.Text == "Lapsed: start clg.cell6 on CLG-05 was not confirmed within 10 s");
+        PlantOps.Initial.Confirm(206, Now).Should().Be(PlantOps.Initial, "with nothing selected, Confirm does nothing");
     }
 
     [Test]
@@ -107,6 +109,56 @@ public class OperationsTests
     }
 
     [Test]
+    public void Manual_holds_a_ramp_where_it_is_and_Auto_carries_it_on()
+    {
+        var ramping = PlantOps.Initial.SetLoad(640, 200, Now);
+        var manual = ramping.ModeChanged(ControlMode.Auto, ControlMode.Manual, 230, Now);
+        manual.Load.ValueAt(230).Should().BeApproximately(625, 1e-9);
+        manual.Load.ValueAt(400).Should().BeApproximately(625, 1e-9, "the ramp holds in Manual");
+        manual.Load.ValueAt(215).Should().BeApproximately(622.5, 1e-9, "ticks before the pause keep the values they had");
+        manual.Load.IsHeld(400).Should().BeTrue();
+        manual.Load.IsMoving(400).Should().BeFalse();
+        manual.Log.Last().Text.Should().Be("Plant mode Auto → Manual");
+
+        var auto = manual.ModeChanged(ControlMode.Manual, ControlMode.Auto, 300, Now);
+        auto.Load.ValueAt(330).Should().BeApproximately(630, 1e-9, "5 MW a minute again, from where it held");
+        auto.Load.ValueAt(500).Should().Be(640);
+        // Hold freezes the data, not the ramps.
+        ramping.ModeChanged(ControlMode.Auto, ControlMode.Hold, 230, Now).Load.Should().Be(ramping.Load);
+    }
+
+    [Test]
+    public void In_Manual_an_applied_setpoint_takes_effect_at_the_next_scan()
+    {
+        var ops = PlantOps.Initial.ModeChanged(ControlMode.Auto, ControlMode.Manual, 200, Now).SetLoad(660, 210, Now, ControlMode.Manual);
+        ops.Load.ValueAt(210).Should().Be(620, "the snapshot the operator acted on stands as it was");
+        ops.Load.ValueAt(211).Should().Be(660, "the whole step at the next scan, with no ramp");
+        ops.Load.IsStep.Should().BeTrue();
+        ops.Load.IsMoving(211).Should().BeFalse();
+        ops.Setpoints.TargetMw.Should().Be(660);
+        ops.Log.Last().Text.Should().Be("Load setpoint 620 → 660 MW (at once, Manual)");
+        (Simulation.OutputMw(211, 7, ops) - Simulation.OutputMw(211, 7, PlantOps.Initial)).Should().BeApproximately(40, 1e-9);
+
+        var fans = PlantOps.Initial.SetFanSpeed(75, 120, Now, ControlMode.Manual);
+        PlantEffects.FanSpeedFraction(fans, 120).Should().Be(1);
+        PlantEffects.FanSpeedFraction(fans, 121).Should().Be(0.75);
+        fans.Log.Single().Text.Should().Be("Fan speed setpoint 100 → 75 % (at once, Manual)");
+    }
+
+    [Test]
+    public void Unshelving_lists_the_alarm_again_and_is_logged()
+    {
+        var shelved = PlantOps.Initial.Shelve("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, 120, Now);
+        var ops = shelved.Unshelve("clg.vib", "CLG-05 cooling fan vibration high", UnitId.Clg, 121, Now);
+        ops.IsShelved("clg.vib", 121).Should().BeFalse();
+        ops.Log.Last().Should().Match<LogEntry>(e => e.Kind == LogKind.Unshelve && e.Text == "Unshelved: CLG-05 cooling fan vibration high");
+        AlarmBook.Compose(121, Setpoints.Default, ops).Entries.Single(e => e.Key == "clg.vib").State
+            .Should().Be(AlarmState.Acknowledged, "shelving acknowledged it");
+        // Nothing on the shelf: nothing to do, nothing logged.
+        PlantOps.Initial.Unshelve("clg.vib", "x", UnitId.Clg, 121, Now).Should().BeSameAs(PlantOps.Initial);
+    }
+
+    [Test]
     public void The_initial_plant_reads_exactly_as_before_operations()
     {
         // With no actions the cooling bank's vibration is the fault drift itself.
@@ -157,14 +209,63 @@ public class OperationsTests
     }
 
     [Test]
-    public void An_alarm_that_returns_unacknowledged_stays_until_acknowledged()
+    public void An_alarm_that_returns_unacknowledged_stays_until_acknowledged_or_out_of_the_window()
     {
         var ops = Do(Do(PlantOps.Initial, Start("clg.cell6"), 122), Stop("clg.cell3"), 130);
-        var book = AlarmBook.Compose(200, Setpoints.Default, ops);
-        book.Entries.Single(e => e.Key == "clg.vib").State.Should().Be(AlarmState.ReturnedUnacknowledged);
+        AlarmBook.Compose(200, Setpoints.Default, ops).Entries.Single(e => e.Key == "clg.vib").State.Should().Be(AlarmState.ReturnedUnacknowledged);
 
         var acked = ops.Acknowledge("clg.vib", "x", UnitId.Clg, 201, Now);
         AlarmBook.Compose(201, Setpoints.Default, acked).Entries.Should().NotContain(e => e.Key == "clg.vib");
+
+        // The book replays 15 minutes, so it is no historian: unacknowledged, the alarm stays listed while its onset is
+        // inside the window and drops off once the window has moved past it (it never comes back in this run).
+        AlarmBook.Compose(200 + AlarmBook.WindowTicks / 2, Setpoints.Default, ops).Entries
+            .Should().Contain(e => e.Key == "clg.vib" && e.State == AlarmState.ReturnedUnacknowledged);
+        AlarmBook.Compose(200 + AlarmBook.WindowTicks, Setpoints.Default, ops).Entries.Should().NotContain(e => e.Key == "clg.vib");
+    }
+
+    [Test]
+    public void A_new_alarm_limit_applies_from_the_next_scan_and_leaves_the_past_alone()
+    {
+        // TRB-04's inlet pressure sits near 165 bar: under a 150 bar limit it alarms, under 170 it never does.
+        const long tick = 600;
+        var lowered = Setpoints.Default with { TurbineLimitBar = 150 };
+        var ops = PlantOps.Initial.SetTurbineLimit(150, tick, Now);
+        ops.Setpoints.Should().Be(lowered);
+
+        var book = AlarmBook.Compose(tick + 1, ops.Setpoints, ops);
+        book.Entries.Single(e => e.Key == "trb.press").Should().Match<AlarmEntry>(e => e.OnsetTick == tick + 1 && !e.OnsetBeforeWindow);
+        book.Transitions.Should().ContainSingle(t => t.Key == "trb.press" && t.Raised && t.Tick == tick + 1);
+        AlarmRules.At(tick, lowered, ops).Should().NotContain(a => a.Key == "trb.press", "the snapshot the operator acted on had the old limit");
+        ops.Log.Single().Text.Should().Be("Inlet pressure alarm limit 170 → 150 bar");
+
+        // Without the change on record, the same setpoints read as if the limit had always been 150.
+        AlarmBook.Compose(tick, lowered, PlantOps.Initial).Entries.Single(e => e.Key == "trb.press").OnsetBeforeWindow.Should().BeTrue();
+    }
+
+    [Test]
+    public void A_damper_move_reads_from_its_tick_on_and_each_change_keeps_what_it_replaced()
+    {
+        var first = Setpoints.Default with { DamperPct = 80 };
+        var second = first with { DamperPct = 50 };
+        var ops = PlantOps.Initial.SetDamper(80, 500, Now).SetDamper(50, 520, Now);
+        ops.Setpoints.Should().Be(second);
+
+        SampleMemo.At(500, second, ops).Setpoints.DamperPct.Should().Be(65);
+        SampleMemo.At(501, second, ops).Setpoints.DamperPct.Should().Be(80);
+        SampleMemo.At(520, second, ops).Setpoints.DamperPct.Should().Be(80);
+        SampleMemo.At(521, second, ops).Setpoints.DamperPct.Should().Be(50);
+        SampleMemo.At(500, second, ops).Readings.Should().Equal(Simulation.Readings(500, 65, ops), "flue gas flow follows the damper in force");
+        SampleMemo.At(501, second, ops).Readings.Should().Equal(Simulation.Readings(501, 80, ops));
+        ops.Log.Select(e => e.Text).Should().Equal("Stack damper 65 → 80 %", "Stack damper 80 → 50 %");
+    }
+
+    [Test]
+    public void Setpoint_changes_older_than_the_longest_trend_are_let_go()
+    {
+        var ops = PlantOps.Initial.SetDamper(80, 100, Now);
+        ops = ops.SetDamper(70, 100 + PlantOps.HistoryTicks + 1, Now);
+        ops.SetpointChanges.Should().ContainSingle().Which.Tick.Should().Be(100 + PlantOps.HistoryTicks + 2);
     }
 
     [Test]
@@ -172,7 +273,7 @@ public class OperationsTests
     {
         var ops = PlantOps.Initial.Shelve("clg.vib", "x", UnitId.Clg, 120, Now);
         var book = AlarmBook.Compose(121, Setpoints.Default, ops);
-        book.ShelvedCount.Should().Be(1);
+        book.Entries.Should().ContainSingle(e => e.State == AlarmState.Shelved);
         book.ActiveCount.Should().Be(0);
         ops.IsShelved("clg.vib", 120 + PlantOps.ShelveTicks + 1).Should().BeFalse();
     }

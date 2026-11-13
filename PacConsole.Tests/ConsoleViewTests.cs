@@ -16,8 +16,7 @@ public class ConsoleViewTests
         TimeSpan? age = null) =>
         ConsoleView.Compose(
             new PlantSnapshot(Simulation.StartTick, T0, Simulation.Readings(Simulation.StartTick)),
-            setpoints ?? Setpoints.Default,
-            PlantOps.Initial,
+            PlantOps.Initial with { Setpoints = setpoints ?? Setpoints.Default },
             mode,
             selected,
             T0 + (age ?? TimeSpan.Zero));
@@ -47,6 +46,17 @@ public class ConsoleViewTests
         held.DataIsStale.Should().BeTrue();
         held.DataIsLive.Should().BeFalse();
         held.ModeLine.Should().Be("Data held 12 s · stale");
+    }
+
+    [Test]
+    public void Held_data_keeps_the_snapshots_times_everywhere()
+    {
+        // Held for 30 s: the wall clock moves on, the snapshot does not, and neither do the times shown.
+        var held = Compose(ControlMode.Hold, age: TimeSpan.FromSeconds(30));
+        held.Trends!.Times[^1].Should().Be(T0, "the newest sample is the snapshot");
+        held.CursorTime.Should().Be(T0.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
+        held.SnapshotText.Should().EndWith(held.CursorTime);
+        held.Trends.Times.Should().Equal(Compose().Trends!.Times, "trends while held are the trends at the snapshot");
     }
 
     [Test]

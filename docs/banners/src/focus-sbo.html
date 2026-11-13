@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>focus-sbo</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* Select-before-operate, Light: the CLG-05 faceplate right after Start on Cell 6 (standby), with the pending command
+     "Confirm: start Cell 6 (standby) on CLG-05?" (PendingCommandBrush, 12% slate-teal), Confirm in Primary #2F5D73 and
+     the six cells, Cell 3 running hot. A loupe lifts the pending command out on Primary hairline leaders, the way the
+     plant's tags hang off their units. Behind, out of focus, the same session's plant with CLG-05 in alarm. Washed in
+     PrimaryContainer #E3EEF3. */
+  .stage { background: #F4F5F6; }
+  .ctx { position: absolute; left: -110px; top: 10px; width: 1100px; height: 630px; filter: blur(6px) saturate(.85); opacity: .85; }
+  .ctx img { width: 100%; height: 100%; }
+  .wash { position: absolute; inset: 0;
+    background: radial-gradient(60% 90% at 62% 50%, rgba(227,238,243,.95) 0%, rgba(227,238,243,.62) 60%, rgba(227,238,243,.3) 100%); }
+  /* The faceplate at native pixels: the capture (350 x 598 CSS at DPR 3) from just above the pending bar to Cell 6 */
+  .plate { position: absolute; left: 780px; top: 50px; width: 350px; height: 530px; border-radius: 12px; overflow: hidden; background: #FFFFFF;
+    box-shadow: 0 0 0 1px rgba(30,40,51,.08), 0 2px 4px rgba(30,40,51,.06), 0 18px 36px -10px rgba(30,40,51,.22), 0 44px 80px -24px rgba(30,40,51,.30); }
+  .plate img { width: 350px; height: auto; display: block; margin-top: -50px; }
+  /* The loupe: the pending bar of the same capture, 307 x 141 CSS (921 x 423 device px) shown at 446 x 205,
+     below its native pixels in the 2x export */
+  .loupe { position: absolute; left: 230px; top: 170px; width: 470px; height: 229px; border-radius: 16px; overflow: hidden; background: #FFFFFF;
+    box-shadow: 0 0 0 1px rgba(47,93,115,.28), 0 0 0 7px rgba(255,255,255,.72), 0 0 0 8px rgba(47,93,115,.14),
+                0 24px 50px -12px rgba(30,40,51,.30), 0 60px 100px -30px rgba(47,93,115,.35); }
+  .loupe .in { position: absolute; left: 12px; top: 12px; width: 446px; height: 205px; overflow: hidden; border-radius: 9px; }
+  .loupe .in img { position: absolute; width: 508.5px; height: auto; left: -39.2px; top: -78.5px; }
+  .leaders { position: absolute; inset: 0; pointer-events: none; }
+</style></head>
+<body><div class="stage grain">
+  <div class="ctx"><img src="cap/light-control-panel@2x.png"></div>
+  <div class="wash"></div>
+  <div class="plate"><img src="cap/light-faceplate@3x.png"></div>
+  <svg class="leaders" width="1200" height="630" viewBox="0 0 1200 630">
+    <g stroke="#2F5D73" stroke-opacity=".5" stroke-width="1" fill="none">
+      <line x1="700" y1="172" x2="813" y2="60"/>
+      <line x1="700" y1="397" x2="813" y2="189"/>
+    </g>
+    <rect x="812.5" y="59.5" width="296" height="130" rx="9" fill="none" stroke="#2F5D73" stroke-opacity=".75" stroke-width="1.2"/>
+  </svg>
+  <div class="loupe"><div class="in"><img src="cap/light-faceplate@3x.png"></div></div>
+</div></body></html>

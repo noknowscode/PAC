@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>showcase-desk</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* House style: a Graphite phone (the plant, CLG-05 in alarm), the Light console in a desktop window, a Light phone
+     (select-before-operate on CLG-05), one session. Backdrop: the console's grounds, Background #F4F5F6 into
+     SurfaceVariant #E9ECEF and TertiaryContainer #D5DAE0, a PrimaryContainer #E3EEF3 haze and a faint drafting grid. */
+  .stage { background:
+      radial-gradient(60% 55% at 50% 36%, rgba(227,238,243,.95) 0%, rgba(227,238,243,0) 70%),
+      linear-gradient(180deg, #F4F5F6 0%, #E9ECEF 60%, #DCE1E6 100%); }
+  .iso-grid { --iso-ink: rgba(138,147,158,.11); --iso-size: 44px; --iso-mask: 80% 70% at 50% 40%; }
+  .floor { position: absolute; left: 8%; right: 8%; bottom: 20px; height: 60px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(30,40,51,.16), rgba(30,40,51,0)); filter: blur(6px); }
+  .win { left: 222px; top: 48px; width: 756px; --bar: 22px; }
+  .win .view { height: 462px; overflow: hidden; }
+  .p1 { left: 64px; top: 168px; width: 212px; height: 440px; --bezel: 8px; --r: 34px; }
+  .p2 { left: 924px; top: 168px; width: 212px; height: 440px; --bezel: 8px; --r: 34px; }
+</style></head>
+<body><div class="stage grain">
+  <div class="iso-grid"></div>
+  <div class="floor"></div>
+  <div class="win"><div class="bar"><i></i><i></i><i></i><b></b></div><div class="view"><img src="cap/light-desk-console@2x.png"></div></div>
+  <div class="device p1"><div class="screen"><img src="cap/dark-phone-plant@2x.png"></div></div>
+  <div class="device p2"><div class="screen"><img src="cap/light-phone-confirm@2x.png"></div></div>
+</div></body></html>

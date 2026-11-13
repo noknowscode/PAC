@@ -39,6 +39,20 @@ public sealed record Setpoints(double TargetMw = 620, double TurbineLimitBar = 1
     public static readonly Setpoints Default = new();
 }
 
+/// <summary>What a typed setpoint may be: whole units from <see cref="Min"/> to <see cref="Max"/>.</summary>
+public sealed record SetpointRange(double Min, double Max)
+{
+    /// <summary>The value to apply for a typed draft, rounded and kept in range; null for an empty field (NaN).</summary>
+    public double? Apply(double draft) => double.IsNaN(draft) ? null : Math.Clamp(Math.Round(draft), Min, Max);
+
+    /// <summary>Each faceplate field's range. Its NumberBox and hint repeat these numbers, which XAML cannot bind.</summary>
+    public static readonly SetpointRange Load = new(400, 700);
+    public static readonly SetpointRange TurbineLimit = new(140, 180);
+    public static readonly SetpointRange Damper = new(0, 100);
+    public static readonly SetpointRange FanSpeed = new(60, 100);
+    public static readonly SetpointRange Reactive = new(0, 200);
+}
+
 public sealed record Valve(int Id, bool Open)
 {
     public string Code => $"V-{Id}";

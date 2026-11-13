@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>focus-plant-titled</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* focus-plant with the display name, "PAC Control Console", in IBM Plex Sans SemiBold, the app's own face (its
+     header and titles). Ink: Graphite OnSurface #E8EAEC for PAC, OnSurfaceVariant #A0A7AF for the rest. The plant
+     moves right and down a little to give the name the empty top-left of the drawing. */
+  .stage { background:
+      radial-gradient(34% 40% at 52% 55%, rgba(127,179,200,.10) 0%, rgba(127,179,200,0) 70%),
+      radial-gradient(22% 30% at 68% 74%, rgba(240,121,58,.09) 0%, rgba(240,121,58,0) 70%),
+      radial-gradient(90% 90% at 55% 50%, #1A1D21 0%, #16181B 60%, #121417 100%); --grain: .04; }
+  .iso-grid { --iso-ink: rgba(110,118,127,.13); --iso-size: 46px; --iso-mask: 70% 75% at 55% 55%; }
+  .plane { position: absolute; left: 150px; top: 30px; width: 1000px; height: 581px; transform-origin: 50% 100%;
+    transform: perspective(2200px) rotateX(9deg); --fx: 6%; --fy: 7%; }
+  .plane img { width: 100%; height: 100%; }
+  .title { position: absolute; left: 76px; top: 58px; font-family: 'IBM Plex Sans'; font-weight: 600; letter-spacing: -.01em; line-height: 1; }
+  .title b { display: block; font-weight: 600; font-size: 64px; color: #E8EAEC; letter-spacing: .01em; }
+  .title span { display: block; margin-top: 10px; font-size: 26px; color: #A0A7AF; letter-spacing: 0; }
+</style></head>
+<body><div class="stage grain">
+  <div class="iso-grid"></div>
+  <div class="plane falloff"><img src="cap/dark-plant-turbine@3x.png"></div>
+  <div class="title"><b>PAC</b><span>Control Console</span></div>
+</div></body></html>

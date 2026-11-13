@@ -1,0 +1,22 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>showcase-phones</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* Three phones from one session: the alarm response (Graphite), the plant with CLG-05 in alarm (Light, centre,
+     raised) and the synchronized trends with fan vibration against its limit (Graphite). Backdrop: the slate-teal
+     Primary #2F5D73 deepening to PrimaryVariantDark #254A5C and the Graphite Background #16181B, with a Graphite Primary
+     #7FB3C8 light behind the centre phone. */
+  .stage { background:
+      radial-gradient(42% 60% at 50% 46%, rgba(127,179,200,.30) 0%, rgba(127,179,200,0) 70%),
+      linear-gradient(165deg, #2F5D73 0%, #254A5C 45%, #18303C 80%, #16181B 100%); --grain: .06; }
+  .iso-grid { --iso-ink: rgba(227,238,243,.07); --iso-size: 44px; --iso-mask: 85% 80% at 50% 45%; }
+  .p1 { left: 214px; top: 104px; width: 228px; height: 473px; --bezel: 9px; --r: 36px; transform: rotate(-4deg); }
+  .p2 { left: 476px; top: 50px; width: 248px; height: 516px; --bezel: 9px; --r: 38px; z-index: 2; }
+  .p3 { left: 758px; top: 104px; width: 228px; height: 473px; --bezel: 9px; --r: 36px; transform: rotate(4deg); }
+</style></head>
+<body><div class="stage grain on-night">
+  <div class="iso-grid"></div>
+  <div class="device p1"><div class="screen"><img src="cap/dark-phone-response@2x.png"></div></div>
+  <div class="device p2"><div class="screen"><img src="cap/light-phone-plant@2x.png"></div></div>
+  <div class="device p3"><div class="screen"><img src="cap/dark-phone-trends@2x.png"></div></div>
+</div></body></html>

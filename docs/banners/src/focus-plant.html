@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>focus-plant</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* The plant drawing in Graphite: TRB-04 Steam turbine selected (lit in the Graphite Primary #7FB3C8) while CLG-05
+     is in alarm (AlertColor #F0793A, its dashed outline and callout). The drawing's own ground is the Graphite
+     Background #16181B, so the capture sits in the backdrop without a seam; the plane is laid back from its bottom edge,
+     which stays at native pixels in the 2x export. A drafting grid in OutlineVariant #2E3237 and two soft lights:
+     slate-teal over the turbine, the alarm's warmth over the cooling bank. */
+  .stage { background:
+      radial-gradient(34% 40% at 47% 50%, rgba(127,179,200,.10) 0%, rgba(127,179,200,0) 70%),
+      radial-gradient(22% 30% at 63% 70%, rgba(240,121,58,.09) 0%, rgba(240,121,58,0) 70%),
+      radial-gradient(90% 90% at 50% 45%, #1A1D21 0%, #16181B 60%, #121417 100%); --grain: .04; }
+  .iso-grid { --iso-ink: rgba(110,118,127,.13); --iso-size: 46px; --iso-mask: 70% 75% at 50% 50%; }
+  .plane { position: absolute; left: 76px; top: -2px; width: 1048px; height: 609px; transform-origin: 50% 100%;
+    transform: perspective(2200px) rotateX(9deg);
+    --fx: 6%; --fy: 7%; }
+  .plane img { width: 100%; height: 100%; }
+</style></head>
+<body><div class="stage grain">
+  <div class="iso-grid"></div>
+  <div class="plane falloff"><img src="cap/dark-plant-turbine@3x.png"></div>
+</div></body></html>

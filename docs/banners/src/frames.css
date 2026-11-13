@@ -1,0 +1,89 @@
+/* Shared frames and backdrops for the PAC (PAC Control Console) banners.
+   Every colour is the app's own: PacConsole/Styles/ColorPaletteOverride.xaml (roles, Light and Graphite) and the
+   no-role colours in PacConsole/App.xaml (alarm, process states, systems, the plant drawing's Solid* tones). */
+:root {
+  /* Light (ColorPaletteOverride.xaml, Light) */
+  --primary: #2F5D73;            /* Primary, the slate-teal selection */
+  --primary-deep: #254A5C;       /* PrimaryVariantDark */
+  --primary-soft: #638696;       /* PrimaryVariantLight */
+  --pc: #E3EEF3;                 /* PrimaryContainer */
+  --on-pc: #173543;              /* OnPrimaryContainer */
+  --ground: #F4F5F6;             /* Background */
+  --surface: #FFFFFF;            /* Surface */
+  --sv: #E9ECEF;                 /* SurfaceVariant, SecondaryContainer */
+  --tc: #D5DAE0;                 /* TertiaryContainer, ProcessFill */
+  --ink: #1E2833;                /* OnSurface, Shadow */
+  --muted: #5A6573;              /* OnSurfaceVariant */
+  --outline: #8A939E;            /* Outline */
+  --hair: #D9DDE2;               /* OutlineVariant */
+  --mark: #C2410C;               /* Tertiary, the PAC mark; AlertColor (App.xaml) */
+  --alert-tint: #FCEAD7;         /* AlertTint (App.xaml), ErrorContainer */
+  --solid-shade0: #C9D4DE;       /* SolidShade0 (App.xaml), the drawing's deepest shade */
+  /* Graphite (ColorPaletteOverride.xaml, Default) */
+  --g-primary: #7FB3C8;          /* Primary */
+  --g-pc: #1A272D;               /* PrimaryContainer */
+  --g-ground: #16181B;           /* Background */
+  --g-surface: #33373D;          /* Surface */
+  --g-sv: #24282D;               /* SurfaceVariant */
+  --g-tc: #353A40;               /* TertiaryContainer */
+  --g-ink: #E8EAEC;              /* OnSurface */
+  --g-hair: #2E3237;             /* OutlineVariant */
+  --g-outline: #6E767F;          /* Outline */
+  --g-alert: #F0793A;            /* AlertColor (App.xaml), Tertiary */
+  --g-alert-tint: #3A2617;       /* AlertTint (App.xaml) */
+  --g-shade0: #0F1113;           /* SolidShade0 (App.xaml) */
+  /* Process systems (App.xaml, Graphite / Light) */
+  --sys-steam: #E8899C; --sys-cooling: #56C4B6; --sys-fuel: #AD90DB; --sys-elec: #E2B652;
+  --sys-steam-l: #B84D66; --sys-cooling-l: #1F8A7E; --sys-fuel-l: #7457A8; --sys-elec-l: #A87B12;
+}
+@font-face { font-family: 'IBM Plex Sans'; font-weight: 600; src: url('fonts/IBMPlexSans-SemiBold.ttf'); }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--ground); }
+.stage { position: absolute; inset: 0; overflow: hidden; }
+img { display: block; }
+
+/* Fine grain from an SVG turbulence, over the backdrop only */
+.grain::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: var(--grain, .05); mix-blend-mode: overlay; z-index: 50;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 240px 240px;
+}
+
+/* The drafting ground: an isometric grid (30 degree lines and verticals) like the paper the plant is inked on.
+   Set --iso-ink to the hairline of the theme it sits on; --iso-size is one cell. Masked to fade at the edges. */
+.iso-grid { position: absolute; inset: 0; pointer-events: none; opacity: var(--iso-op, 1);
+  --c: var(--iso-ink, rgba(30,40,51,.07)); --s: var(--iso-size, 44px);
+  background-image:
+    repeating-linear-gradient(30deg, var(--c) 0 1px, transparent 1px var(--s)),
+    repeating-linear-gradient(150deg, var(--c) 0 1px, transparent 1px var(--s)),
+    repeating-linear-gradient(90deg, var(--c) 0 1px, transparent 1px calc(var(--s) * 1.1547));
+  -webkit-mask-image: radial-gradient(var(--iso-mask, 75% 80% at 50% 50%), #000 0%, rgba(0,0,0,.55) 55%, transparent 100%); }
+
+/* Generic desktop window: a slim neutral title bar, no brand marks */
+.win { position: absolute; border-radius: 10px; overflow: hidden; background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(30,40,51,.12), 0 1px 2px rgba(30,40,51,.06), 0 10px 24px -6px rgba(30,40,51,.14), 0 34px 70px -18px rgba(30,40,51,.32); }
+.win .bar { height: var(--bar, 24px); display: flex; align-items: center; gap: 6px; padding: 0 12px; background: #E9ECEF;
+  border-bottom: 1px solid rgba(30,40,51,.10); }
+.win .bar i { width: 8px; height: 8px; border-radius: 50%; background: rgba(30,40,51,.18); }
+.win .bar b { margin: 0 auto; width: 28%; height: 11px; border-radius: 6px; background: rgba(30,40,51,.07); }
+.win.night { background: var(--g-surface);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -6px rgba(0,0,0,.45), 0 40px 80px -20px rgba(0,0,0,.6); }
+.win.night .bar { background: #24282D; border-bottom-color: rgba(255,255,255,.06); }
+.win.night .bar i { background: rgba(232,234,236,.20); }
+.win.night .bar b { background: rgba(232,234,236,.07); }
+.win img { width: 100%; height: auto; }
+
+/* Generic phone and tablet: a graphite instrument bezel with a soft edge highlight; no notch, no camera, no logo */
+.device { position: absolute; background: linear-gradient(150deg, #3A3F45, #1B1E21 52%, #2B2F34); padding: var(--bezel, 9px);
+  border-radius: var(--r, 38px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 0 rgba(255,255,255,.18), 0 0 0 1px rgba(30,40,51,.40),
+              0 2px 4px rgba(30,40,51,.10), 0 14px 30px -8px rgba(30,40,51,.28), 0 40px 70px -24px rgba(30,40,51,.42); }
+.device .screen { width: 100%; height: 100%; overflow: hidden; border-radius: calc(var(--r, 38px) - var(--bezel, 9px)); background: #000; }
+.device .screen img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.on-night .device { box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.20), 0 0 0 1px rgba(0,0,0,.6),
+              0 2px 4px rgba(0,0,0,.3), 0 16px 34px -8px rgba(0,0,0,.55), 0 44px 80px -24px rgba(0,0,0,.7); }
+
+/* Two-mask falloff helper: horizontal and vertical edges fade into the backdrop */
+.falloff { -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 var(--fx, 8%), #000 calc(100% - var(--fx, 8%)), transparent 100%),
+                               linear-gradient(180deg, transparent 0%, #000 var(--fy, 10%), #000 calc(100% - var(--fy, 10%)), transparent 100%);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }

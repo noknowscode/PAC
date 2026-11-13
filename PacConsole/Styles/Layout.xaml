@@ -1,0 +1,142 @@
+<!--
+  Layout tokens (hand-authored). Pages and controls reference these keys, never literal spacing, insets or sizes, so
+  one edit here retunes the console. Colours live once per theme in Palette.xaml; fonts, the type ramp, strokes,
+  radii and control heights in Tokens.xaml.
+
+  Spacing scale: PAC's 4 px grid (SPEC-CONSOLE.md: 4 / 8 / 12 / 16 / 24 / 32) with the 2 / 6 / 10 / 14 half steps the
+  console already used, named by value. Thickness forms:
+    Inset{n}            n on all sides               GapTop{n} / GapBottom{n}   one side only
+    Semantic insets     bands, panels, callouts      *Narrow for phones (below 600 px), the plain key from Normal up
+  WinUI cannot StaticResource across sibling merged dictionaries, so every value here is a literal.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:utu="using:Uno.Toolkit.UI">
+
+  <!--
+    The console's one layout, four categories. A central layout instead of the Toolkit defaults (600 / 800 / 1080)
+    because the page is a plant canvas beside a 340 px inspector: the pair needs about 960 px before the drawing has
+    room to orbit, and the inspector widens to 400 only where the canvas no longer gains from the width.
+      Narrow   below 600   phone: one column; header in three rows; the plant panel sizes to its rows; 44 px targets.
+      Normal   600 - 959   tablet or small window: one column; two-row header; segmented view switcher; 44 px targets.
+      Wide     960 - 1599  desktop: plant and inspector side by side (620 tall); live view thumbnails; one-row
+                           header and footers; 32 px pointer controls.
+      Widest   from 1600   wide desktop: the inspector widens to 400, the plant grows to 700, the operator is named in
+                           the header. The page stays edge to edge (the user, 2026-10-15): bands carry the structure.
+    A property given Narrow and Wide values uses the Narrow value up to 959 px (touch sizes for Narrow and Normal).
+  -->
+  <utu:ResponsiveLayout x:Key="ConsoleLayout" Narrowest="0" Narrow="0" Normal="600" Wide="960" Widest="1600" />
+
+  <!-- The plant panel's systems filter: its own row under the view switcher on phones, under the title from 600 px,
+       beside the title from 1280 px, where the panel (window less the 340 inspector) holds every chip on one line. -->
+  <utu:ResponsiveLayout x:Key="PlantHeaderLayout" Narrowest="0" Narrow="0" Normal="600" Wide="1280" />
+
+  <!-- Spacing scale (gaps: Spacing, RowSpacing, ColumnSpacing) -->
+  <x:Double x:Key="Space2">2</x:Double>
+  <x:Double x:Key="Space4">4</x:Double>
+  <x:Double x:Key="Space6">6</x:Double>
+  <x:Double x:Key="Space8">8</x:Double>
+  <x:Double x:Key="Space10">10</x:Double>
+  <x:Double x:Key="Space12">12</x:Double>
+  <x:Double x:Key="Space14">14</x:Double>
+  <x:Double x:Key="Space16">16</x:Double>
+  <x:Double x:Key="Space20">20</x:Double>
+  <x:Double x:Key="Space24">24</x:Double>
+
+  <!-- Uniform insets and one-sided gaps (the few places a parent Spacing can't express) -->
+  <Thickness x:Key="Inset3">3</Thickness>
+  <Thickness x:Key="InsetX4">4,0</Thickness>
+  <Thickness x:Key="InsetY6">0,6</Thickness>
+  <Thickness x:Key="GapTop4">0,4,0,0</Thickness>
+  <Thickness x:Key="GapTop6">0,6,0,0</Thickness>
+  <Thickness x:Key="GapTop8">0,8,0,0</Thickness>
+  <Thickness x:Key="GapTop10">0,10,0,0</Thickness>
+  <Thickness x:Key="GapTop12">0,12,0,0</Thickness>
+  <Thickness x:Key="GapTop16">0,16,0,0</Thickness>
+  <!-- Small text set on the baseline of a large figure beside it (MW beside the net output, a unit beside a value). -->
+  <Thickness x:Key="BaselineGapSm">0,0,0,3</Thickness>
+  <Thickness x:Key="BaselineGap">0,0,0,5</Thickness>
+  <Thickness x:Key="Zero">0</Thickness>
+
+  <!-- Page bands (header, trends, operator log, footer): 16 px sides on phones, 24 from Normal up. -->
+  <Thickness x:Key="HeaderInsetNarrow">16,8,8,12</Thickness>
+  <Thickness x:Key="HeaderInset">24,12,16,12</Thickness>
+  <Thickness x:Key="BandInsetNarrow">16,16</Thickness>
+  <Thickness x:Key="BandInset">24,20</Thickness>
+  <Thickness x:Key="FooterInsetNarrow">16,12</Thickness>
+  <Thickness x:Key="FooterInset">24,12</Thickness>
+  <!-- The inspector's content, stacked under the plant or beside it. -->
+  <Thickness x:Key="InspectorInsetNarrow">16,16</Thickness>
+  <Thickness x:Key="InspectorInset">24,20</Thickness>
+
+  <!-- The plant panel: header (title, switcher, systems filter), legend, thumbnails and its footer bar. -->
+  <Thickness x:Key="PanelHeaderInsetNarrow">16,12,16,0</Thickness>
+  <Thickness x:Key="PanelHeaderInset">20,16,20,0</Thickness>
+  <Thickness x:Key="PanelFooterInsetNarrow">16,8</Thickness>
+  <Thickness x:Key="PanelFooterInset">20,8</Thickness>
+  <Thickness x:Key="LegendMarginNarrow">16,0,0,12</Thickness>
+  <Thickness x:Key="LegendMargin">20,0,0,12</Thickness>
+  <Thickness x:Key="ThumbColumnMargin">0,12,20,12</Thickness>
+  <Thickness x:Key="ThumbLabelMargin">10,0,10,8</Thickness>
+
+  <!-- Component insets -->
+  <Thickness x:Key="CalloutInset">14,12</Thickness>
+  <Thickness x:Key="TileInset">10,8</Thickness>
+  <Thickness x:Key="LinkInset">4,0</Thickness>
+  <Thickness x:Key="ChipInset">10,0</Thickness>
+  <!-- A trend plot sits 16 px below its row top: the target or limit label rides above the plot. -->
+  <Thickness x:Key="TrendPlotGap">0,16,0,0</Thickness>
+  <!-- Stream states (connecting, no telemetry, stopped): kept off the window edge on phones. -->
+  <Thickness x:Key="StateInset">24</Thickness>
+
+  <!-- Sizes -->
+  <x:Double x:Key="IconSizeSm">14</x:Double>
+  <x:Double x:Key="IconSize">16</x:Double>
+  <!-- Status dots: the live dot, a system's dot in the filter, a circuit's swatch in the legend, a device's state. -->
+  <x:Double x:Key="DotSizeLive">6</x:Double>
+  <x:Double x:Key="DotSizeSystem">7</x:Double>
+  <x:Double x:Key="DotSizeLegend">8</x:Double>
+  <x:Double x:Key="DeviceDotStroke">1.5</x:Double>
+  <!-- Vertical rule in the header (between the mark and the plant name) and the event marker in the trends. -->
+  <x:Double x:Key="HeaderRuleHeight">20</x:Double>
+  <x:Double x:Key="EventMarkWidth">2</x:Double>
+  <x:Double x:Key="EventMarkHeight">14</x:Double>
+
+  <!-- Compact pointer controls (plant mode and trend range segments on a 3 px track, radius 8 + 1; the alarm title
+       link): 28 px from Wide up, the touch target below. -->
+  <x:Double x:Key="ControlHeightCompact">28</x:Double>
+  <CornerRadius x:Key="RadiusTrack">9</CornerRadius>
+  <!-- Fields beside 32 px buttons (the equipment picker). -->
+  <x:Double x:Key="FieldHeight">34</x:Double>
+  <x:Double x:Key="PickerMinWidth">220</x:Double>
+  <x:Double x:Key="RowActionMinWidth">72</x:Double>
+  <x:Double x:Key="ListRowMinHeight">40</x:Double>
+  <x:Double x:Key="TileMinHeight">72</x:Double>
+  <!-- A valve: 64 x 44, the touch target at every width. -->
+  <x:Double x:Key="ValveWidth">64</x:Double>
+  <x:Double x:Key="ValveHeight">44</x:Double>
+
+  <!-- Plant panel and inspector, per category (see ConsoleLayout). Narrow and Normal size the panel to its rows,
+       with the drawing at least this tall; Wide and Widest share one fixed height with the inspector beside it. -->
+  <x:Double x:Key="PlantDrawingMinHeightNarrow">320</x:Double>
+  <x:Double x:Key="PlantDrawingMinHeightNormal">380</x:Double>
+  <x:Double x:Key="PlantHeightWide">620</x:Double>
+  <x:Double x:Key="PlantHeightWidest">700</x:Double>
+  <x:Double x:Key="InspectorWidthWide">340</x:Double>
+  <x:Double x:Key="InspectorWidthWidest">400</x:Double>
+  <!-- The live view thumbnails beside the drawing (Wide and up). -->
+  <x:Double x:Key="ThumbWidth">176</x:Double>
+  <x:Double x:Key="ThumbDrawingHeight">104</x:Double>
+
+  <!-- Synchronized trends: one row per series, its label beside the plot (Normal up) or above it (Narrow). -->
+  <x:Double x:Key="TrendRowHeight">96</x:Double>
+  <x:Double x:Key="TrendRowHeightNarrow">148</x:Double>
+  <GridLength x:Key="TrendLabelColumn">160</GridLength>
+  <!-- Inside a trend chart (built in code, TrendChart.cs): the value-axis label column, the labels' overhang so the
+       top and bottom ones centre on their gridlines, and the target or limit label lifted above the plot. -->
+  <x:Double x:Key="TrendAxisLabelWidth">44</x:Double>
+  <Thickness x:Key="TrendAxisLabelOverhang">0,-6,0,-6</Thickness>
+  <Thickness x:Key="TrendReferenceLift">0,-16,0,0</Thickness>
+  <!-- Operator log columns: time and kind (Normal up); on phones they share a line above the entry. -->
+  <GridLength x:Key="LogTimeColumn">72</GridLength>
+</ResourceDictionary>

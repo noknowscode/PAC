@@ -1,10 +1,12 @@
-<!-- This tool pins its own package versions (the repo manages them centrally for the app). -->
+<!-- This tool pins its own package versions, centrally like the app (it sits outside the app's solution). -->
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="SkiaSharp" Version="3.119.2" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
+    <PackageVersion Include="SkiaSharp" Version="4.151.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.151.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.151.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
   </ItemGroup>
 </Project>

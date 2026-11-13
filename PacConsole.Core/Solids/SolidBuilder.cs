@@ -145,7 +145,7 @@ public static class SolidBuilder
 
         return new SolidShape
         {
-            Fill = ConvexHull([.. top, .. bottom]),
+            Fill = ConvexHull(top, bottom),
             ShadeFaces = shades,
             Top = [Oriented(top)],
             Outline = outline,
@@ -261,11 +261,11 @@ public static class SolidBuilder
         var n = steps;
         var m = meridian.Length;
 
-        var rings = new Vec2[m][];
+        // Every knot ring on screen, ring i at [i * n, i * n + n). A scratch buffer: the faces copy their corners.
+        var rings = Scratch(ref _rings, m * n);
         for (var i = 0; i < m; i++)
         {
-            rings[i] = new Vec2[n];
-            for (var j = 0; j < n; j++) rings[i][j] = p.Project(f.PointAt(meridian[i].S, meridian[i].R, (float)j / n * Tau));
+            for (var j = 0; j < n; j++) rings[i * n + j] = p.Project(f.PointAt(meridian[i].S, meridian[i].R, (float)j / n * Tau));
         }
 
         var buckets = NewBuckets(5);
@@ -283,7 +283,7 @@ public static class SolidBuilder
                 if (facing <= 1e-6f * length) continue;
                 var lit = (ds * (c * uL + s * vL) - dr * aL) / length;
                 var next = (j + 1) % n;
-                buckets[BandOf(lit)].Add(Oriented([rings[i][j], rings[i][next], rings[i + 1][next], rings[i + 1][j]]));
+                buckets[BandOf(lit)].Add(Oriented([rings[i * n + j], rings[i * n + next], rings[(i + 1) * n + next], rings[(i + 1) * n + j]]));
             }
         }
 
@@ -329,12 +329,13 @@ public static class SolidBuilder
         // Silhouette: the hull of every knot ring, sampled finely enough to stay round on screen.
         var mostR = meridian.Max(k => k.R);
         var around = Math.Min(320, Math.Max(n, (int)MathF.Ceiling(Tau * mostR * p.Scale / 1.5f)));
-        var all = new List<Vec2>(m * around);
+        var all = Scratch(ref _silhouette, m * around);
+        var sampled = 0;
         foreach (var (s, r) in meridian)
         {
-            for (var j = 0; j < around; j++) all.Add(p.Project(f.PointAt(s, r, (float)j / around * Tau)));
+            for (var j = 0; j < around; j++) all[sampled++] = p.Project(f.PointAt(s, r, (float)j / around * Tau));
         }
-        var hull = ConvexHull(all);
+        var hull = ConvexHull(all.AsSpan(0, sampled));
 
         return new SolidShape
         {
@@ -436,26 +437,56 @@ public static class SolidBuilder
         return points;
     }
 
+    // Scratch buffers for the work an orbit frame repeats for every part (trace, 2026-11-04: 2.2 MB of garbage a frame,
+    // most of it the hull's sort and the lathe's sample rings). Per thread: the render thread builds the drawing while
+    // the UI thread hit-tests. Only the returned shapes are new.
+    [ThreadStatic] private static Vec2[]? _sorted;
+    [ThreadStatic] private static Vec2[]? _chain;
+    [ThreadStatic] private static Vec2[]? _rings;
+    [ThreadStatic] private static Vec2[]? _silhouette;
+
+    private static Vec2[] Scratch(ref Vec2[]? buffer, int size)
+    {
+        if (buffer is null || buffer.Length < size) buffer = new Vec2[Math.Max(size, (buffer?.Length ?? 0) * 2)];
+        return buffer;
+    }
+
+    private static readonly Comparison<Vec2> ByXThenY = (a, b) => a.X != b.X ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y);
+
     /// <summary>Andrew's monotone chain, as the kit's <c>convexHull</c>.</summary>
     public static Vec2[] ConvexHull(IReadOnlyCollection<Vec2> points)
     {
-        var sorted = points.OrderBy(p => p.X).ThenBy(p => p.Y).ToArray();
-        if (sorted.Length < 3) return sorted;
+        var copy = Scratch(ref _silhouette, points.Count);
+        var count = 0;
+        foreach (var point in points) copy[count++] = point;
+        return ConvexHull(copy.AsSpan(0, count));
+    }
+
+    /// <summary>The hull of <paramref name="a"/> and <paramref name="b"/> together (an extrusion's top and bottom rings).</summary>
+    public static Vec2[] ConvexHull(ReadOnlySpan<Vec2> a, ReadOnlySpan<Vec2> b = default)
+    {
+        var sorted = Scratch(ref _sorted, a.Length + b.Length);
+        a.CopyTo(sorted);
+        b.CopyTo(sorted.AsSpan(a.Length));
+        var n = a.Length + b.Length;
+        // Equal keys are equal points, so the sort's instability cannot change the hull.
+        sorted.AsSpan(0, n).Sort(ByXThenY);
+        if (n < 3) return sorted.AsSpan(0, n).ToArray();
         static float Cross(Vec2 o, Vec2 a, Vec2 b) => (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X);
-        var hull = new List<Vec2>(sorted.Length);
-        foreach (var point in sorted)
+        var hull = Scratch(ref _chain, n + 1);
+        var k = 0;
+        for (var i = 0; i < n; i++)
         {
-            while (hull.Count >= 2 && Cross(hull[^2], hull[^1], point) <= 0) hull.RemoveAt(hull.Count - 1);
-            hull.Add(point);
+            while (k >= 2 && Cross(hull[k - 2], hull[k - 1], sorted[i]) <= 0) k--;
+            hull[k++] = sorted[i];
         }
-        var lower = hull.Count;
-        for (var i = sorted.Length - 2; i >= 0; i--)
+        var lower = k;
+        for (var i = n - 2; i >= 0; i--)
         {
-            while (hull.Count > lower && Cross(hull[^2], hull[^1], sorted[i]) <= 0) hull.RemoveAt(hull.Count - 1);
-            hull.Add(sorted[i]);
+            while (k > lower && Cross(hull[k - 2], hull[k - 1], sorted[i]) <= 0) k--;
+            hull[k++] = sorted[i];
         }
-        hull.RemoveAt(hull.Count - 1);
-        return [.. hull];
+        return hull.AsSpan(0, k - 1).ToArray();
     }
 
     private static float Dot(Vec3 a, Vec3 b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z;

@@ -1,0 +1,36 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>stylized-split</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* One console, Light and Graphite, captured 8 s apart in one session, cut on the drawing's own isometric angle
+     (30 degrees) so the plant itself is half paper, half graphite. The cut runs through backdrop and screen alike;
+     its edge is a Primary #7FB3C8 hairline. Light side: Background #F4F5F6 to SurfaceVariant #E9ECEF. Graphite side:
+     Background #16181B to PrimaryContainer #1A272D. */
+  .layer { position: absolute; inset: 0; }
+  .day { background:
+      radial-gradient(70% 80% at 20% 25%, #F4F5F6 0%, rgba(244,245,246,0) 70%),
+      linear-gradient(160deg, #EEF0F2 0%, #E2E6EA 100%); }
+  .night { background:
+      radial-gradient(70% 80% at 85% 80%, rgba(26,39,45,.95) 0%, rgba(26,39,45,0) 70%),
+      linear-gradient(160deg, #1B1E22 0%, #16181B 100%);
+    clip-path: polygon(0 var(--y0), 100% var(--y1), 100% 100%, 0 100%); }
+  .stage { --y0: 661px; --y1: -32px; }
+  .screen { position: absolute; left: 60px; top: 36px; width: 1080px; height: 560px; border-radius: 12px; overflow: hidden; background: #FFFFFF;
+    box-shadow: 0 0 0 1px rgba(30,40,51,.12), 0 2px 4px rgba(30,40,51,.06), 0 14px 30px -8px rgba(30,40,51,.18), 0 40px 80px -20px rgba(30,40,51,.32); }
+  .night .screen { background: #33373D;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 2px 4px rgba(0,0,0,.3), 0 14px 30px -8px rgba(0,0,0,.45), 0 40px 80px -20px rgba(0,0,0,.6); }
+  .screen img { width: 1080px; height: auto; }
+  .seam { position: absolute; inset: 0; pointer-events: none; }
+</style></head>
+<body><div class="stage">
+  <div class="layer day grain"><div class="screen"><img src="cap/light-desk-console@2x.png"></div></div>
+  <div class="layer night grain" style="--grain:.05"><div class="screen"><img src="cap/dark-desk-console@2x.png"></div></div>
+  <svg class="seam" width="1200" height="630" viewBox="0 0 1200 630">
+    <defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#7FB3C8" stop-opacity="0"/><stop offset=".12" stop-color="#7FB3C8" stop-opacity=".9"/>
+      <stop offset=".88" stop-color="#7FB3C8" stop-opacity=".9"/><stop offset="1" stop-color="#7FB3C8" stop-opacity="0"/></linearGradient>
+      <filter id="b" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+    <line x1="0" y1="661" x2="1200" y2="-32" stroke="url(#g)" stroke-width="6" filter="url(#b)" opacity=".5"/>
+    <line x1="0" y1="661" x2="1200" y2="-32" stroke="url(#g)" stroke-width="1.2"/>
+  </svg>
+</div></body></html>

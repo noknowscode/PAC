@@ -115,4 +115,63 @@ public static class Details
     /// <summary>A flow mark along the crown of a straight pipe, from <paramref name="a"/> to <paramref name="b"/>.</summary>
     public static DetailLine Flow(Vec3 a, Vec3 b, float r, OrbitProjection p) =>
         new(EdgeTone.Hi, [p.Project(a with { Y = a.Y + r }), p.Project(b with { Y = b.Y + r })], DetailKind.Flow);
+
+    /// <summary>True when a face with plan normal (nx, nz) faces the viewer.</summary>
+    public static bool Faces(float nx, float nz, OrbitProjection p) => nx * p.SinYaw + nz * p.CosYaw > 1e-5f;
+
+    /// <summary>Vertical lines every <paramref name="pitch"/> across a slab's visible sides (boiler wall tubes, tank fins).</summary>
+    public static IEnumerable<DetailLine> FaceLines(Plan plan, float y0, float y1, float pitch, OrbitProjection p)
+    {
+        var faces = new (float Nx, float Nz, Vec3 A, Vec3 B)[]
+        {
+            (0, -1, new(plan.X, 0, plan.Z), new(plan.X + plan.W, 0, plan.Z)),
+            (1, 0, new(plan.X + plan.W, 0, plan.Z), new(plan.X + plan.W, 0, plan.Z + plan.D)),
+            (0, 1, new(plan.X, 0, plan.Z + plan.D), new(plan.X + plan.W, 0, plan.Z + plan.D)),
+            (-1, 0, new(plan.X, 0, plan.Z), new(plan.X, 0, plan.Z + plan.D)),
+        };
+        foreach (var (nx, nz, a, b) in faces)
+        {
+            if (!Faces(nx, nz, p)) continue;
+            var length = (b - a).Length;
+            for (var s = plan.R + pitch; s < length - plan.R; s += pitch)
+            {
+                var x = a.X + (b.X - a.X) * s / length;
+                var z = a.Z + (b.Z - a.Z) * s / length;
+                yield return Details.Segment(EdgeTone.Faint, new(x, y0, z), new(x, y1, z), p);
+            }
+        }
+    }
+
+    /// <summary>A ladder standing off a face: two rails and a rung every 3 units, from <paramref name="foot"/> up to <paramref name="top"/>.</summary>
+    public static IEnumerable<DetailLine> Ladder(Vec3 foot, Vec3 across, float width, float top, OrbitProjection p)
+    {
+        var other = new Vec3(foot.X + across.X * width, foot.Y, foot.Z + across.Z * width);
+        yield return Details.Segment(EdgeTone.Mid, foot, foot with { Y = top }, p);
+        yield return Details.Segment(EdgeTone.Mid, other, other with { Y = top }, p);
+        for (var y = foot.Y + 2; y < top; y += 3)
+        {
+            yield return Details.Segment(EdgeTone.Lo, foot with { Y = y }, other with { Y = y }, p);
+        }
+    }
+
+    /// <summary>A handrail round a deck: posts every <paramref name="pitch"/> and a top rail, <paramref name="height"/> tall.</summary>
+    public static IEnumerable<DetailLine> Handrail(Plan deck, float y, float height, float pitch, OrbitProjection p)
+    {
+        var (x0, z0, x1, z1) = (deck.X + 0.6f, deck.Z + 0.6f, deck.X + deck.W - 0.6f, deck.Z + deck.D - 0.6f);
+        PlanPoint[] ring = [new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)];
+        yield return new(EdgeTone.Mid, [.. ring.Select(q => p.Project(new(q.X, y + height, q.Z))), p.Project(new(ring[0].X, y + height, ring[0].Z))]);
+        yield return new(EdgeTone.Lo, [.. ring.Select(q => p.Project(new(q.X, y + height / 2, q.Z))), p.Project(new(ring[0].X, y + height / 2, ring[0].Z))]);
+        for (var i = 0; i < ring.Length; i++)
+        {
+            var a = ring[i];
+            var b = ring[(i + 1) % ring.Length];
+            var length = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z));
+            for (var s = 0f; s < length; s += pitch)
+            {
+                var x = a.X + (b.X - a.X) * s / length;
+                var z = a.Z + (b.Z - a.Z) * s / length;
+                yield return Details.Segment(EdgeTone.Lo, new(x, y, z), new(x, y + height, z), p);
+            }
+        }
+    }
 }

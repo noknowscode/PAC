@@ -1,0 +1,18 @@
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Build an operator console for a steam-cycle power plant that takes an alarm from start to finish on one screen:\n- a header with the station, net output against target, the plant mode and the data age\n- an isometric drawing of the plant's seven units that can be orbited, switched between isometric, elevation and plan views, and narrowed to one process system (steam and water, cooling, fuel and flue gas, electrical, active alarms)\n- an equipment inspector with Overview, Condition and Control tabs: each unit's readings, its alarm with acknowledge, shelve and the response (likely cause, steps, consequence), and its controls, where every command is selected and then confirmed\n- Auto, Manual and Hold modes, and typed setpoints applied with Apply\n- synchronized trends of net generation and the selected readings, with a shared cursor and alarm markers\n- an operator log of every step, with shift notes, kept between launches\n- System, Light and Graphite themes\n\nSimulate the telemetry. Use MVUX, Navigation Extensions, the Uno Toolkit and SkiaSharp for the drawing, and make it work from a phone to a wide desktop."
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the **PAC Control Console**. It's built and running in the preview: Plant 02 with CLG-05 in alarm, the isometric plant, the equipment inspector, the synchronized trends and the operator log."
+    }
+  ],
+  "suggestedPrompts": [
+    "Add a full operator log view with filters by kind and unit",
+    "Show fewer unit tags on phones and let the equipment picker carry the rest",
+    "Add a second plant and a switcher in the header",
+    "Export the operator log of a shift as CSV"
+  ]
+}

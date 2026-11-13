@@ -7,6 +7,7 @@ namespace PacConsole.Tests;
 public class PlantSolidsTests
 {
     private static readonly PlantSolids Plant = PlantSolids.Default;
+    private static readonly UnitPicker Picker = new(Plant);
 
     [Test]
     public void Every_unit_has_lit_parts_and_a_pad()
@@ -38,7 +39,7 @@ public class PlantSolidsTests
     public void The_whole_plant_fits_its_frame(float yaw, float elevation)
     {
         const float w = 1240, h = 760;
-        var p = PlantSolids.ViewProjection(new CameraPose(yaw, elevation), w, h);
+        var p = PlantFraming.ViewProjection(new CameraPose(yaw, elevation), w, h);
         foreach (var part in Plant.All)
         {
             var v = part.Volume;
@@ -59,29 +60,29 @@ public class PlantSolidsTests
     [TestCase(4.4f, 0.3f)]
     public void Clicking_a_units_top_selects_that_unit(float yaw, float elevation)
     {
-        var p = PlantSolids.ViewProjection(new CameraPose(yaw, elevation), 1240, 760);
+        var p = PlantFraming.ViewProjection(new CameraPose(yaw, elevation), 1240, 760);
         foreach (var (id, anchor) in Plant.Anchors)
         {
             // Just below the anchor: on the unit's tallest part, where a person would click.
             var hit = p.Project(anchor with { Y = anchor.Y - 1 });
-            Plant.UnitAt(p, hit).Should().Be(id);
+            Picker.UnitAt(p, hit).Should().Be(id);
         }
     }
 
     [Test]
     public void Clicking_empty_space_selects_nothing()
     {
-        var p = PlantSolids.ViewProjection(CameraPose.Iso, 1240, 760);
-        Plant.UnitAt(p, new(5, 5)).Should().BeNull();
+        var p = PlantFraming.ViewProjection(CameraPose.Iso, 1240, 760);
+        Picker.UnitAt(p, new(5, 5)).Should().BeNull();
     }
 
     [Test]
     public void A_lifted_unit_is_hit_where_it_is_drawn()
     {
-        var p = PlantSolids.ViewProjection(CameraPose.Iso, 1240, 760);
+        var p = PlantFraming.ViewProjection(CameraPose.Iso, 1240, 760);
         var anchor = Plant.Anchors[UnitId.Sil];
         var lifted = p.Project(anchor with { Y = anchor.Y + 10 - 1 });
-        Plant.UnitAt(p, lifted, new Dictionary<UnitId, float> { [UnitId.Sil] = 10 }).Should().Be(UnitId.Sil);
+        Picker.UnitAt(p, lifted, new Dictionary<UnitId, float> { [UnitId.Sil] = 10 }).Should().Be(UnitId.Sil);
     }
 
     [Test]
@@ -208,13 +209,13 @@ public class PlantSolidsTests
                 {
                     var b = boxes[i];
                     if (x < b.L || x > b.R || y < b.T || y > b.B) continue;
-                    if (Exit(volumes[i], halves[i], origin, d) is not { } t) continue;
+                    if (Exit(halves[i], origin, d) is not { } t) continue;
                     if (t > nearestT) { nearestT = t; nearest = i; }
                     if (top < 0 || rank[i] > rank[top]) top = i;
                 }
                 if (top < 0 || top == nearest) continue;
                 // A tie on a shared face is fine; anything farther than that is a misorder.
-                var topT = Exit(volumes[top], halves[top], origin, d)!.Value;
+                var topT = Exit(halves[top], origin, d)!.Value;
                 if (nearestT - topT > 0.05f) bad.Add((top, nearest));
             }
         }
@@ -222,7 +223,7 @@ public class PlantSolidsTests
     }
 
     /// <summary>The ray parameter where it leaves the hull toward the viewer (its visible surface), or null if it misses.</summary>
-    private static float? Exit(Volume v, (Vec3 N, float C)[] halves, Vec3 o, Vec3 d)
+    private static float? Exit((Vec3 N, float C)[] halves, Vec3 o, Vec3 d)
     {
         float t0 = float.MinValue, t1 = float.MaxValue;
         foreach (var (n, c) in halves)

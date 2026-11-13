@@ -1,7 +1,17 @@
 <Project Sdk="Uno.Sdk">
   <PropertyGroup>
-    <!-- v1 targets desktop only (Skia renderer on Windows, macOS, Linux). -->
-    <TargetFrameworks>net10.0-desktop</TargetFrameworks>
+    <!--
+      Four heads: Android, iOS, WebAssembly and desktop (Skia on Windows, macOS, Linux).
+      Uno.Sdk skips the heads the build OS can't build (iOS on Linux).
+      Plain net10.0 is not a head: it is the build PacConsole.Tests references, on Uno's reference assemblies, so the
+      page model, the renderer and the viewport's helpers are tested as the app compiles them (MVUX generator included).
+    -->
+    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-browserwasm;net10.0-desktop;net10.0</TargetFrameworks>
+    <!--
+      App-only override for single-head builds (CI, RID-specific publish): -p:PacTargetFrameworks=net10.0-desktop.
+      A global -p:TargetFrameworks would also retarget PacConsole.Core and the test project.
+    -->
+    <TargetFrameworks Condition="'$(PacTargetFrameworks)' != ''">$(PacTargetFrameworks)</TargetFrameworks>
 
     <OutputType>Exe</OutputType>
     <UnoSingleProject>true</UnoSingleProject>
@@ -37,6 +47,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PacConsole.Core\PacConsole.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The model tests drive the page model and the renderer's parts, which the app keeps internal. -->
+    <InternalsVisibleTo Include="PacConsole.Tests" />
   </ItemGroup>
 
 </Project>

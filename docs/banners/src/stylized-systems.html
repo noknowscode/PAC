@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>stylized-systems</title>
+<link rel="stylesheet" href="frames.css">
+<style>
+  /* The four process systems as a control-room wall, Graphite: the plant drawing with Steam and water, Cooling, Fuel
+     and flue gas, and Electrical isolated in turn (each a real capture of the plant panel with that system chip on;
+     the system's parts glow in its colour, the rest of the plant dims). Each tile is lit from below in its system
+     colour from App.xaml: SystemSteamWater #E8899C, SystemCooling #56C4B6, SystemFuelFlue #AD90DB, SystemElectrical
+     #E2B652. Backdrop: Graphite Background #16181B. */
+  .stage { background: radial-gradient(100% 100% at 50% 45%, #1C1F23 0%, #16181B 55%, #101215 100%); --grain: .05; }
+  .wall { position: absolute; left: 106px; top: 40px; width: 988px; height: 556px;
+    transform: perspective(2600px) rotateY(-6deg) rotateX(3deg); transform-origin: 30% 50%;
+    display: grid; grid-template-columns: 484px 484px; grid-template-rows: 274px 274px; gap: 20px; }
+  .tile { position: relative; border-radius: 8px; overflow: hidden; background: #16181B;
+    box-shadow: 0 0 0 1px rgba(232,234,236,.10), 0 0 0 5px #24282D, 0 0 0 6px rgba(232,234,236,.06),
+                0 18px 40px -12px rgba(0,0,0,.7), 0 0 60px -14px var(--c); }
+  .tile img { width: 100%; height: 100%; }
+  .tile::after { content: ''; position: absolute; inset: 0; border-radius: 8px;
+    background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,0) 35%); }
+</style></head>
+<body><div class="stage grain">
+  <div class="wall">
+    <div class="tile" style="--c: rgba(232,137,156,.85)"><img src="cap/dark-system-steam@2x.png"></div>
+    <div class="tile" style="--c: rgba(86,196,182,.8)"><img src="cap/dark-system-cooling@2x.png"></div>
+    <div class="tile" style="--c: rgba(173,144,219,.85)"><img src="cap/dark-system-fuel@2x.png"></div>
+    <div class="tile" style="--c: rgba(226,182,82,.75)"><img src="cap/dark-system-elec@2x.png"></div>
+  </div>
+</div></body></html>

@@ -16,27 +16,24 @@ public sealed partial class PlantThumb : SKCanvasElement
 {
     private static readonly ImmutableArray<SolidPart> Parts = PlantSolids.Default.All;
 
+    // RenderOverride runs on the desktop host's render thread: frames draw under _drawGate, and Swap and Set replace
+    // the renderer and the view under it.
     private SolidRenderer? _renderer;
-    private CameraPose _pose = CameraPose.Iso;
-    private UnitId? _selected;
-    private ImmutableArray<UnitId> _alerting = [];
-    private PlantSystem _system;
+    private readonly object _drawGate = new();
+    private View _view = new(CameraPose.Iso, null, [], PlantSystem.All);
+
+    /// <summary>What the thumbnail shows, replaced whole so a frame never mixes an old field with a new one.</summary>
+    private sealed record View(CameraPose Pose, UnitId? Selected, ImmutableArray<UnitId> Alerting, PlantSystem System);
 
     public PlantThumb()
     {
         Loaded += (_, _) =>
         {
-            _renderer ??= new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
-            Styles.ConsoleTheme.Changed -= OnThemeChanged;
-            Styles.ConsoleTheme.Changed += OnThemeChanged;
+            if (_renderer is null) Swap(new(SolidPalette.For(ActualTheme)));
             Invalidate();
         };
-        Unloaded += (_, _) =>
-        {
-            Styles.ConsoleTheme.Changed -= OnThemeChanged;
-            _renderer?.Dispose();
-            _renderer = null;
-        };
+        Unloaded += (_, _) => Swap(null);
+        ActualThemeChanged += (_, _) => OnThemeChanged();
     }
 
     /// <summary>Key of a <see cref="CameraPresets"/> entry ("iso", "elevation", "plan").</summary>
@@ -50,34 +47,53 @@ public sealed partial class PlantThumb : SKCanvasElement
         DependencyProperty.Register(nameof(PresetKey), typeof(string), typeof(PlantThumb), new PropertyMetadata(null, (d, e) =>
         {
             var thumb = (PlantThumb)d;
-            if (CameraPresets.All.FirstOrDefault(p => p.Key == e.NewValue as string) is { } preset) thumb._pose = preset.Pose;
-            thumb.Invalidate();
+            if (CameraPresets.All.FirstOrDefault(p => p.Key == e.NewValue as string) is { } preset) thumb.Set(thumb._view with { Pose = preset.Pose });
         }));
 
     /// <summary>Takes the main view's selection, alerts and system; redraws only when one changed.</summary>
     public void Show(UnitId? selected, ImmutableArray<UnitId> alerting, PlantSystem system)
     {
-        if (selected == _selected && system == _system && alerting.SequenceEqual(_alerting)) return;
-        _selected = selected;
-        _alerting = alerting;
-        _system = system;
+        var view = _view;
+        if (selected == view.Selected && system == view.System && alerting.SequenceEqual(view.Alerting)) return;
+        Set(view with { Selected = selected, Alerting = alerting, System = system });
+    }
+
+    private void Set(View view)
+    {
+        lock (_drawGate) _view = view;
         Invalidate();
     }
 
     private void OnThemeChanged()
     {
-        _renderer?.Dispose();
-        _renderer = new() { Palette = SolidPalette.FromResources(Application.Current.Resources) };
+        if (_renderer is null) return;
+        Swap(new(SolidPalette.For(ActualTheme)));
         Invalidate();
+    }
+
+    /// <summary>Replaces the renderer once no frame is drawing with it, then frees the old one.</summary>
+    private void Swap(SolidRenderer? next)
+    {
+        SolidRenderer? old;
+        lock (_drawGate)
+        {
+            old = _renderer;
+            _renderer = next;
+        }
+        old?.Dispose();
     }
 
     protected override void RenderOverride(SKCanvas canvas, Size area)
     {
-        if (_renderer is null || area.Width <= 0 || area.Height <= 0) return;
-        _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
-        // A thumbnail's camera never moves, so it fits the plant tightly at its own yaw (the main view's
-        // framing holds every yaw, which leaves a fixed view half empty at this size).
-        var projection = PlantSolids.Fit(_pose, Parts, (float)area.Width, (float)area.Height, 6);
-        _renderer.Draw(canvas, Parts, projection, new SolidFrame(_selected, _alerting, Details: false, System: _system, Motion: false));
+        lock (_drawGate)
+        {
+            if (_renderer is null || area.Width <= 0 || area.Height <= 0) return;
+            _renderer.Scale = (float)(XamlRoot?.RasterizationScale ?? 1);
+            // A thumbnail's camera never moves, so it fits the plant tightly at its own yaw (the main view's
+            // framing holds every yaw, which leaves a fixed view half empty at this size).
+            var v = _view;
+            var projection = PlantFraming.Fit(v.Pose, Parts, (float)area.Width, (float)area.Height, 6);
+            _renderer.Draw(canvas, Parts, projection, new SolidFrame(v.Selected, v.Alerting, Details: false, System: v.System, Motion: false));
+        }
     }
 }

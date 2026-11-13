@@ -54,13 +54,15 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
 
     /// <summary>
     /// Samples the net output and each compared reading over the range (bucket means), ending at
-    /// <paramref name="tick"/>; finds alert onsets; places the cursor (-1 = newest).
+    /// <paramref name="tick"/>, which was sampled at <paramref name="at"/>; finds alert onsets; places the cursor
+    /// (-1 = newest). The times count back from the snapshot, not the wall clock, so under HOLD the trends keep
+    /// the times the alarm list and the log show.
     /// </summary>
-    public static TrendSet Compose(long tick, DateTimeOffset now, Setpoints setpoints, PlantOps ops, TrendRange range, IEnumerable<string> compared, int cursor)
+    public static TrendSet Compose(long tick, DateTimeOffset at, Setpoints setpoints, PlantOps ops, TrendRange range, IEnumerable<string> compared, int cursor)
     {
         var step = TicksIn(range) / (double)(Samples - 1);
         var ticks = Enumerable.Range(0, Samples).Select(k => tick - (long)Math.Round((Samples - 1 - k) * step)).ToArray();
-        var times = ticks.Select(t => now - TimeSpan.FromSeconds((tick - t) * 2)).ToImmutableArray();
+        var times = ticks.Select(t => at - TimeSpan.FromSeconds((tick - t) * 2)).ToImmutableArray();
         var samples = ticks.Select(t => SampleMemo.At(t, setpoints, ops)).ToArray();
         var readings = samples.Select(s => s.Readings).ToArray();
 
@@ -84,7 +86,7 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
                 for (var i = 0; i < specs.Count; i++)
                 {
                     var unit = units[i];
-                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, setpoints, ops)) / sub;
+                    series[i][k] += specs[i].Value(new ReadingContext(sample.First(r => r.Id == unit), t, mw, point.Setpoints, ops)) / sub;
                 }
             }
         }
@@ -113,8 +115,8 @@ public sealed class TrendSet(ImmutableArray<TrendSeries> series, ImmutableArray<
             before = alarms;
         }
 
-        var at = cursor < 0 || cursor >= Samples ? Samples - 1 : cursor;
-        return new TrendSet(rows.ToImmutable(), times, events.ToImmutable(), at);
+        var placed = cursor < 0 || cursor >= Samples ? Samples - 1 : cursor;
+        return new TrendSet(rows.ToImmutable(), times, events.ToImmutable(), placed);
     }
 
     private static TrendSeries Row(string key, string label, string code, string unit, string format, double[] raw, double? target, double? limit)

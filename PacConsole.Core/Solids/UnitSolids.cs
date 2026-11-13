@@ -1,0 +1,324 @@
+using PacConsole.Core.Geometry;
+using PacConsole.Core.Plant;
+
+namespace PacConsole.Core.Solids;
+
+/// <summary>
+/// The reference figure's plant (<c>docs/anatomy/plant/build.mjs</c>): the stand with a pad under each unit, the six
+/// units and the pipework between them. The figure is Z-up; here the figure's (x, y, z) is (X, Z, Y), so every plan
+/// keeps the figure's numbers. Line work (seams, bolts, ticks, fan blades, pipe flow) rides on its part as
+/// <see cref="SolidPart.Details"/>.
+/// </summary>
+internal sealed class UnitSolids(PartKit kit)
+{
+    private const float PadHeight = PlantSolids.PadHeight;
+    private const float PlateHeight = 10, FootHeight = 6;
+
+    /// <summary>The stand. It reaches west of the figure's plate (x -160) to hold the boiler bay.</summary>
+    private static readonly Plan Plate = new(-250, -110, 410, 220, 10);
+
+    /// <summary>The top of the condenser's fan stacks, where the blades turn.</summary>
+    private const float FanTop = PadHeight + 29 + 6;
+
+    /// <summary>Fan speed, radians per second (the figure's 1.6).</summary>
+    private const float FanSpeed = 1.6f;
+
+    private static ImmutableDictionary<UnitId, PlanPoint> Centres => PlantSolids.Centres;
+
+    public void Build()
+    {
+        Stand();
+        Stacks();
+        TankFarm();
+        GeneratorHall();
+        TurbineHouse();
+        CondenserBank();
+        AshSilo();
+        Pipework();
+    }
+
+    /// <summary>Base plate on feet, a ruler strip and a label plate, and a pad under each unit.</summary>
+    private void Stand()
+    {
+        foreach (var c in PartKit.Corners(Plate, 24))
+        {
+            kit.Post(null, "stand.foot", c.X, c.Z, 8, -PlateHeight - FootHeight, 1.6f, edge: EdgeTone.Lo);
+            kit.Post(null, "stand.foot", c.X, c.Z, 6, -PlateHeight - FootHeight + 1.6f, FootHeight - 1.6f);
+        }
+        kit.Slab(null, "stand.plate", Plate, -PlateHeight, PlateHeight, steps: 8, bevel: 1.6f, edge: EdgeTone.Lo);
+        var screws = PartKit.Corners(Plate, 10);
+        kit.With((p, _) => [
+            Details.PlanOutline(EdgeTone.Faint, new(Plate.X + 5, Plate.Z + 5, Plate.W - 10, Plate.D - 10, Plate.R - 5), 0, p),
+            .. screws.Select(c => Details.Ring(EdgeTone.Lo, c.X, c.Z, 2.2f, 0, p, 16)),
+            .. Details.Dots(EdgeTone.Mid, screws.Select(c => new Vec3(c.X, 0, c.Z)), p),
+        ]);
+        var strip = new Plan(-140, Plate.Z + Plate.D - 13, 196, 7, 1);
+        kit.Slab(null, "stand.strip", strip, 0, 0.6f, steps: 3, bevel: 0, edge: EdgeTone.Lo, crease: false);
+        kit.With((p, _) => Details.Ticks(strip.X + 4, strip.X + strip.W - 4, 4, 5, strip.Z + 0.8f, 0.6f, 2, 3.6f, p));
+        var label = new Plan(72, Plate.Z + Plate.D - 18, 60, 12, 1.2f);
+        kit.Slab(null, "stand.label", label, 0, 0.8f, bevel: 0, edge: EdgeTone.Lo);
+        kit.With((p, _) => [
+            Details.PlanOutline(EdgeTone.Faint, new(label.X + 1.6f, label.Z + 1.6f, label.W - 3.2f, label.D - 3.2f, 0), 0.8f, p, 4),
+            .. new[] { (4f, 38f), (6.5f, 30f), (9f, 22f) }.Select(l => Details.OnTop(EdgeTone.Lo, label.X + 5, label.Z + l.Item1, label.X + 5 + l.Item2, label.Z + l.Item1, 0.8f, p)),
+        ]);
+
+        foreach (var (id, c) in Centres)
+        {
+            var half = PlantSolids.PadHalfOf(id);
+            var plan = new Plan(c.X - half, c.Z - half, half * 2, half * 2, 4);
+            var bolts = PartKit.Corners(plan, 4).Select(q => new Vec3(q.X, PadHeight, q.Z)).ToArray();
+            var pad = new SolidPart("stand.pad", null, Volume.Box(plan, 0, PadHeight), p => SolidBuilder.Slab(plan, 0, PadHeight, p, 4, 0.4f), EdgeTone.Lo)
+            {
+                PadOf = id,
+                Details = (p, _) => Details.Dots(EdgeTone.Mid, bolts, p),
+            };
+            kit.Pads[id] = pad;
+            kit.Add(pad);
+        }
+    }
+
+    /// <summary>STK-01: two stacks on a foundation, a flue duct between them, a gallery on each.</summary>
+    private void Stacks()
+    {
+        const UnitId u = UnitId.Stk;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        kit.Slab(u, "stk.foundation", new(cx - 24, cz - 16, 48, 32, 3), PadHeight, 4.8f, bevel: 0.6f);
+        const float y0 = PadHeight + 4.8f;
+        var duct = new Plan(cx - 5, cz - 5, 11, 10, 1.5f);
+        kit.Slab(u, "stk.duct", duct, y0 + 2, 10);
+        kit.With((p, _) => Details.SideSeam(EdgeTone.Faint, duct, y0 + 7, p));
+        foreach (var (x, r, deck, top) in new[] { (cx - 12, 7f, 72f, 100f), (cx + 12, 6f, 58f, 80f) })
+        {
+            kit.Post(u, "stk.flange", x, cz, r + 1.6f, y0, 2, bevel: 0.4f);
+            kit.With((p, _) => Details.DotRing(EdgeTone.Mid, x, cz, r + 0.9f, y0 + 2, 12, p));
+            kit.Post(u, "stk.shaft", x, cz, r, y0 + 2, deck - y0 - 2, steps: 48, lit: true);
+            kit.With((p, _) => [Details.SideArc(EdgeTone.Faint, x, cz, r, deck - 40, p, 32), Details.SideArc(EdgeTone.Faint, x, cz, r, deck - 20, p, 32)]);
+            kit.Post(u, "stk.gallery", x, cz, r + 3.6f, deck, 1.6f);
+            kit.With((p, _) => [Details.Ring(EdgeTone.Lo, x, cz, r + 3, deck + 1.6f, p), .. Details.DotRing(EdgeTone.Mid, x, cz, r + 3, deck + 1.6f, 16, p)]);
+            kit.Post(u, "stk.shaft", x, cz, r, deck + 1.6f, top - deck - 1.6f, steps: 48, lit: true);
+            kit.Post(u, "stk.lip", x, cz, r + 0.8f, top, 3);
+            kit.With((p, _) => [Details.Ring(EdgeTone.Lo, x, cz, r - 0.6f, top + 3, p)]);
+        }
+    }
+
+    /// <summary>TKA-02: a bund wall round two cone-roofed tanks, steps over the wall and a pump skid.</summary>
+    private void TankFarm()
+    {
+        const UnitId u = UnitId.Tka;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        const float t = 2.4f, wall = 6;
+        foreach (var plan in new Plan[]
+        {
+            new(cx - 32, cz - 32, 64, t, 0.6f),
+            new(cx - 32, cz - 32 + t, t, 64 - 2 * t, 0.6f),
+            new(cx + 32 - t, cz - 32 + t, t, 64 - 2 * t, 0.6f),
+            new(cx - 32, cz + 32 - t, 64, t, 0.6f),
+        })
+        {
+            kit.Slab(u, "tka.bund", plan, PadHeight, wall, steps: 2, bevel: 0.3f);
+        }
+        foreach (var (z0, z1, top) in new[] { (34.4f, 36f, 2f), (33.2f, 34.4f, 4f), (32f, 33.2f, wall) })
+        {
+            kit.Slab(u, "tka.step", new(cx - 24, cz + z0, 6, z1 - z0, 0.2f), PadHeight, top, steps: 2, bevel: 0);
+        }
+
+        var skid = new Plan(cx + 6, cz + 16, 18, 9, 0.8f);
+        kit.Slab(u, "tka.skid", skid, PadHeight, 2, steps: 2, bevel: 0.3f);
+        kit.With((p, _) => Details.Dots(EdgeTone.Mid, [new(skid.X + 1.5f, PadHeight + 2, skid.Z + 1.5f), new(skid.X + skid.W - 1.5f, PadHeight + 2, skid.Z + 1.5f)], p));
+        var pumpAxis = new Frame(new(0, PadHeight + 5, skid.Z + 4.5f), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
+        foreach (var (name, s0, s1, r) in new[] { ("tka.motor", cx + 7.5f, cx + 15, 3f), ("tka.coupling", cx + 15, cx + 16.5f, 1.4f), ("tka.pump", cx + 16.5f, cx + 22, 3f) })
+        {
+            kit.Disc(u, name, pumpAxis, s0, s1, r);
+        }
+
+        foreach (var (x, z) in new[] { (cx + 12, cz - 10), (cx - 12, cz + 10) })
+        {
+            const float top = 30;
+            kit.Post(u, "tka.tank", x, z, 13, PadHeight, top - PadHeight, steps: 56, bevel: 0.6f, lit: true);
+            kit.With((p, _) => [Details.SideArc(EdgeTone.Faint, x, z, 13, 11, p, 40), Details.SideArc(EdgeTone.Faint, x, z, 13, 21, p, 40)]);
+            kit.TurnedUp(u, "tka.roof", x, z, [(top, 13), (top + 7, 2.5f)]);
+            kit.Post(u, "tka.vent", x, z, 1.6f, top + 7, 3);
+            kit.Post(u, "tka.cap", x, z, 2.4f, top + 10, 1.2f);
+        }
+    }
+
+    /// <summary>GEN-03: a gabled hall with a roller door and louvres, and a transformer outside.</summary>
+    private void GeneratorHall()
+    {
+        const UnitId u = UnitId.Gen;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        var hall = new Plan(cx - 30, cz - 24, 60, 36, 1.5f);
+        kit.Slab(u, "gen.hall", hall, PadHeight, 30 - PadHeight, bevel: 0.6f, lit: true);
+        kit.With((p, _) => [.. Details.SideSeam(EdgeTone.Faint, hall, 10, p), .. Details.SideSeam(EdgeTone.Faint, hall, 20, p)]);
+
+        var ridge = new Frame(new(cx - 31, 30, cz - 6), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
+        (float, float)[] gable = [(-19, 0), (19, 0), (0, 9)];
+        kit.Add(new("gen.roof", u, Volume.Box(new(cx - 31, cz - 25, 62, 38, 0), 30, 9), p => SolidBuilder.Prism(ridge, gable, 0, 62, p), Lit: true));
+
+        var door = new Plan(cx - 22, cz + 12, 18, 1, 0.3f);
+        kit.Slab(u, "gen.door", door, PadHeight, 19, steps: 2, bevel: 0);
+        kit.With((p, _) => new[] { 4f, 7f, 10f, 13f, 16f }.SelectMany(dy => Details.SideSeam(EdgeTone.Lo, door, PadHeight + dy, p, 2)));
+        foreach (var z in new[] { cz - 19, cz - 10, cz - 1 })
+        {
+            kit.Slab(u, "gen.louvre", new(cx + 30, z, 0.8f, 6, 0.3f), 18, 6, steps: 2, bevel: 0);
+        }
+
+        var tx = new Plan(cx + 4, cz + 18, 20, 12, 1.5f);
+        kit.Slab(u, "gen.transformer", tx, PadHeight, 12);
+        // Cooling fins on the front face, drawn only while that face is toward the viewer.
+        kit.With((p, _) => p.CosYaw <= 0 ? [] : Enumerable.Range(0, 7).Select(i =>
+            Details.Segment(EdgeTone.Lo, new(tx.X + 2.5f + i * 2.5f, PadHeight, tx.Z + tx.D), new(tx.X + 2.5f + i * 2.5f, PadHeight + 12, tx.Z + tx.D), p)));
+        foreach (var x in new[] { tx.X + 5, tx.X + 10, tx.X + 15 })
+        {
+            kit.Post(u, "gen.bushing", x, tx.Z + 6, 1.2f, PadHeight + 12, 5, steps: 16);
+            kit.Post(u, "gen.bushing.cap", x, tx.Z + 6, 1.8f, PadHeight + 17, 1, steps: 16);
+        }
+        foreach (var x in new[] { tx.X + 2, tx.X + 17 })
+        {
+            kit.Slab(u, "gen.bracket", new(x, tx.Z + 1, 1, 2, 0.2f), PadHeight + 12, 2, steps: 2, bevel: 0);
+        }
+        var conservator = new Frame(new(0, PadHeight + 15.8f, tx.Z + 2), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
+        kit.Disc(u, "gen.conservator", conservator, tx.X + 1, tx.X + 19, 1.8f);
+    }
+
+    /// <summary>TRB-04: HP, IP and LP casings and the generator on one shaft, on pedestals on a deck.</summary>
+    private void TurbineHouse()
+    {
+        const UnitId u = UnitId.Trb;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        foreach (var x in new[] { cx - 28, cx - 2, cx + 24 })
+        {
+            foreach (var z in new[] { cz - 10, cz + 6 })
+            {
+                kit.Slab(u, "trb.column", new(x, z, 4, 4, 0.6f), PadHeight, 12 - PadHeight, steps: 2, bevel: 0.3f);
+            }
+        }
+        var deck = new Plan(cx - 30, cz - 12, 60, 24, 2);
+        kit.Slab(u, "trb.deck", deck, 12, 4, bevel: 0.6f);
+        kit.With((p, _) => Details.SideSeam(EdgeTone.Faint, deck, 14, p));
+        foreach (var (z0, z1, top) in new[] { (16.5f, 18f, 5.2f), (15f, 16.5f, 9.2f), (13.5f, 15f, 13.2f), (12f, 13.5f, 16f) })
+        {
+            kit.Slab(u, "trb.step", new(cx + 8, cz + z0, 6, z1 - z0, 0.2f), PadHeight, top - PadHeight, steps: 2, bevel: 0);
+        }
+        var oil = new Plan(cx - 28, cz + 18, 14, 10, 1.2f);
+        kit.Slab(u, "trb.oil", oil, PadHeight, 6, bevel: 0.4f);
+        kit.With((p, _) => Details.SideSeam(EdgeTone.Faint, oil, PadHeight + 3, p));
+        kit.Post(u, "trb.filler", oil.X + 10, oil.Z + 5, 1.4f, PadHeight + 6, 1.6f, steps: 16);
+
+        const float shaftY = 28;
+        var shaft = new Frame(new(cx, shaftY, cz), new(1, 0, 0), new(0, 0, 1), new(0, 1, 0));
+        foreach (var (s0, s1) in new[] { (-30f, -27f), (-15.5f, -13.5f), (-0.5f, 1.5f), (18.5f, 20.5f), (28.5f, 30f) })
+        {
+            kit.Slab(u, "trb.pedestal", new(cx + s0, cz - 5, s1 - s0, 10, 0.8f), 16, shaftY - 2 - 16, steps: 2, bevel: 0.3f);
+        }
+        foreach (var (s0, s1) in new[] { (-28f, -26f), (-16f, -13f), (-1f, 2f), (18f, 20.5f), (28.5f, 29.5f) })
+        {
+            kit.Disc(u, "trb.shaft", shaft, s0, s1, 2);
+        }
+        kit.Turned(u, "trb.hp", shaft, [(-26, 5), (-25, 6), (-17, 6), (-16, 5)], lit: true);
+        kit.Turned(u, "trb.ip", shaft, [(-13, 6.5f), (-12, 8), (-2, 8), (-1, 6.5f)], lit: true);
+        kit.Turned(u, "trb.lp", shaft, [(2, 9), (3.5f, 11), (16.5f, 11), (18, 9)], lit: true);
+        kit.Turned(u, "trb.gen", shaft, [(20.5f, 7.5f), (28.5f, 7.5f)], lit: true);
+    }
+
+    /// <summary>CLG-05: a mechanical-draft cell on its basin with six fan stacks on top.</summary>
+    private void CondenserBank()
+    {
+        const UnitId u = UnitId.Clg;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        kit.Slab(u, "clg.basin", new(cx - 30, cz - 24, 60, 48, 2), PadHeight, 4);
+        var cell = new Plan(cx - 28, cz - 22, 56, 44, 2);
+        kit.Slab(u, "clg.cell", cell, PadHeight + 4, 25, bevel: 0.6f, lit: true);
+        // Louvred air inlets low on the cell, and a faint band below the fan deck.
+        kit.With((p, _) => [
+            .. new[] { 8f, 10f, 12f, 14f, 16f }.SelectMany(dy => Details.SideSeam(EdgeTone.Lo, cell, PadHeight + dy, p)),
+            .. Details.SideSeam(EdgeTone.Faint, cell, PadHeight + 19, p),
+        ]);
+        foreach (var x in new[] { cx - 18, cx, cx + 18 })
+        {
+            foreach (var z in new[] { cz - 11, cz + 11 })
+            {
+                kit.Post(u, "clg.stack", x, z, 7.5f, FanTop - 6, 6, steps: 40, bevel: 0.5f, lit: true);
+                // Guard ring, hub and five blades; the blades turn with time, each fan a little out of phase.
+                var phase = (x + z) * 0.37f;
+                kit.With((p, t) => [
+                    Details.Ring(EdgeTone.Lo, x, z, 6.3f, FanTop, p),
+                    Details.Ring(EdgeTone.Mid, x, z, 1.4f, FanTop, p, 16),
+                    .. Details.Blades(x, z, FanTop, phase + (float)(t * FanSpeed % (Math.PI * 2)), p),
+                ], animated: true);
+            }
+        }
+    }
+
+    /// <summary>SIL-06: a body on four legs over a hopper and chute, a cone roof with a vent filter.</summary>
+    private void AshSilo()
+    {
+        const UnitId u = UnitId.Sil;
+        var (cx, cz) = (Centres[u].X, Centres[u].Z);
+        foreach (var (dx, dz) in new[] { (-10f, -10f), (10f, -10f), (-10f, 10f), (10f, 10f) })
+        {
+            kit.Slab(u, "sil.leg", new(cx + dx - 1.5f, cz + dz - 1.5f, 3, 3, 0.6f), PadHeight, 26 - PadHeight, steps: 2, bevel: 0.3f);
+        }
+        foreach (var plan in new Plan[]
+        {
+            new(cx - 8.5f, cz - 11.5f, 17, 3, 0.3f),
+            new(cx - 11.5f, cz - 8.5f, 3, 17, 0.3f),
+            new(cx + 8.5f, cz - 8.5f, 3, 17, 0.3f),
+            new(cx - 8.5f, cz + 8.5f, 17, 3, 0.3f),
+        })
+        {
+            kit.Slab(u, "sil.brace", plan, 12, 2, steps: 2, bevel: 0);
+        }
+        kit.Post(u, "sil.chute", cx, cz, 2, 8, 6, steps: 20);
+        kit.TurnedUp(u, "sil.hopper", cx, cz, [(14, 3), (26, 10.5f)]);
+        kit.Post(u, "sil.body", cx, cz, 13, 26, 36, steps: 56, bevel: 0.6f, lit: true);
+        kit.With((p, _) => [Details.SideArc(EdgeTone.Faint, cx, cz, 13, 38, p, 40), Details.SideArc(EdgeTone.Faint, cx, cz, 13, 50, p, 40)]);
+        kit.TurnedUp(u, "sil.roof", cx, cz, [(62, 13), (68, 3)]);
+        kit.Post(u, "sil.vent", cx, cz, 2, 68, 3, steps: 16);
+        kit.Post(u, "sil.filter", cx, cz, 3.2f, 71, 5, steps: 24, bevel: 0.4f);
+    }
+
+    /// <summary>
+    /// Two headers down the corridor on sleepers, and steam and fuel lines between neighbours, each
+    /// run ending in a flange on a pier so a unit lifts free.
+    /// </summary>
+    private void Pipework()
+    {
+        void Pier(Plan plan, float height)
+        {
+            kit.Slab(null, "stand.pier", plan, 0, height, bevel: 0.4f);
+            kit.With((p, _) => Details.Dots(EdgeTone.Mid, [new(plan.X + plan.W / 2, height, plan.Z + 1.6f), new(plan.X + plan.W / 2, height, plan.Z + plan.D - 1.6f)], p));
+        }
+        void Pipe(string name, Vec3 a, Vec3 b, float r, Circuit circuit)
+        {
+            var along = b - a;
+            var length = along.Length;
+            var dir = new Vec3(along.X / length, along.Y / length, along.Z / length);
+            var t = MathF.Max(0.9f, r * 0.55f);
+            var rim = r * 1.55f;
+            Vec3 At(float s) => new(a.X + dir.X * s, a.Y + dir.Y * s, a.Z + dir.Z * s);
+            var axis = Frame.Along(a, along);
+            kit.Add(new(name, null, PartKit.BoxAlong(axis, t, length - t, r), p => SolidBuilder.Tube(At(t), At(length - t), r, p)) { Circuit = circuit });
+            // A flow mark along the crown, in the direction the line runs.
+            kit.With((p, _) => [Details.Flow(At(t), At(length - t), r, p)]);
+            kit.Add(PartKit.PipeDisc(name + ".flange", axis, 0, t, rim) with { Circuit = circuit });
+            kit.Add(PartKit.PipeDisc(name + ".flange", axis, length - t, length, rim) with { Circuit = circuit });
+        }
+
+        Pier(new(-150, -8, 8, 16, 0.8f), 10);
+        Pier(new(142, -8, 8, 16, 0.8f), 10);
+        foreach (var x in new[] { -122f, -84f, -47.5f, -12f, 20f, 47.5f, 84f, 122f })
+        {
+            kit.Slab(null, "stand.sleeper", new(x - 1.5f, -6.5f, 3, 13, 0.3f), 0, 3.3f, steps: 2, bevel: 0);
+        }
+        Pipe("rack.north", new(-142, 5.5f, -3), new(142, 5.5f, -3), 2.2f, Circuit.Cooling);
+        Pipe("rack.south", new(142, 5.5f, 3), new(-142, 5.5f, 3), 2.2f, Circuit.Cooling); // the return header runs west
+
+        Pier(new(37, 42, 5, 12, 0.6f), 12);
+        Pier(new(53, 42, 5, 12, 0.6f), 12);
+        Pipe("steam", new(42, 6.5f, 48), new(53, 6.5f, 48), 2.6f, Circuit.Cooling);
+        Pier(new(37, -35, 5, 10, 0.6f), 9);
+        Pier(new(53, -35, 5, 10, 0.6f), 9);
+        Pipe("fuel", new(42, 4.8f, -30), new(53, 4.8f, -30), 1.6f, Circuit.Fuel);
+    }
+}
